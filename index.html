@@ -217,9 +217,9 @@ input:focus,select:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3
 .scale,.kpi,.pf,.prod,.forma{background-image:linear-gradient(155deg,rgba(255,255,255,.17),rgba(255,255,255,0) 45%,rgba(0,0,0,.13)) !important}
 .scale.comida{box-shadow:0 18px 30px -18px rgba(238,93,35,.8)}
 .scale.acai{box-shadow:0 18px 30px -18px rgba(106,43,147,.8)}
-.pf{box-shadow:0 18px 30px -18px rgba(28,26,39,.7)}
+.pf{box-shadow:0 18px 30px -18px rgba(95,111,42,.85)}
 .kpi{box-shadow:var(--shadow)}
-.pf,.prod.prato{background-color:#3b3e46}
+.pf,.prod.prato{background-color:#5f6f2a}
 main>.note{background:#fff;border:1px solid var(--line)}
 .pdv>.col>*,.venda>*{flex-shrink:0}
 .kpi .lbl,.scale .lbl{letter-spacing:.05em;text-transform:uppercase;font-size:11.5px}
@@ -306,6 +306,16 @@ input[type=range]{width:100%;accent-color:var(--op,var(--ink));min-height:32px}
 .banner.teste .row>.btn{flex:none}
 .btn.perigo,.btn.line.perigo{color:var(--bad);border-color:var(--bad);background:#fff}
 .btn.perigo.cheio:not(.line):not(.go):not(.white):not(.ghost){background:var(--bad);color:#fff}
+
+/* ---------- confirmação da venda e aba do n8n ---------- */
+.conf-total{display:flex;justify-content:space-between;align-items:baseline;background:var(--soft);border-radius:16px;padding:14px 16px}
+.conf-total strong{font:800 34px/1 var(--display)}
+.btn.sim{background:var(--ok) !important;color:#fff;min-height:68px;font-size:19px}
+.btn.nao{min-height:60px;color:var(--bad);border-color:var(--bad)}
+.cod{background:var(--ink);color:#f3f1fa;border-radius:12px;padding:12px 14px;font:13px/1.5 ui-monospace,Consolas,monospace;overflow-x:auto;white-space:pre-wrap;overflow-wrap:anywhere;margin:0}
+.consulta{border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.consulta h3{font-size:17px}
+.consulta p{margin:0;color:var(--muted);font-size:14.5px}
 </style>
 </head>
 <body>
@@ -398,6 +408,12 @@ function dvInfo(){const t=totais().total,s=S.dv.reduce((a,d)=>a+parseMoney(d.val
 function statusBox(m,semForma){return m.falta>0?`<div class="troco falta"><span>Falta distribuir</span><strong>${brl(m.falta)}</strong></div>`:m.falta<0?`<div class="troco falta"><span>Passou do total em</span><strong>${brl(-m.falta)}</strong></div>`:semForma?`<div class="troco falta"><span>Escolha a forma de cada pessoa</span><strong>${brl(m.t)}</strong></div>`:`<div class="troco"><span>Valores conferem</span><strong>${brl(m.t)}</strong></div>`}
 function dvIgual(){const t=totais().total,n=S.dv.length,b=Math.floor(t/n);S.dv.forEach((d,k)=>d.valor=num(k===n-1?t-b*(n-1):b))}
 function modalHtml(fa){
+  if(S.modal==='confirmar'){const t=totais(),como=S.pags?S.pags.linhas.map(l=>(l.rot?l.rot+': ':'')+FORMAS[l.forma]+' '+brl(l.valor)).join(' + '):FORMAS[S.forma]||'';
+    return `<div class="panel" style="width:min(480px,100%)"><h1>Tem certeza que quer finalizar a venda?</h1>
+    <p style="margin:0;font-size:18px;color:var(--ink)"><b>O cliente já fez o pagamento?</b></p>
+    <div class="conf-total"><span>${esc(como)}</span><strong>${brl(t.total)}</strong></div>
+    <button class="btn sim" data-a="finalizarSim">SIM, CONFIRMAR VENDA</button>
+    <button class="btn line nao" data-a="finalizarNao">NÃO, PAGAMENTO NÃO CONFIRMADO</button></div>`}
   if(S.modal==='senha'&&S.apagar)return `<div class="panel" style="width:min(460px,100%)"><h1>Apagar ${S.apagar.tipo==='fluxo'?'fluxo de caixa':'registro'}</h1>
     <p style="margin:0">O senhor está prestes a apagar <b>${esc(S.apagar.txt)}</b>. Não tem como desfazer.</p>
     ${S.apagar.extra?`<div class="note" style="color:var(--ink)">${esc(S.apagar.extra)}</div>`:''}
@@ -729,7 +745,7 @@ async function carregarDia(){
 async function carregarTudo(){
   await carregarPerfis();
   await Promise.all([carregarBase(),carregarDia()]);
-  S.pronto=true;render();if(S.view==='financeiro')carregarFin();
+  S.pronto=true;render();if(S.view==='financeiro')carregarFin();if(S.view==='whatsapp')carregarN8n();
 }
 function mudarRef(s){const r=refData(),P=S.periodo;
   if(P==='diario')r.setDate(r.getDate()+s);else if(P==='semanal')r.setDate(r.getDate()+7*s);else if(P==='anual')r.setFullYear(r.getFullYear()+s);else r.setMonth(r.getMonth()+s,1);
@@ -791,15 +807,40 @@ function payload(){
   const a=aggVendas(S.vendas);
   return JSON.stringify({evento:'resumo_do_dia',data:hoje.toISOString().slice(0,10),cardapio:S.cardapio.filter(x=>x.on).map(x=>x.nome),comida_kg:+(a.gCom/1000).toFixed(3),acai_kg:+(a.gAcai/1000).toFixed(3),outros_itens:a.itens,vendas:a.n,total:a.fat/100,por_forma:{pix:a.pix/100,credito:a.credito/100,debito:a.debito/100,dinheiro:a.dinheiro/100}},null,2);
 }
+const N8N=[
+  ['n8n_resumo_do_dia','Resumo do dia','Para quando o senhor mandar "resumo" ao assistente. Sem data, responde o dia de hoje.',{}],
+  ['n8n_cardapio','Cardápio do dia','Para enviar o cardápio ao grupo ou a quem pedir.',{}],
+  ['n8n_pontos','Pontos do cliente','Para quando o cliente perguntar pelos pontos. O n8n envia o número de quem escreveu.',{p_telefone:'5585999990000'}],
+  ['n8n_novidades','Vendas novas com cliente','Para avisar cada cliente dos pontos ganhos. Guarde o campo "ultimo" e mande de volta em p_apos na consulta seguinte.',{p_apos:0}],
+  ['n8n_grupo','Situação do grupo','Lista quem está abaixo e quem está dentro do mínimo de pontos em 30 dias.',{}]];
+async function carregarN8n(){
+  if(!sb||!isAdmin())return;
+  const r=await q(sb.from('integracoes').select('token,token_criado_em').eq('id',1).maybeSingle(),'Integração');
+  S.n8n=Object.assign(S.n8n||{},{carregado:true,token:r&&r!==true?r.token:null,quando:r&&r!==true&&r.token_criado_em?new Date(r.token_criado_em):null});
+  if(S.view==='whatsapp')render();
+}
 function vWhats(){
-  const E={resumo:'Resumo do dia (quando o senhor perguntar ao assistente)',cardapio:'Cardápio do dia',pontos:'Pontos do cliente após cada compra',grupo:'Clientes abaixo do mínimo do grupo'};
-  return `<div class="head"><div><h1>WhatsApp e n8n</h1><p>O sistema entrega os dados ao n8n; o fluxo e as mensagens ficam por conta do senhor.</p></div></div>
-  <div class="grid2"><section class="panel"><h2>Conexão</h2>
-    <div><label for="wa-url">Endereço do webhook no n8n</label><input type="url" id="wa-url" data-c="waUrl" value="${esc(S.wa.url)}" placeholder="https://seu-n8n/webhook/restaurante"></div>
-    <h3>O que o sistema envia</h3>${Object.keys(E).map(k=>`<label class="sw" for="ev-${k}">${E[k]}<input type="checkbox" id="ev-${k}" data-c="waEv" data-k="${k}" ${S.wa.eventos[k]?'checked':''}></label>`).join('')}
-    <h3>Exemplo do que chega no n8n</h3><pre>${esc(payload())}</pre><button class="btn line" data-a="copiar" data-t="payload">Copiar exemplo</button>
+  const N=S.n8n||{},tk=N.token,url=f=>SUPABASE_URL+'/rest/v1/rpc/'+f,corpo=x=>JSON.stringify(Object.assign({p_token:tk||'COLE_AQUI_A_CHAVE_DE_ACESSO'},x),null,2);
+  const cp=(txt,rot)=>`<button class="chip" data-a="copiarTxt" data-txt="${esc(txt)}">${rot}</button>`;
+  return `<div class="head"><div><h1>WhatsApp e n8n</h1><p>O sistema entrega os dados prontos ao n8n. Quem conversa com o WhatsApp é o seu fluxo no n8n.</p></div></div>
+  <section class="panel"><h2>1. Chave de acesso do n8n</h2>
+    ${!N.carregado?'<p style="margin:0">Carregando…</p>':tk?`<p style="margin:0">Chave criada em ${N.quando?N.quando.toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'}):''}. Trate como senha: quem tiver esta chave lê os resumos do restaurante.</p>
+      <pre class="cod">${esc(N.mostrar?tk:tk.slice(0,6)+'••••••••••••••••••••••••'+tk.slice(-4))}</pre>
+      <div class="row">${cp(tk,'Copiar chave')}<button class="chip" data-a="n8nMostrar">${N.mostrar?'Esconder':'Mostrar'}</button><button class="chip ${N.confTroca?'on':''}" data-a="n8nGerar">${N.confTroca?'Toque de novo: a chave atual para de funcionar':'Gerar nova chave'}</button></div>`
+    :`<p style="margin:0">Ainda não há chave. Sem ela, nenhuma consulta responde.</p><div class="row"><button class="btn" data-a="n8nGerar" style="flex:none">Gerar chave de acesso</button></div>`}
   </section>
-  <section class="panel"><h2>Como fica a conversa</h2><div class="bubble me">Resumo do dia</div><div class="bubble bot">${esc(resumoTexto())}</div><button class="btn line" data-a="copiar" data-t="resumo">Copiar resumo</button></section></div>`;
+  <section class="panel"><h2>2. Como configurar cada consulta no n8n</h2>
+    <p style="margin:0">Em cada nó "HTTP Request": método <b>POST</b>, o endereço da consulta, os dois cabeçalhos abaixo e o corpo em JSON.</p>
+    <pre class="cod">apikey: ${esc(SUPABASE_KEY)}
+Content-Type: application/json</pre>
+    <div class="row">${cp(SUPABASE_KEY,'Copiar valor do apikey')}</div>
+    ${N8N.map(([f,t,d,x])=>`<div class="consulta"><h3>${t}</h3><p>${d}</p><pre class="cod">POST ${esc(url(f))}
+
+${esc(corpo(x))}</pre><div class="row">${cp(url(f),'Copiar endereço')}${cp(corpo(x),'Copiar corpo')}<button class="chip" data-a="n8nTestar" data-f="${f}" ${tk?'':'disabled'}>Testar agora</button></div></div>`).join('')}
+  </section>
+  <section class="panel"><h2>3. Resultado do teste</h2>
+    ${N.teste?`<p style="margin:0"><b>${esc(N.teste.nome)}</b></p>${N.teste.erro?`<div class="note" role="alert" style="color:var(--bad)">${esc(N.teste.erro)}</div>`:`${N.teste.texto?`<div class="bubble bot">${esc(N.teste.texto)}</div>`:''}<pre class="cod">${esc(N.teste.json)}</pre>`}`:'<div class="empty">Toque em "Testar agora" em uma consulta para ver aqui exatamente o que o n8n vai receber. O campo "texto" já vem pronto para enviar no WhatsApp.</div>'}
+  </section>`;
 }
 const RENDER={caixa:vCaixa,cardapio:vCardapio,produtos:vProdutos,financeiro:vRelatorios,clientes:vClientes,usuarios:vUsuarios,balancas:vBalancas,whatsapp:vWhats};
 function render(){
@@ -827,7 +868,7 @@ const bal=id=>S.balancas.find(b=>b.id===id);
 
 /* ---------- ações ---------- */
 const A={
-  ir:e=>{S.view=e.dataset.v;S.zerarConf=null;if(S.view==='usuarios')carregarPerfis();if(S.view==='financeiro')carregarFin();if(typeof window!=='undefined'&&window.innerWidth<=980)S.menu=false;try{location.hash=S.view}catch(_){}},
+  ir:e=>{S.view=e.dataset.v;S.zerarConf=null;if(S.view==='whatsapp')carregarN8n();if(S.view==='usuarios')carregarPerfis();if(S.view==='financeiro')carregarFin();if(typeof window!=='undefined'&&window.innerWidth<=980)S.menu=false;try{location.hash=S.view}catch(_){}},
   sair:()=>{S.modal=null;S.recuperando=false;if(sb)sb.auth.signOut().then(()=>{},()=>{});else aoSessao(null);return true},
   apagarFluxo:e=>{const f=S.fin.fluxos.find(x=>x.id===e.dataset.id);if(!f)return;
     S.apagar={tipo:'fluxo',id:f.id,txt:`o Fluxo ${f.numero} de ${f.operador||''}, de ${new Date(f.aberto_em).toLocaleDateString('pt-BR')}`,extra:f.n?`${f.n===1?'A venda':'As '+f.n+' vendas'} deste fluxo (${brl(f.total)}) ${f.n===1?'será apagada':'serão apagadas'} junto, e os pontos que ${f.n===1?'ela deu':'elas deram'} aos clientes serão desfeitos.`:'Este fluxo não tem vendas.'};S.modal='senha'},
@@ -849,6 +890,17 @@ const A={
     S.zerarConf=null;
     q(sb.rpc('teste_zerar',{p_grupo:g}),'Zerar teste').then(async r=>{if(r){S.cart=[];S.pags=null;S.clienteId='';toast('Dados de teste zerados.')}
       await Promise.all([carregarBase(),carregarDia()]);render();if(S.view==='financeiro')carregarFin()});return true},
+  copiarTxt:e=>{try{navigator.clipboard.writeText(e.dataset.txt).then(()=>toast('Copiado.'),()=>toast('Não foi possível copiar aqui. Selecione o texto e copie.'))}catch(_){toast('Não foi possível copiar aqui. Selecione o texto e copie.')}return true},
+  n8nMostrar:()=>{S.n8n.mostrar=!S.n8n.mostrar},
+  n8nGerar:()=>{if(S.n8n&&S.n8n.token&&!S.n8n.confTroca){S.n8n.confTroca=true;return}
+    q(sb.rpc('n8n_gerar_token'),'Chave do n8n').then(async r=>{if(typeof r==='string')toast('Chave de acesso gerada.');if(S.n8n)S.n8n.confTroca=false;await carregarN8n();render()});return true},
+  n8nTestar:e=>{const f=e.dataset.f,def=N8N.find(x=>x[0]===f),ex=Object.assign({},def[3]);
+    if(f==='n8n_pontos'&&S.clientes[0])ex.p_telefone=S.clientes[0].fone;
+    const anon=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:'sb-teste-n8n'}});
+    toast('Consultando como o n8n faria…');
+    anon.rpc(f,Object.assign({p_token:S.n8n.token},ex)).then(r=>{
+      S.n8n.teste=r.error?{nome:def[1],erro:r.error.message}:{nome:def[1],texto:r.data&&r.data.texto||'',json:JSON.stringify(r.data,null,2)};render()},
+      er=>{S.n8n.teste={nome:def[1],erro:String(er&&er.message||er)};render()});return true},
   conta:()=>{S.conta={nome:S.user.nome,avatar:S.user.avatar||null,cor:S.user.cor||null,senha:''};S.crop=null;S.modal='conta';carregarCores()},
   contaCor:e=>{S.conta.cor=e.dataset.cor||null},
   avatarTirar:()=>{S.conta.avatar=null},
@@ -928,8 +980,11 @@ const A={
   quick:e=>{S.recebido=num(parseMoney(S.recebido)+ +e.dataset.v)},
   exato:()=>{S.recebido=num(totais().total)},
   limparRec:()=>{S.recebido=''},
-  finalizar:()=>{
-    if(!podeFinalizar()||S.enviando)return true;
+  finalizar:()=>{if(!podeFinalizar()||S.enviando)return true;S.modal='confirmar'},
+  finalizarNao:()=>{S.modal=null;toast('Venda não finalizada. Confirme o pagamento com o cliente.')},
+  finalizarSim:()=>{
+    S.modal=null;
+    if(!podeFinalizar()||S.enviando){render();return true}
     const t=totais(),rec=parseMoney(S.recebido);
     const pags=S.pags?S.pags.linhas.map(l=>({rotulo:l.rot,forma:l.forma,valor_centavos:l.valor,recebido_centavos:l.forma==='dinheiro'&&S.pags.troco?l.valor+S.pags.troco:null}))
       :[{rotulo:'',forma:S.forma,valor_centavos:t.total,recebido_centavos:S.forma==='dinheiro'?rec:null}];
@@ -937,7 +992,7 @@ const A={
       itens:S.cart.map(i=>i.grupo==='produto'?{produto_id:i.src}:{balanca_id:i.src,gramas:i.g,tara_gramas:i.tara||0}),pagamentos:pags};
     const troco=S.pags?(S.pags.troco||0):S.forma==='dinheiro'?rec-t.total:0,nomeC=t.c?t.c.nome.split(' ')[0]:'';
     const como=S.pags?'('+S.pags.linhas.map(l=>FORMAS[l.forma]+' '+brl(l.valor)).join(' + ')+')':'no '+FORMAS[S.forma].toLowerCase();
-    S.enviando=true;toast('Registrando a venda…');
+    S.enviando=true;render();toast('Registrando a venda…');
     q(sb.rpc('registrar_venda',{p})).then(async r=>{S.enviando=false;
       if(!r||!r.numero){await carregarBase();return render()}
       toast(`Venda nº ${r.numero} de ${brl(r.total_centavos)} registrada ${como}`+(troco?` · Troco ${brl(troco)}`:'')+(r.pontos_ganhos?` · ${nomeC} ganhou ${r.pontos_ganhos} pontos`:''));
