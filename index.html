@@ -1,180 +1,927 @@
--- =====================================================================
--- 005_financeiro_e_perfis.sql  ·  Caixa do Restaurante  ·  ETAPA 4
--- 1) Funções do Financeiro para qualquer período (dia, semana, mês, semestre, ano).
---    Os totais são calculados no banco; somente administradores acessam.
--- 2) Perfil do operador: foto e cor de fundo, alterados pelo próprio usuário.
--- Este arquivo substitui por completo o antigo 004 (que não deve ser executado).
--- Idempotente: pode ser executado mais de uma vez. Rode depois do 003.
--- =====================================================================
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Caixa do Restaurante</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Layout: menu lateral de botões grandes + área de trabalho; fundo branco, cards de cor cheia por função. Tema único (claro) por escolha do dono. */
+:root{
+  color-scheme:light;
+  --bg:#eeeff3; --soft:#f5f4f9; --line:#e6e3ee; --ink:#1c1a27; --muted:#676378;
+  --comida:#d44c14; --acai:#531f78; --pix:#0c9c8b; --credito:#2a66dd; --debito:#8a4fd0; --dinheiro:#27924a;
+  --doce:#d83f77; --bebida:#1f86c9;
+  --ok:#1f8a44; --warn:#b86a00; --bad:#cf3434;
+  --display:"Bricolage Grotesque","Trebuchet MS",sans-serif;
+  --body:"Figtree","Segoe UI",system-ui,sans-serif;
+  --r:20px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.4 var(--body);font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance}
+h1{font-size:28px} h2{font-size:20px} h3{font-size:16px}
+.app{display:grid;grid-template-columns:232px minmax(0,1fr);height:100%}
+.app.min{grid-template-columns:minmax(0,1fr)}
+.app.min nav{display:none}
+.work{display:flex;flex-direction:column;min-width:0;min-height:0;height:100%;overflow:hidden}
+.top{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;padding:12px 24px;border-bottom:2px solid var(--line);background:#fff}
+.tinfo,.who{display:flex;flex-direction:column;line-height:1.25}
+.tinfo span,.who span{color:var(--muted);font-size:13px}
+.tright{margin-left:auto;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.banner{background:#fdecc8;border:2px solid var(--warn);border-radius:var(--r);padding:16px 18px;display:flex;flex-wrap:wrap;gap:14px;align-items:center;justify-content:space-between;color:#5c3600}
+.banner>div:first-child{display:flex;flex-direction:column;gap:4px;font-size:17px;flex:1;min-width:240px}
+.banner .row>.btn{flex:none}
+.scale.off{opacity:.55}
+.chip:disabled,.prod:disabled{opacity:.5;cursor:not-allowed}
+nav{background:var(--soft);padding:16px;display:flex;flex-direction:column;gap:8px;overflow:auto}
+.brand{font:800 22px/1.1 var(--display);padding:6px 8px 12px}
+.brand small{display:block;font:500 13px var(--body);color:var(--muted);margin-top:4px}
+.nav{display:flex;align-items:center;min-height:56px;padding:0 16px;border:0;border-radius:16px;background:transparent;font-weight:600;font-size:17px;text-align:left}
+.nav:hover{background:#eae8f2}
+.nav.on{background:var(--ink);color:#fff}
+main{flex:1;min-height:0;overflow:auto;padding:24px;display:flex;flex-direction:column;gap:20px}
+.head{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.head p{margin:4px 0 0;color:var(--muted)}
+.btn{min-height:56px;padding:0 22px;border-radius:16px;border:2px solid transparent;font-weight:700;font-size:17px;background:var(--ink);color:#fff}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.line{background:#fff;color:var(--ink);border-color:var(--line)}
+.btn.white{background:#fff;color:var(--ink)}
+.btn.ghost{background:rgba(255,255,255,.18);color:#fff;border-color:rgba(255,255,255,.5)}
+.btn.sm{min-height:44px;font-size:15px;padding:0 16px;border-radius:12px}
+.btn.go{background:var(--ok);width:100%;min-height:68px;font-size:20px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.row>.btn{flex:1}
+.panel{background:#fff;border:2px solid var(--line);border-radius:var(--r);padding:18px;display:flex;flex-direction:column;gap:14px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:99px;font-size:13px;font-weight:600;background:var(--soft)}
+.pill.ok{background:#dff3e5;color:#156632}.pill.warn{background:#fdecc8;color:#7a4700}.pill.bad{background:#fbdcdc;color:#952020}
+.pill.onc{background:rgba(255,255,255,.22);color:#fff}
+.lbl{font-size:13px;font-weight:600;opacity:.85}
+.pdv{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(320px,1fr);gap:20px;align-items:start}
+.col{display:flex;flex-direction:column;gap:20px;min-width:0}
+.scales{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px}
+.scale{border-radius:var(--r);padding:20px;color:#fff;display:flex;flex-direction:column;gap:14px}
+.scale.comida{background:var(--comida)}.scale.acai{background:var(--acai)}
+.scale header{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center}
+.peso{background:rgba(0,0,0,.2);border-radius:16px;padding:12px 16px;display:flex;flex-direction:column}
+.peso strong{font:800 44px/1.05 var(--display)}
+.taras{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.taras .lbl{width:100%}
+.chip{min-height:44px;padding:0 14px;border-radius:12px;border:2px solid var(--line);background:#fff;font-weight:600;display:inline-flex;align-items:center;gap:6px}
+.chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.scale .chip{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.45);color:#fff}
+.scale .chip.on{background:#fff;color:var(--ink);border-color:#fff}
+.chip.inp input{width:58px;border:0;border-radius:8px;padding:6px;background:#fff;color:var(--ink)}
+.calc{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0}
+.calc dt{font-size:13px;opacity:.85}.calc dd{margin:0;font-weight:700;font-size:18px}
+.calc dd.big{font:800 26px/1.1 var(--display)}
+.prods{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.prod{min-height:84px;border:0;border-radius:16px;padding:12px 14px;color:#fff;text-align:left;display:flex;flex-direction:column;justify-content:space-between;gap:6px}
+.pf{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;width:100%;min-height:104px;border:0;border-radius:var(--r);background:var(--ink);color:#fff;padding:18px 22px;text-align:left}
+.pf small{display:block;font-size:13px;font-weight:600;opacity:.8}
+.pf b{display:block;font:800 30px/1.1 var(--display)}
+.pf strong{font:800 38px/1 var(--display);margin-left:auto}
+.pf em{font-style:normal;font-weight:700;font-size:17px;background:#fff;color:var(--ink);border-radius:14px;padding:16px 22px}
+.pf:disabled{opacity:.5;cursor:not-allowed}
+.venda .formas{grid-template-columns:repeat(4,1fr);gap:8px}
+.venda .forma{min-height:56px;font-size:15px}
+.fim{position:sticky;bottom:0;background:#fff;padding:8px 0 2px}
+.cart li.gh{background:transparent;padding:8px 4px 0;grid-template-columns:1fr auto;font-size:13px;color:var(--muted)}
+.mrow{display:grid;grid-template-columns:110px minmax(0,1fr) auto;gap:10px;align-items:center}
+.drow{display:grid;grid-template-columns:84px 130px minmax(0,1fr) auto;gap:10px;align-items:center;background:var(--soft);border-radius:14px;padding:10px}
+#modal .panel{max-height:100%;overflow:auto}
+tr.cont td{color:var(--muted)}
+@media (min-width:1101px) and (min-height:701px){
+  main.fixo{overflow:hidden}
+  main.fixo .pdv{flex:1;min-height:0;align-items:stretch}
+  main.fixo .pdv>.col{overflow:auto;min-height:0;padding:14px 14px 4px 0}
+  main.fixo .pdv>aside.col{padding:0}
+  main.fixo .venda{min-height:100%}
+  main.fixo .venda .lista{max-height:30vh;overflow:auto}
+}
+@media (max-width:720px){.drow{grid-template-columns:1fr 1fr}.mrow{grid-template-columns:1fr 1fr}}
+.scale,.pf,.prod{position:relative}
+.qt{position:absolute;top:-12px;right:-12px;min-width:44px;height:44px;padding:0 10px;border-radius:99px;background:#fff;color:var(--ink);border:3px solid var(--ink);display:grid;place-items:center;font:800 22px/1 var(--display)}
+.qt.z{color:var(--muted);border-color:var(--line)}
+.parcial{display:flex;align-items:center;gap:14px;padding:8px 18px;border-radius:16px;background:var(--soft);min-height:56px}
+.parcial.tem{background:var(--ok);color:#fff}
+.parcial span{font-weight:600;font-size:14px;line-height:1.2}
+.parcial strong{font:800 30px/1 var(--display)}
+@keyframes bump{0%{transform:scale(1)}40%{transform:scale(1.1)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:no-preference){.parcial.bump{animation:bump .35s ease-out}}
+.prod.prato{background:var(--ink)}
+.prod.doce{background:var(--doce)}.prod.bebida{background:var(--bebida)}
+.prod b{font-size:16px}.prod span{font-weight:600;opacity:.95}
+.cart{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.cart li{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;background:var(--soft);border-radius:14px;padding:10px 12px}
+.cart small{display:block;color:var(--muted)}
+.x{width:40px;height:40px;border-radius:10px;border:0;background:#fff;font-size:20px;font-weight:700;color:var(--bad)}
+.empty{color:var(--muted);background:var(--soft);border-radius:14px;padding:16px}
+.tot{display:flex;justify-content:space-between;align-items:baseline}
+.tot.g strong{font:800 36px/1 var(--display)}
+.formas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.forma{min-height:64px;border-radius:16px;border:3px solid transparent;color:#fff;font-weight:700;font-size:18px;opacity:.55}
+.forma.on,.forma.none{opacity:1}.forma.on{border-color:var(--ink)}
+.f-pix{background:var(--pix)}.f-credito{background:var(--credito)}.f-debito{background:var(--debito)}.f-dinheiro{background:var(--dinheiro)}
+.cash{display:flex;flex-direction:column;gap:10px}
+label{font-weight:600;font-size:14px}
+input[type=text],input[type=password],input[type=url],select,.field{min-height:52px;border:2px solid var(--line);border-radius:14px;padding:0 14px;background:#fff;width:100%}
+#recebido{font:800 28px var(--display);min-height:64px}
+.troco{border-radius:16px;padding:14px 16px;display:flex;justify-content:space-between;align-items:baseline;background:#dff3e5;color:#124f28}
+.troco.falta{background:#fdecc8;color:#6b3f00}
+.troco strong{font:800 34px/1 var(--display)}
+.note{background:var(--soft);border-radius:14px;padding:12px 14px;color:var(--muted);font-size:14px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
+.kpi{border-radius:var(--r);padding:16px;color:#fff;display:flex;flex-direction:column;gap:4px}
+.kpi strong{font:800 28px/1.1 var(--display)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;align-items:start}
+.chart{display:flex;gap:6px;align-items:flex-end;overflow-x:auto;padding-bottom:4px}
+.bar{flex:1;min-width:18px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:var(--muted)}
+.track{height:180px;width:100%;display:flex;align-items:flex-end;background:linear-gradient(to top,var(--line) 1px,transparent 1px) 0 0/100% 25%}
+.track i{display:block;width:100%;background:var(--comida);border-radius:8px 8px 0 0}
+.bar.today .track i{background:var(--ink)}
+.hb{display:grid;grid-template-columns:90px 1fr auto;gap:10px;align-items:center}
+.hb .t{height:16px;border-radius:99px;background:var(--soft);overflow:hidden}.hb .t i{display:block;height:100%;border-radius:99px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%}
+th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:13px;color:var(--muted)} td.n,th.n{text-align:right}
+.menu-cat{display:flex;flex-direction:column;gap:8px}
+.dish{display:flex;gap:10px;align-items:center;justify-content:space-between;background:var(--soft);border-radius:14px;padding:8px 8px 8px 14px}
+.dish.off span{text-decoration:line-through;color:var(--muted)}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end}
+.form>div{display:flex;flex-direction:column;gap:6px}
+.bubble{max-width:520px;border-radius:18px;padding:12px 14px;white-space:pre-wrap}
+.bubble.me{align-self:flex-end;background:#d9f7d0}.bubble.bot{background:var(--soft)}
+pre{margin:0;background:var(--ink);color:#f3f1fa;border-radius:14px;padding:14px;overflow-x:auto;font-size:13px}
+.sw{display:flex;gap:12px;align-items:center;justify-content:space-between;background:var(--soft);border-radius:14px;padding:10px 14px;font-weight:600}
+.sw input{width:26px;height:26px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:14px 20px;border-radius:16px;font-weight:600;max-width:calc(100% - 32px);display:none;z-index:20}
+#login,#modal{position:fixed;inset:0;background:var(--soft);display:none;place-items:center;padding:16px;z-index:10}
+#modal{background:rgba(28,26,39,.45);z-index:9}
+#login .panel,#modal .panel{width:min(440px,100%)}
+@media (max-width:1100px){.pdv{grid-template-columns:1fr}}
+@media (max-width:720px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  nav{position:fixed;top:0;bottom:0;left:0;width:240px;z-index:6;box-shadow:0 0 0 100vmax rgba(28,26,39,.35)}
+  main{padding:16px}.top{padding:10px 16px}
+}
+@media (prefers-reduced-motion:no-preference){.btn,.nav,.chip,.forma{transition:background .15s,opacity .15s}}
 
--- Resumo do período: totais por hora, dia ou mês e os outros itens vendidos.
--- p_gran: 'hour', 'day' ou 'month' (horário de Fortaleza).
-create or replace function public.financeiro_resumo(p_inicio timestamptz, p_fim timestamptz, p_gran text default 'day')
-returns jsonb
-language plpgsql stable security definer set search_path = public as $$
-declare
-  r jsonb;
-begin
-  if not public.eh_admin() then
-    raise exception 'Apenas administradores acessam o financeiro.';
-  end if;
-  if p_gran is null or p_gran not in ('hour', 'day', 'month') then
-    raise exception 'Agrupamento inválido.';
-  end if;
-  with v as (
-    select id, date_trunc(p_gran, criado_em at time zone 'America/Fortaleza') as b, total_centavos
-      from public.vendas
-     where criado_em >= p_inicio and criado_em < p_fim
-  ), i as (
-    select vi.venda_id,
-           coalesce(sum(vi.gramas) filter (where vi.grupo = 'comida'), 0) as gc,
-           coalesce(sum(vi.gramas) filter (where vi.grupo = 'acai'), 0)   as ga,
-           count(*) filter (where vi.grupo = 'produto')                    as it
-      from public.venda_itens vi join v on v.id = vi.venda_id
-     group by vi.venda_id
-  ), p as (
-    select vp.venda_id,
-           coalesce(sum(vp.valor_centavos) filter (where vp.forma = 'pix'), 0)      as pix,
-           coalesce(sum(vp.valor_centavos) filter (where vp.forma = 'credito'), 0)  as credito,
-           coalesce(sum(vp.valor_centavos) filter (where vp.forma = 'debito'), 0)   as debito,
-           coalesce(sum(vp.valor_centavos) filter (where vp.forma = 'dinheiro'), 0) as dinheiro
-      from public.venda_pagamentos vp join v on v.id = vp.venda_id
-     group by vp.venda_id
-  ), bk as (
-    select v.b, count(*) as n, sum(v.total_centavos) as fat,
-           sum(coalesce(i.gc, 0)) as gc, sum(coalesce(i.ga, 0)) as ga, sum(coalesce(i.it, 0)) as it,
-           sum(coalesce(p.pix, 0)) as pix, sum(coalesce(p.credito, 0)) as credito,
-           sum(coalesce(p.debito, 0)) as debito, sum(coalesce(p.dinheiro, 0)) as dinheiro
-      from v left join i on i.venda_id = v.id left join p on p.venda_id = v.id
-     group by v.b
-  ), pr as (
-    select vi.descricao as nome, count(*) as qtd, sum(vi.valor_centavos) as valor
-      from public.venda_itens vi join v on v.id = vi.venda_id
-     where vi.grupo = 'produto'
-     group by vi.descricao
-  )
-  select jsonb_build_object(
-    'buckets', coalesce((select jsonb_agg(jsonb_build_object(
-        'k', to_char(b, 'YYYY-MM-DD"T"HH24'), 'n', n, 'fat', fat, 'gCom', gc, 'gAcai', ga, 'itens', it,
-        'pix', pix, 'credito', credito, 'debito', debito, 'dinheiro', dinheiro) order by b) from bk), '[]'::jsonb),
-    'produtos', coalesce((select jsonb_agg(jsonb_build_object('nome', nome, 'qtd', qtd, 'valor', valor) order by qtd desc, nome) from pr), '[]'::jsonb))
-  into r;
-  return r;
-end $$;
+/* ---------- acabamento premium ---------- */
+:root{--shadow:0 1px 2px rgba(28,26,39,.05),0 10px 28px rgba(28,26,39,.07)}
+h1{letter-spacing:-.02em}h2{letter-spacing:-.01em}
+.app{grid-template-columns:224px minmax(0,1fr)}
+nav{background:var(--ink);color:#fff;padding:18px 14px;gap:4px}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 8px 18px;font-size:19px}
+.brand i{width:38px;height:38px;flex:none;border-radius:12px;background:linear-gradient(135deg,var(--comida),var(--acai));display:grid;place-items:center;font:800 18px var(--display);color:#fff}
+.brand small{color:rgba(255,255,255,.55);margin-top:2px;font-size:12px}
+.nav{gap:12px;min-height:50px;padding:0 14px;border-radius:13px;font-size:15.5px;color:rgba(255,255,255,.78)}
+.nav svg,.ib svg{width:20px;height:20px;flex:none}
+.nav:hover{background:rgba(255,255,255,.08);color:#fff}
+.nav.on{background:#fff;color:var(--ink);box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.nav:focus-visible{outline-color:#fff}
+.top{flex-wrap:nowrap;gap:12px;padding:10px 20px;min-height:68px;border-bottom:1px solid var(--line);box-shadow:0 4px 18px rgba(28,26,39,.05);position:relative;z-index:3}
+.ib{width:44px;height:44px;flex:none;border-radius:12px;border:1px solid var(--line);background:#fff;display:grid;place-items:center}
+.ib:hover,.user:hover{background:var(--soft)}
+.tinfo{flex:none}.tinfo b{font-size:14px;white-space:nowrap}.tinfo span{font-size:12px}
+.inds{display:flex;align-items:stretch;flex:none;border:1px solid var(--line);border-radius:14px;background:var(--soft);overflow:hidden}
+.ind{display:flex;align-items:center;gap:9px;padding:6px 13px;border-left:1px solid var(--line);line-height:1.15;white-space:nowrap}
+.ind:first-child{border-left:0}
+.ind small{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.ind b{font-size:13px}
+.dot{width:9px;height:9px;flex:none;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px rgba(31,138,68,.18)}
+.dot.warn{background:var(--warn);box-shadow:0 0 0 3px rgba(184,106,0,.2)}
+.dot.bad{background:var(--bad);box-shadow:0 0 0 3px rgba(207,52,52,.2)}
+.parcial{margin-left:auto;flex:none;min-height:48px;padding:6px 16px;border-radius:14px;border:1px solid var(--line);background:#fff;gap:12px}
+.parcial.tem{background:linear-gradient(135deg,#1f8a44,#147a58);border-color:transparent;box-shadow:0 8px 20px -8px rgba(31,138,68,.65)}
+.parcial span{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;opacity:.85;white-space:nowrap}
+.parcial strong{font-size:24px;white-space:nowrap}
+.tright{margin-left:0;gap:8px;flex-wrap:nowrap;flex:none}
+.top .btn.sm{min-height:44px;border-radius:12px;font-size:14px;padding:0 14px;border-width:1px;white-space:nowrap}
+.user{display:flex;align-items:center;gap:10px;height:44px;padding:0 14px 0 4px;border-radius:99px;border:1px solid var(--line);background:#fff;text-align:left}
+.av{width:36px;height:36px;flex:none;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font:700 13px var(--body)}
+.who b{font-size:13.5px;white-space:nowrap}.who span{font-size:11.5px;white-space:nowrap}
+.panel{border:1px solid var(--line);box-shadow:var(--shadow)}
+.btn{box-shadow:0 1px 2px rgba(28,26,39,.14)}
+.btn.line{border-width:1px;box-shadow:none}
+.btn.go{background:linear-gradient(135deg,#1f8a44,#147a58);box-shadow:0 10px 22px -10px rgba(31,138,68,.75)}
+.chip,input[type=text],input[type=password],input[type=url],select{border-width:1px}
+input:focus,select:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(28,26,39,.12)}
+.scale,.kpi,.pf,.prod,.forma{background-image:linear-gradient(155deg,rgba(255,255,255,.17),rgba(255,255,255,0) 45%,rgba(0,0,0,.13)) !important}
+.scale.comida{box-shadow:0 18px 30px -18px rgba(238,93,35,.8)}
+.scale.acai{box-shadow:0 18px 30px -18px rgba(106,43,147,.8)}
+.pf{box-shadow:0 18px 30px -18px rgba(28,26,39,.7)}
+.kpi{box-shadow:var(--shadow)}
+.pf,.prod.prato{background-color:#3b3e46}
+main>.note{background:#fff;border:1px solid var(--line)}
+.pdv>.col>*,.venda>*{flex-shrink:0}
+.kpi .lbl,.scale .lbl{letter-spacing:.05em;text-transform:uppercase;font-size:11.5px}
+th{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase}
+tbody tr:hover td{background:#faf9fd}
+.qt{border-width:2px;box-shadow:0 4px 10px rgba(28,26,39,.22)}
+.banner{border-width:1px;box-shadow:var(--shadow)}
+.head p{font-size:14.5px}
+#login{background:radial-gradient(1100px 600px at 15% 0%,#ece6f6,#f5f4f9)}
+#login .panel,#modal .panel{box-shadow:0 30px 60px -20px rgba(28,26,39,.35)}
+@media (max-width:1480px){.tinfo{display:none}}
+@media (max-width:980px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  nav{position:fixed;top:0;bottom:0;left:0;width:248px;z-index:6;box-shadow:0 0 0 100vmax rgba(28,26,39,.45)}
+  .top{flex-wrap:wrap;padding:10px 14px}
+  .inds{order:5;flex:1 1 100%;overflow-x:auto}
+  .parcial{flex:1 1 auto}
+  .who{display:none}.user{padding:0 4px}
+  main{padding:16px}
+}
+@media (max-width:560px){
+  h1{font-size:23px}
+  .top{gap:8px}.top .btn.sm{padding:0 10px;font-size:13px}
+  .parcial{padding:6px 12px}.parcial strong{font-size:20px}
+  .ind{padding:6px 10px}
+  .peso strong{font-size:36px}.calc dd.big{font-size:21px}.calc dd{font-size:16px}
+  .kpis{grid-template-columns:1fr 1fr}.kpi strong{font-size:22px}
+  .pf b{font-size:24px}.pf strong{font-size:30px}.pf em{flex:1 1 100%;text-align:center}
+  .panel{padding:14px}
+  .venda .formas{grid-template-columns:1fr 1fr}
+}
 
--- Lista de vendas do período, com filtros e paginação.
--- Devolve a quantidade e a soma de TODAS as vendas filtradas e uma página de linhas.
-create or replace function public.financeiro_vendas(
-  p_inicio timestamptz, p_fim timestamptz,
-  p_forma text default null, p_tipo text default null,
-  p_operador uuid default null, p_cliente uuid default null, p_sem_cliente boolean default false,
-  p_limite int default 200, p_pulo int default 0)
-returns jsonb
-language plpgsql stable security definer set search_path = public as $$
-declare
-  r jsonb;
-begin
-  if not public.eh_admin() then
-    raise exception 'Apenas administradores acessam o financeiro.';
-  end if;
-  with f as (
-    select v.*
-      from public.vendas v
-     where v.criado_em >= p_inicio and v.criado_em < p_fim
-       and (p_tipo is null or v.tipo = p_tipo)
-       and (p_operador is null or v.operador_id = p_operador)
-       and (p_cliente is null or v.cliente_id = p_cliente)
-       and (not coalesce(p_sem_cliente, false) or v.cliente_id is null)
-       and (p_forma is null or exists (select 1 from public.venda_pagamentos x where x.venda_id = v.id and x.forma = p_forma))
-  ), pg as (
-    select * from f
-     order by criado_em desc, numero desc
-     limit greatest(1, least(coalesce(p_limite, 200), 1000)) offset greatest(0, coalesce(p_pulo, 0))
-  )
-  select jsonb_build_object(
-    'qtd',  (select count(*) from f),
-    'soma', (select coalesce(sum(total_centavos), 0) from f),
-    'linhas', coalesce((select jsonb_agg(jsonb_build_object(
-        'id', pg.id, 'numero', pg.numero, 'criado_em', pg.criado_em,
-        'operador_id', pg.operador_id, 'operador', (select nome from public.perfis where id = pg.operador_id),
-        'cliente_id', pg.cliente_id, 'cliente', (select nome from public.clientes where id = pg.cliente_id),
-        'tipo', pg.tipo, 'total', pg.total_centavos, 'desconto', pg.desconto_centavos,
-        'itens', coalesce((select jsonb_agg(jsonb_build_object('descricao', i.descricao, 'gramas', i.gramas, 'valor', i.valor_centavos) order by i.grupo, i.descricao)
-                             from public.venda_itens i where i.venda_id = pg.id), '[]'::jsonb),
-        'pagamentos', coalesce((select jsonb_agg(jsonb_build_object('rotulo', x.rotulo, 'forma', x.forma, 'valor', x.valor_centavos) order by x.ordem)
-                                  from public.venda_pagamentos x where x.venda_id = pg.id), '[]'::jsonb)
-      ) order by pg.criado_em desc, pg.numero desc) from pg), '[]'::jsonb))
-  into r;
-  return r;
-end $$;
+/* ---------- perfil do operador ---------- */
+.top{border-top:5px solid var(--op,var(--ink))}
+.user{background:var(--op,var(--ink));border-color:transparent;color:#fff}
+.user:hover{background:var(--op,var(--ink));filter:brightness(1.12)}
+.user .who span{color:rgba(255,255,255,.82)}
+.user .av{background:rgba(255,255,255,.22)}
+.av{overflow:hidden}
+.av img{width:100%;height:100%;object-fit:cover;display:block}
+.av.mini{display:inline-grid;width:30px;height:30px;font-size:11px;vertical-align:middle;margin-right:8px}
+.av.grande{width:84px;height:84px;font-size:28px;background:rgba(255,255,255,.22);border:3px solid rgba(255,255,255,.7)}
+.perfil-topo{display:flex;align-items:center;gap:16px;padding:18px;border-radius:16px;color:#fff}
+.perfil-topo b{display:block;font:800 22px/1.15 var(--display)}
+.perfil-topo span span,.perfil-topo div span{font-size:13px;opacity:.85;overflow-wrap:anywhere}
+.cor{width:44px;height:44px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line)}
+.cor.on{box-shadow:0 0 0 3px var(--ink)}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav id="nav"></nav>
+  <div class="work"><header class="top" id="top"></header><main id="main"></main></div>
+</div>
+<div id="modal"></div>
+<div id="login"></div>
+<div id="toast" role="status"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+/* Conexão com o Supabase. A chave abaixo é a pública (publishable): pode ficar no código. */
+const SUPABASE_URL='https://ejcuctlbokkgtlwnggav.supabase.co';
+const SUPABASE_KEY='sb_publishable_chq2hf7J7jyFlYFFIqm_Pg_l_LwXvEx';
+const sb=(typeof window!=='undefined'&&window.supabase)?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const brl=c=>(c/100).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const num=c=>(c/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const kg=g=>(g/1000).toLocaleString('pt-BR',{minimumFractionDigits:3,maximumFractionDigits:3})+' kg';
+const kg1=g=>(g/1000).toLocaleString('pt-BR',{minimumFractionDigits:1,maximumFractionDigits:1})+' kg';
+const hhmm=d=>d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+function parseMoney(s){s=String(s||'').replace(/[^\d,.]/g,'');if(s.includes(','))s=s.replace(/\./g,'').replace(',','.');return Math.round((parseFloat(s)||0)*100)}
+function rng(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const hoje=new Date();
+const MES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const MESL=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DIA=['dom','seg','ter','qua','qui','sex','sáb'];
+const FORMAS={pix:'Pix',credito:'Crédito',debito:'Débito',dinheiro:'Dinheiro'};
+const CATS=['Pratos quentes','Guarnições','Saladas','Sobremesas','Açaí e acompanhamentos'];
+const VIEWS=[['caixa','Caixa'],['cardapio','Cardápio do dia'],['produtos','Produtos'],['financeiro','Financeiro'],['clientes','Clientes e pontos'],['usuarios','Usuários'],['balancas','Balanças'],['whatsapp','WhatsApp e n8n']];
+const SO_ADMIN=['produtos','financeiro','usuarios','balancas','whatsapp'];
 
--- Fluxos de caixa abertos no período (e os que ainda estão abertos), com os totais de cada um.
-create or replace function public.financeiro_fluxos(p_inicio timestamptz, p_fim timestamptz)
-returns jsonb
-language plpgsql stable security definer set search_path = public as $$
-declare
-  r jsonb;
-begin
-  if not public.eh_admin() then
-    raise exception 'Apenas administradores acessam o financeiro.';
-  end if;
-  select coalesce(jsonb_agg(jsonb_build_object(
-      'id', f.id, 'operador_id', f.operador_id, 'operador', (select nome from public.perfis where id = f.operador_id),
-      'numero', f.numero, 'dia', f.dia, 'aberto_em', f.aberto_em, 'fechado_em', f.fechado_em,
-      'fundo', f.fundo_centavos, 'contado', f.contado_centavos,
-      'n', (select count(*) from public.vendas v where v.fluxo_id = f.id),
-      'total', (select coalesce(sum(v.total_centavos), 0) from public.vendas v where v.fluxo_id = f.id),
-      'pix',      (select coalesce(sum(x.valor_centavos), 0) from public.venda_pagamentos x join public.vendas v on v.id = x.venda_id where v.fluxo_id = f.id and x.forma = 'pix'),
-      'credito',  (select coalesce(sum(x.valor_centavos), 0) from public.venda_pagamentos x join public.vendas v on v.id = x.venda_id where v.fluxo_id = f.id and x.forma = 'credito'),
-      'debito',   (select coalesce(sum(x.valor_centavos), 0) from public.venda_pagamentos x join public.vendas v on v.id = x.venda_id where v.fluxo_id = f.id and x.forma = 'debito'),
-      'dinheiro', (select coalesce(sum(x.valor_centavos), 0) from public.venda_pagamentos x join public.vendas v on v.id = x.venda_id where v.fluxo_id = f.id and x.forma = 'dinheiro')
-    ) order by f.aberto_em), '[]'::jsonb)
-    into r
-    from public.fluxos_caixa f
-   where (f.aberto_em >= p_inicio and f.aberto_em < p_fim)
-      or (f.fechado_em is null and f.aberto_em < p_fim);
-  return r;
-end $$;
+const S={
+  view:'caixa',logged:false,auth:'carregando',authTab:'entrar',authMsg:'',perfil:null,perfis:null,recuperando:false,
+  usuarios:[],pronto:false,enviando:false,
+  balancas:[],
+  produtos:[],
+  clientes:[],
+  regras:{base:'valor',pontosResgate:100,valorResgate:1000,minGrupo:50},
+  cardapio:[],
+  cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,
+  periodo:'diario',refData:'',fin:null,finSeq:0,finLimite:200,finCarregando:false,contado:{},fluxos:[],log:[],modal:null,menu:(typeof window!=='undefined'&&window.innerWidth>980),fundo:10000,
+  wa:{url:'',eventos:{resumo:true,cardapio:true,pontos:true,grupo:false}},
+  vendas:[]
+};
+S.user={id:'',nome:'',login:'',perfil:'Caixa'};
 
-revoke execute on function public.financeiro_resumo(timestamptz, timestamptz, text),
-  public.financeiro_vendas(timestamptz, timestamptz, text, text, uuid, uuid, boolean, int, int),
-  public.financeiro_fluxos(timestamptz, timestamptz) from public, anon;
-grant execute on function public.financeiro_resumo(timestamptz, timestamptz, text),
-  public.financeiro_vendas(timestamptz, timestamptz, text, text, uuid, uuid, boolean, int, int),
-  public.financeiro_fluxos(timestamptz, timestamptz) to authenticated;
+/* ---------- cálculos ---------- */
+const Z=()=>({fat:0,gCom:0,gAcai:0,n:0,itens:0,pix:0,credito:0,debito:0,dinheiro:0});
+const soma=(a,b)=>{for(const k in a)a[k]+=b[k];return a};
+function aggVendas(vs){const a=Z();vs.forEach(v=>{a.fat+=v.total;a.n++;v.pags.forEach(p=>a[p.forma]+=p.valor);v.itens.forEach(i=>{if(i.grupo==='produto')a.itens++;else if(i.grupo==='acai')a.gAcai+=i.g;else a.gCom+=i.g})});return a}
+function genDay(seed){const r=rng(seed),a=Z();a.n=88+Math.floor(r()*50);a.fat=a.n*(2900+Math.floor(r()*700));a.gCom=a.n*(430+Math.floor(r()*90));a.gAcai=Math.floor(a.n*.3*(320+r()*90));a.itens=Math.floor(a.n*(.3+r()*.12));a.pix=Math.round(a.fat*(.38+r()*.08));a.debito=Math.round(a.fat*(.2+r()*.06));a.credito=Math.round(a.fat*(.17+r()*.06));a.dinheiro=a.fat-a.pix-a.debito-a.credito;return a}
+const dkey=d=>d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
+const aggDia=d=>dkey(d)===dkey(hoje)?aggVendas(S.vendas):genDay(dkey(d));
+function aggMes(y,m){const a=Z(),atual=y===hoje.getFullYear()&&m===hoje.getMonth(),ult=atual?hoje.getDate():new Date(y,m+1,0).getDate();for(let d=1;d<=ult;d++)soma(a,aggDia(new Date(y,m,d)));return a}
+function buckets(p){
+  const y=hoje.getFullYear(),m=hoje.getMonth(),d=hoje.getDate(),b=[];
+  if(p==='diario'){const hs=S.vendas.map(v=>v.ts.getHours());if(!hs.length)return b;for(let h=Math.min(...hs);h<=Math.max(...hs);h++)b.push({l:h+'h',a:aggVendas(S.vendas.filter(v=>v.ts.getHours()===h))})}
+  if(p==='semanal')for(let i=6;i>=0;i--){const x=new Date(y,m,d-i);b.push({l:DIA[x.getDay()]+' '+x.getDate(),a:aggDia(x),hoje:i===0})}
+  if(p==='mensal')for(let i=1;i<=d;i++)b.push({l:String(i),a:aggDia(new Date(y,m,i)),hoje:i===d});
+  if(p==='semestral')for(let i=5;i>=0;i--){const x=new Date(y,m-i,1);b.push({l:MES[x.getMonth()],a:aggMes(x.getFullYear(),x.getMonth()),hoje:i===0})}
+  if(p==='anual')for(let i=0;i<=m;i++)b.push({l:MES[i],a:aggMes(y,i),hoje:i===m});
+  return b;
+}
+const cli=()=>S.clientes.find(c=>c.id===S.clienteId);
+function totais(){const sub=S.cart.reduce((a,i)=>a+i.valor,0),c=cli(),pode=!!c&&c.pontos>=S.regras.pontosResgate&&sub>0,desc=S.resgate&&pode?Math.min(S.regras.valorResgate,sub):0;return{sub,desc,total:sub-desc,pode,c}}
+const reg=()=>{};
+const deQuem=id=>id===S.user.id?'o próprio caixa':'o caixa de '+S.usuarios.find(u=>u.id===id).nome;
+function regFech(){}
+const qtd=id=>S.cart.filter(i=>i.src===id).length;
+const badge=(id,soSe)=>{const n=qtd(id);return soSe&&!n?'':`<span class="qt ${n?'':'z'}" aria-label="${n} na venda atual">${n}</span>`};
+const fxDe=uid=>S.fluxos.filter(f=>f.op===uid).sort((a,b)=>a.n-b.n);
+const fxAberto=uid=>S.fluxos.find(f=>f.op===uid&&!f.fechamento);
+const somaPags=()=>S.pags?S.pags.linhas.reduce((a,l)=>a+l.valor,0):0;
+const podeFinalizar=()=>{const t=totais();if(!fxAberto(S.user.id)||!S.cart.length)return false;return S.pags?somaPags()===t.total:!!S.forma&&(S.forma!=='dinheiro'||parseMoney(S.recebido)>=t.total)};
+const GR=[['prato','Pratos'],['comida','Comida a quilo'],['acai','Açaí'],['doce','Sobremesas'],['bebida','Bebidas']];
+const gk=i=>i.grupo==='produto'?(i.cat||'doce'):i.grupo;
+function listaCart(){
+  if(!S.cart.length)return `<div class="empty">Coloque o prato na balança ou toque em um item para começar.</div>`;
+  return `<ul class="cart">${GR.map(([k,n])=>{const its=S.cart.map((i,idx)=>({i,idx})).filter(x=>gk(x.i)===k);if(!its.length)return '';
+    return `<li class="gh"><b>${n} · ${its.length}</b><b>${brl(its.reduce((a,x)=>a+x.i.valor,0))}</b></li>`+its.map(({i,idx})=>`<li><div><b>${esc(i.desc)}</b><small>${i.g?kg(i.g)+' × '+brl(i.precoKg)+'/kg':'1 unidade'}</small></div><b>${brl(i.valor)}</b><button class="x" data-a="rmItem" data-k="${idx}" aria-label="Remover ${esc(i.desc)}">×</button></li>`).join('')}).join('')}</ul>`;
+}
+function pagsBox(){const P=S.pags;return `<div class="note" style="color:var(--ink)"><b>${P.tipo==='dividida'?'Conta dividida em '+P.linhas.length:'Pagamento misto'}</b>${P.linhas.map(l=>`<div class="tot"><span>${l.rot} · ${FORMAS[l.forma]}</span><b>${brl(l.valor)}</b></div>`).join('')}${P.troco?`<div class="tot"><span>Troco do dinheiro</span><b>${brl(P.troco)}</b></div>`:''}<div class="row" style="margin-top:8px"><button class="chip" data-a="${P.tipo==='dividida'?'abrirDividir':'abrirMisto'}">Alterar</button><button class="chip" data-a="limparPags">Desfazer</button></div></div>`}
+function mistoInfo(){const t=totais().total,s=Object.keys(FORMAS).reduce((a,f)=>a+parseMoney(S.mx[f]),0),din=parseMoney(S.mx.dinheiro),rec=parseMoney(S.mx.rec);return{t,s,falta:t-s,troco:din&&rec>din?rec-din:0,ok:t>0&&s===t}}
+function dvInfo(){const t=totais().total,s=S.dv.reduce((a,d)=>a+parseMoney(d.valor),0);return{t,s,falta:t-s,ok:t>0&&s===t&&S.dv.every(d=>d.forma&&parseMoney(d.valor)>0)}}
+function statusBox(m,semForma){return m.falta>0?`<div class="troco falta"><span>Falta distribuir</span><strong>${brl(m.falta)}</strong></div>`:m.falta<0?`<div class="troco falta"><span>Passou do total em</span><strong>${brl(-m.falta)}</strong></div>`:semForma?`<div class="troco falta"><span>Escolha a forma de cada pessoa</span><strong>${brl(m.t)}</strong></div>`:`<div class="troco"><span>Valores conferem</span><strong>${brl(m.t)}</strong></div>`}
+function dvIgual(){const t=totais().total,n=S.dv.length,b=Math.floor(t/n);S.dv.forEach((d,k)=>d.valor=num(k===n-1?t-b*(n-1):b))}
+function modalHtml(fa){
+  if(S.modal==='conta'){const c=S.conta||{};return `<div class="panel" style="width:min(480px,100%)"><h1>Meu perfil</h1>
+    <div class="perfil-topo" style="background:${corOp(c)}"><span class="av grande">${avHtml(c)}</span><div><b>${esc(c.nome||'')}</b><span>${esc(S.perfil?S.perfil.login:'')} · ${S.user.perfil}</span></div></div>
+    <div class="row"><label class="btn line sm" for="cs-foto" style="display:inline-flex;align-items:center;cursor:pointer;flex:1;justify-content:center">Trocar foto</label><input type="file" id="cs-foto" accept="image/*" data-c="avatarArq" hidden>${c.avatar?`<button class="btn line sm" data-a="avatarTirar">Remover foto</button>`:''}</div>
+    <div><span class="lbl">Cor de fundo do operador</span><div class="row" style="margin-top:8px">${CORES.map(x=>`<button class="cor ${corOp(c)===x?'on':''}" data-a="contaCor" data-cor="${x}" style="background:${x}" aria-label="Cor ${x}"></button>`).join('')}</div></div>
+    <div><label for="cs-nome">Nome que aparece no sistema</label><input type="text" id="cs-nome" value="${esc(c.nome||'')}" maxlength="60"></div>
+    <button class="btn" data-a="salvarPerfil">Salvar perfil</button>
+    <div><label for="cs-nova">Nova senha (mínimo 8 caracteres)</label><input type="password" id="cs-nova" autocomplete="new-password" value="${esc(c.senha||'')}"></div>
+    <div class="row"><button class="btn line" data-a="salvarSenha">Trocar senha</button><button class="btn line" data-a="cancelar">Fechar</button></div>
+    <button class="btn line sm" data-a="sair">Sair do sistema</button></div>`}
+  if(S.modal==='fechar'){const a=aggVendas(S.vendas.filter(v=>v.fx===fa.id));return `<div class="panel"><h1>Fechar caixa</h1><p style="margin:0">${esc(S.user.nome)} · Fluxo ${fa.n}, aberto às ${hhmm(fa.abertura)} · ${a.n} vendas · ${brl(a.fat)}</p><div><label for="md-contado">Dinheiro contado na gaveta</label><input type="text" id="md-contado" inputmode="numeric" data-m placeholder="0,00"></div><div class="note">Depois de fechar, a pesagem fica desabilitada para este operador até o caixa ser reaberto.</div><div class="row"><button class="btn line" data-a="cancelar">Cancelar</button><button class="btn" data-a="confirmarFechar">Fechar caixa</button></div></div>`}
+  if(S.modal==='misto'){const m=mistoInfo();return `<div class="panel" style="width:min(560px,100%)"><h1>Pagamento misto</h1><p style="margin:0">Total da venda: <b>${brl(m.t)}</b>. Digite quanto vai em cada forma.</p>
+    ${Object.keys(FORMAS).map(f=>`<div class="mrow"><span class="pill" style="background:var(--${f});color:#fff;justify-content:center;min-height:44px">${FORMAS[f]}</span><input type="text" id="mx-${f}" aria-label="Valor em ${FORMAS[f]}" data-i="mx" data-f="${f}" inputmode="numeric" data-m value="${esc(S.mx[f])}" placeholder="0,00"><button class="chip" data-a="mxResto" data-f="${f}">Restante</button></div>`).join('')}
+    <div class="mrow"><label for="mx-rec">Recebido em dinheiro</label><input type="text" id="mx-rec" data-i="mx" data-f="rec" inputmode="numeric" data-m value="${esc(S.mx.rec)}" placeholder="opcional"><b id="mx-troco">${m.troco?'Troco '+brl(m.troco):''}</b></div>
+    <div id="mx-status">${statusBox(m)}</div>
+    <div class="row"><button class="btn line" data-a="cancelar">Cancelar</button><button class="btn" id="mx-ok" data-a="confirmarMisto" ${m.ok?'':'disabled'}>Confirmar</button></div></div>`}
+  if(S.modal==='dividir'){const m=dvInfo();return `<div class="panel" style="width:min(680px,100%)"><h1>Dividir conta</h1><p style="margin:0">Total da venda: <b>${brl(m.t)}</b>. Cada pessoa paga a sua parte, na forma que preferir.</p>
+    ${S.dv.map((d,k)=>`<div class="drow"><b>Pessoa ${k+1}</b><input type="text" id="dv-${k}" aria-label="Valor da pessoa ${k+1}" data-i="dv" data-k="${k}" inputmode="numeric" data-m value="${esc(d.valor)}" placeholder="0,00"><div class="row">${Object.keys(FORMAS).map(f=>`<button class="chip ${d.forma===f?'on':''}" data-a="dvForma" data-k="${k}" data-f="${f}">${FORMAS[f]}</button>`).join('')}</div>${S.dv.length>2?`<button class="x" data-a="dvMenos" data-k="${k}" aria-label="Remover pessoa ${k+1}">×</button>`:'<span></span>'}</div>`).join('')}
+    <div class="row"><button class="chip" data-a="dvMais" ${S.dv.length>=6?'disabled':''}>Adicionar pessoa</button><button class="chip" data-a="dvIgualar">Dividir igualmente</button></div>
+    <div id="dv-status">${statusBox(m,!m.falta&&!m.ok)}</div>
+    <div class="row"><button class="btn line" data-a="cancelar">Cancelar</button><button class="btn" id="dv-ok" data-a="confirmarDiv" ${m.ok?'':'disabled'}>Confirmar</button></div></div>`}
+  return '';
+}
+const nomeCli=id=>{const c=S.clientes.find(x=>x.id===id);return c?c.nome:''};
+const nomeOp=id=>(S.usuarios.find(u=>u.id===id)||{nome:''}).nome;
+const TIPOS={simples:'Comum',dividida:'Conta dividida',misto:'Pagamento misto'};
+const filtroAtivo=()=>Object.values(S.fil).some(Boolean);
+const CORES=['#1c1a27','#d44c14','#531f78','#0c9c8b','#2a66dd','#27924a','#d83f77','#b86a00'];
+const corOp=u=>u&&/^#[0-9a-f]{6}$/i.test(u.cor||'')?u.cor:CORES[0];
+const iniciais=n=>String(n||'').trim().split(/\s+/).map(x=>x[0]||'').join('').slice(0,2).toUpperCase();
+const avHtml=u=>u&&u.avatar?`<img src="${esc(u.avatar)}" alt="">`:esc(iniciais(u&&u.nome));
+const itensTxt=v=>v.itens.map(i=>i.desc+(i.g?' '+kg(i.g):'')).join(', ');
+const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+S.refData=ymd(new Date());
+function refData(){const x=(S.refData||ymd(new Date())).split('-').map(Number);return new Date(x[0],x[1]-1,x[2])}
+function intervalo(){
+  const r=refData(),y=r.getFullYear(),m=r.getMonth(),d=r.getDate(),P=S.periodo;
+  if(P==='diario')return{ini:new Date(y,m,d),fim:new Date(y,m,d+1),gran:'hour',por:'hora',t:r.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'})};
+  if(P==='semanal')return{ini:new Date(y,m,d-6),fim:new Date(y,m,d+1),gran:'day',por:'dia',t:'7 dias até '+r.toLocaleDateString('pt-BR')};
+  if(P==='mensal')return{ini:new Date(y,m,1),fim:new Date(y,m+1,1),gran:'day',por:'dia',t:MESL[m]+' de '+y};
+  if(P==='semestral')return{ini:new Date(y,m-5,1),fim:new Date(y,m+1,1),gran:'month',por:'mês',t:'6 meses até '+MESL[m].toLowerCase()+' de '+y};
+  return{ini:new Date(y,0,1),fim:new Date(y+1,0,1),gran:'month',por:'mês',t:'Ano de '+y};
+}
+const filtrosRpc=()=>({p_forma:S.fil.forma||null,p_tipo:S.fil.tipo||null,p_operador:S.fil.op||null,p_cliente:S.fil.cli&&S.fil.cli!=='_sem'?S.fil.cli:null,p_sem_cliente:S.fil.cli==='_sem'});
+const mapVenda=l=>({n:l.numero,v:{id:l.id,ts:new Date(l.criado_em),op:l.operador_id,opNome:l.operador||'',cli:l.cliente_id||'',cliNome:l.cliente||'',tipo:l.tipo,total:l.total,
+  itens:(l.itens||[]).map(i=>({desc:i.descricao,g:i.gramas||0,valor:i.valor})),pags:(l.pagamentos||[]).map(x=>({rot:x.rotulo,forma:x.forma,valor:x.valor}))}});
+async function carregarFin(){
+  if(!sb||!isAdmin())return;
+  const I=intervalo(),seq=++S.finSeq,args={p_inicio:I.ini.toISOString(),p_fim:I.fim.toISOString()};
+  S.finCarregando=true;render();
+  const [rs,vs,fx,at]=await Promise.all([
+    q(sb.rpc('financeiro_resumo',Object.assign({p_gran:I.gran},args)),'Resumo'),
+    q(sb.rpc('financeiro_vendas',Object.assign({p_limite:S.finLimite,p_pulo:0},args,filtrosRpc())),'Vendas'),
+    q(sb.rpc('financeiro_fluxos',args),'Fluxos de caixa'),
+    q(sb.from('atividades').select('*').gte('criado_em',args.p_inicio).lt('criado_em',args.p_fim).order('id',{ascending:false}).limit(300),'Registro de atividades')]);
+  if(seq!==S.finSeq)return;
+  S.finCarregando=false;
+  if(!rs||rs===true||!vs||vs===true)return render();
+  const N=x=>({fat:Number(x.fat),gCom:Number(x.gCom),gAcai:Number(x.gAcai),n:Number(x.n),itens:Number(x.itens),pix:Number(x.pix),credito:Number(x.credito),debito:Number(x.debito),dinheiro:Number(x.dinheiro)});
+  const mp={};rs.buckets.forEach(x=>mp[x.k]=N(x));
+  const hj=new Date(),kk=(d,hh)=>ymd(d)+'T'+String(hh).padStart(2,'0');let bs=[];
+  if(I.gran==='hour'){const hs=rs.buckets.map(x=>+x.k.slice(11));if(hs.length)for(let x=Math.min(...hs);x<=Math.max(...hs);x++)bs.push({l:x+'h',a:mp[kk(I.ini,x)]||Z()})}
+  else if(I.gran==='day')for(let d=new Date(I.ini);d<I.fim;d.setDate(d.getDate()+1))bs.push({l:S.periodo==='semanal'?DIA[d.getDay()]+' '+d.getDate():String(d.getDate()),a:mp[kk(d,0)]||Z(),hoje:ymd(d)===ymd(hj)});
+  else for(let d=new Date(I.ini);d<I.fim;d.setMonth(d.getMonth()+1))bs.push({l:MES[d.getMonth()]+(S.periodo==='semestral'?'/'+String(d.getFullYear()).slice(2):''),a:mp[kk(d,0)]||Z(),hoje:d.getMonth()===hj.getMonth()&&d.getFullYear()===hj.getFullYear()});
+  S.fin={I,buckets:bs,total:rs.buckets.reduce((a,x)=>soma(a,N(x)),Z()),produtos:rs.produtos||[],
+    vendas:{qtd:Number(vs.qtd),soma:Number(vs.soma),linhas:(vs.linhas||[]).map(mapVenda)},
+    fluxos:Array.isArray(fx)?fx:[],
+    log:Array.isArray(at)?at.map(a=>({ts:new Date(a.criado_em),quem:nomeOp(a.usuario_id)||'Sistema',txt:a.texto})):[]};
+  render();
+}
+const dataHora=d=>S.periodo==='diario'?hhmm(d):d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+hhmm(d);
+function vendasFin(){
+  const V=S.fin.vendas,ativo=filtroAtivo(),F=S.fil;
+  const sel=(k,rot,ops)=>`<div><label for="fl-${k}">${rot}</label><select id="fl-${k}" data-c="fil" data-k="${k}"><option value="">Todos</option>${ops.map(([v,t])=>`<option value="${v}" ${F[k]===v?'selected':''}>${esc(t)}</option>`).join('')}</select></div>`;
+  return `<section class="panel"><div class="head"><h2>Vendas do período</h2><span class="pill">${V.qtd.toLocaleString('pt-BR')} ${V.qtd===1?'venda':'vendas'}${ativo?' com esses filtros':''} · ${brl(V.soma)}</span></div>
+  <div class="form">${sel('forma','Forma de pagamento',Object.entries(FORMAS))}${sel('tipo','Tipo de pagamento',Object.entries(TIPOS))}${sel('op','Operador',S.usuarios.map(u=>[u.id,u.nome]))}${sel('cli','Cliente',[['_sem','Sem cliente identificado']].concat(S.clientes.map(c=>[c.id,c.nome])))}<button class="btn line" data-a="limparFil" ${ativo?'':'disabled'}>Limpar filtros</button></div>
+  <div class="tw"><table><thead><tr><th>Venda</th><th>${S.periodo==='diario'?'Hora':'Data e hora'}</th><th>Operador</th><th>Cliente</th><th>Itens</th><th>Parte</th><th>Forma</th><th class="n">Valor pago</th><th class="n">Total da venda</th></tr></thead><tbody>
+    ${V.linhas.map(({v,n})=>v.pags.map((p,k)=>{const rs=`rowspan="${v.pags.length}"`;return `<tr ${k?'class="cont"':''}>${k?'':`<td ${rs}><b>#${n}</b>${v.tipo==='simples'?'':` <span class="pill warn">${TIPOS[v.tipo]}</span>`}</td><td ${rs}>${dataHora(v.ts)}</td><td ${rs}>${esc(v.opNome)}</td><td ${rs}>${esc(v.cliNome)}</td><td ${rs} style="white-space:normal;min-width:180px">${esc(itensTxt(v))}</td>`}<td>${esc(p.rot)||'Única'}</td><td><span class="pill" style="background:var(--${p.forma});color:#fff">${FORMAS[p.forma]}</span></td><td class="n">${brl(p.valor)}</td>${k?'':`<td class="n" ${rs}><b>${brl(v.total)}</b></td>`}</tr>`}).join('')).join('')||'<tr><td colspan="9">Nenhuma venda neste período'+(ativo?' com esses filtros':'')+'.</td></tr>'}
+  </tbody></table></div>${V.linhas.length<V.qtd?`<button class="btn line" data-a="finMais">Mostrar mais (${V.linhas.length.toLocaleString('pt-BR')} de ${V.qtd.toLocaleString('pt-BR')})</button>`:''}</section>`;
+}
+function fluxosFin(){
+  const fs=S.fin.fluxos;
+  return `<section class="panel"><h2>Fluxo de caixa do período</h2><div class="tw"><table><thead><tr><th>Operador</th><th>Dia</th><th>Fluxo</th><th>Abertura</th><th>Fechamento</th><th class="n">Vendas</th><th class="n">Pix</th><th class="n">Crédito</th><th class="n">Débito</th><th class="n">Dinheiro</th><th class="n">Total</th><th class="n">Gaveta esperada</th><th>Dinheiro contado</th><th class="n">Diferença</th><th></th></tr></thead><tbody>
+    ${fs.map(f=>{const esp=f.fundo+f.dinheiro,aberto=!f.fechado_em,ct=S.contado[f.id],cv=aberto?(ct?parseMoney(ct):null):f.contado,dif=cv===null?null:cv-esp,ab=new Date(f.aberto_em);
+      return `<tr><td><b>${esc(f.operador||'')}</b></td><td>${ab.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</td><td><span class="pill ${aberto?'ok':''}">Fluxo ${f.numero}</span></td><td>${hhmm(ab)}</td><td>${aberto?'Aberto':hhmm(new Date(f.fechado_em))}</td>
+      <td class="n">${f.n}</td><td class="n">${brl(f.pix)}</td><td class="n">${brl(f.credito)}</td><td class="n">${brl(f.debito)}</td><td class="n">${brl(f.dinheiro)}</td><td class="n"><b>${brl(f.total)}</b></td><td class="n">${brl(esp)}</td>
+      <td>${aberto?`<input type="text" id="ct-${f.id}" aria-label="Dinheiro contado de ${esc(f.operador||'')}, fluxo ${f.numero}" data-c="contado" data-id="${f.id}" inputmode="numeric" data-m value="${esc(ct||'')}" placeholder="0,00" style="min-width:110px">`:brl(f.contado)}</td>
+      <td class="n">${dif===null?'':`<span class="pill ${dif===0?'ok':dif>0?'warn':'bad'}">${dif>0?'+':dif<0?'−':''}${brl(Math.abs(dif))}</span>`}</td>
+      <td>${aberto?`<button class="btn sm" data-a="fechar" data-id="${f.id}" data-n="${f.numero}" ${ct?'':'disabled'}>Fechar caixa</button>`:'<span class="pill">Fechado</span>'}</td></tr>`}).join('')||'<tr><td colspan="15">Nenhum caixa aberto neste período.</td></tr>'}
+  </tbody></table></div><div class="note">Cada fluxo é uma abertura de caixa do operador: ao reabrir, começa o fluxo seguinte. Gaveta esperada = fundo de troco + vendas em dinheiro do fluxo.</div></section>`;
+}
+async function exportPdf(){
+  if(typeof window==='undefined'||!window.jspdf||!window.jspdf.jsPDF)return toast('O gerador de PDF não carregou. Verifique a internet e tente de novo.');
+  if(!S.fin)return toast('Aguarde o financeiro carregar e tente de novo.');
+  toast('Gerando o PDF…');
+  const Fn=S.fin,I=Fn.I,a=Fn.total,b=Fn.buckets,LIM=3000;
+  let linhas=Fn.vendas.linhas.slice();
+  while(linhas.length<Fn.vendas.qtd&&linhas.length<LIM){
+    const r=await q(sb.rpc('financeiro_vendas',Object.assign({p_inicio:I.ini.toISOString(),p_fim:I.fim.toISOString(),p_limite:1000,p_pulo:linhas.length},filtrosRpc())),'Vendas');
+    if(!r||r===true||!r.linhas||!r.linhas.length)break;linhas=linhas.concat(r.linhas.map(mapVenda));
+  }
+  const doc=new window.jspdf.jsPDF({orientation:'landscape',unit:'pt',format:'a4'}),X=s=>String(s).replace(/ /g,' ').replace(/−/g,'-').replace(/—/g,'-');
+  const TT={diario:'Diário',semanal:'Semanal',mensal:'Mensal',semestral:'Semestral',anual:'Anual'},W=doc.internal.pageSize.getWidth(),H=doc.internal.pageSize.getHeight(),pct=v=>(a.fat?Math.round(v/a.fat*100):0)+'%';
+  doc.setFont('helvetica','bold');doc.setFontSize(20);doc.setTextColor(28,26,39);doc.text('Relatório financeiro',40,48);
+  doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(103,99,120);
+  doc.text(X(TT[S.periodo]+' · '+I.t+'  |  gerado em '+new Date().toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})+' por '+S.user.nome),40,66);
+  let y=86;
+  const tab=(titulo,head,body)=>{doc.autoTable({startY:y,margin:{left:40,right:40,bottom:44},head:[[{content:X(titulo),colSpan:head.length,styles:{fillColor:[255,255,255],textColor:[28,26,39],fontSize:12,cellPadding:{top:2,bottom:6,left:0,right:0}}}],head.map(X)],body:body.map(r=>r.map(X)),styles:{font:'helvetica',fontSize:9,cellPadding:5,textColor:[28,26,39],lineColor:[230,227,238],lineWidth:.5},headStyles:{fillColor:[28,26,39],textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[247,246,251]}});y=doc.lastAutoTable.finalY+22};
+  tab('Resumo',['Faturamento','Comida vendida','Açaí vendido','Vendas','Ticket médio','Outros itens'],[[brl(a.fat),kg1(a.gCom),kg1(a.gAcai),String(a.n),brl(a.n?Math.round(a.fat/a.n):0),a.itens+' un.']]);
+  tab('Por forma de pagamento',['Forma','Valor','Participação'],Object.keys(FORMAS).map(f=>[FORMAS[f],brl(a[f]),pct(a[f])]));
+  if(b.length)tab('Por '+I.por,['Período','Vendas','Comida','Açaí','Pix','Crédito','Débito','Dinheiro','Faturamento'],b.map(x=>[x.l,String(x.a.n),kg1(x.a.gCom),kg1(x.a.gAcai),brl(x.a.pix),brl(x.a.credito),brl(x.a.debito),brl(x.a.dinheiro),brl(x.a.fat)]));
+  if(Fn.produtos.length)tab('Outros itens vendidos',['Item','Quantidade','Valor'],Fn.produtos.map(x=>[x.nome,String(x.qtd),brl(Number(x.valor))]));
+  const F=S.fil,fs=[F.forma&&'forma '+FORMAS[F.forma],F.tipo&&'tipo '+TIPOS[F.tipo],F.op&&'operador '+nomeOp(F.op),F.cli&&'cliente '+(F.cli==='_sem'?'não identificado':nomeCli(F.cli))].filter(Boolean);
+  tab('Vendas do período ('+Fn.vendas.qtd+' · '+brl(Fn.vendas.soma)+')'+(fs.length?' · filtros: '+fs.join(', '):'')+(linhas.length<Fn.vendas.qtd?' · mostrando as '+linhas.length+' mais recentes':''),['Venda','Data e hora','Operador','Cliente','Itens','Parte','Forma','Valor pago','Total'],
+    [].concat(...linhas.map(({v,n})=>v.pags.map((p,k)=>[k?'':'#'+n+(v.tipo==='simples'?'':' ('+TIPOS[v.tipo]+')'),k?'':v.ts.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+hhmm(v.ts),k?'':v.opNome,k?'':v.cliNome,k?'':itensTxt(v),p.rot||'Única',FORMAS[p.forma],brl(p.valor),k?'':brl(v.total)]))));
+  if(Fn.fluxos.length)tab('Fluxo de caixa do período',['Operador','Dia','Fluxo','Abertura','Fechamento','Vendas','Dinheiro','Total','Gaveta esperada','Contado','Diferença'],
+    Fn.fluxos.map(f=>{const esp=f.fundo+f.dinheiro,dif=f.fechado_em?f.contado-esp:null,ab=new Date(f.aberto_em);return [f.operador||'',ab.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}),'Fluxo '+f.numero,hhmm(ab),f.fechado_em?hhmm(new Date(f.fechado_em)):'Aberto',String(f.n),brl(f.dinheiro),brl(f.total),brl(esp),f.fechado_em?brl(f.contado):'',dif===null?'':(dif>0?'+':dif<0?'-':'')+brl(Math.abs(dif))]}));
+  const np=doc.getNumberOfPages();
+  for(let i=1;i<=np;i++){doc.setPage(i);doc.setFontSize(9);doc.setTextColor(103,99,120);doc.text('Caixa do Restaurante',40,H-20);doc.text('Página '+i+' de '+np,W-40,H-20,{align:'right'})}
+  const blob=doc.output('blob'),nome='relatorio-'+S.periodo+'-'+S.refData+'.pdf';
+  try{const u=URL.createObjectURL(blob),l=document.createElement('a');l.href=u;l.download=nome;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),8000);toast('PDF gerado: '+nome)}catch(_){toast('Não foi possível baixar o PDF neste navegador.')}
+}
+const ICO={menu:'M4 7h16M4 12h16M4 17h16',caixa:'M4 8h16v11H4zM8 8V5h8v3M8 13h8M8 16h4',cardapio:'M6 4h12v16H6zM9 8h6M9 12h6M9 16h3',produtos:'M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8',financeiro:'M5 20V11M11 20V5M17 20v-6M3 20h18',clientes:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 20c0-3.5 3.6-6 8-6s8 2.5 8 6',usuarios:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',balancas:'M12 4v16M7 20h10M5 8h14M5 8l-2.5 6a2.5 2.5 0 005 0zM19 8l-2.5 6a2.5 2.5 0 005 0z',whatsapp:'M4 20l1.4-4.2A8 8 0 1112 20a8 8 0 01-3.6-.9z'};
+const ico=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICO[k]}"/></svg>`;
+const isAdmin=()=>S.user.perfil==='Administrador';
 
+/* ---------- telas ---------- */
+function scaleCard(s){
+  const liq=Math.max(0,s.bruto-s.tara),valor=Math.round(liq*s.precoKg/1000),custom=!s.taras.some(t=>t.g===s.tara),off=!fxAberto(S.user.id),dis=off?'disabled':'';
+  return `<article class="scale ${s.grupo} ${off?'off':''}">
+    ${badge(s.id)}<header><h2>${esc(s.nome)}</h2><span class="pill onc">${s.conectada?'Conectada':'Desconectada'} · ${esc(s.marca)}</span></header>
+    <div class="peso"><span class="lbl">Peso na balança</span><strong>${kg(s.bruto)}</strong></div>
+    <div class="taras"><span class="lbl">Tara (peso do recipiente)</span>
+      ${s.taras.map(t=>`<button class="chip ${s.tara===t.g?'on':''}" data-a="tara" data-id="${s.id}" data-g="${t.g}" ${dis}>${esc(t.n)}${t.g?' '+t.g+' g':''}</button>`).join('')}
+      <label class="chip inp ${custom?'on':''}" for="tara-${s.id}">Outra <input id="tara-${s.id}" data-c="taraManual" data-id="${s.id}" inputmode="numeric" value="${custom?s.tara:''}" placeholder="g" ${dis}></label>
+    </div>
+    <dl class="calc"><div><dt>Líquido</dt><dd>${kg(liq)}</dd></div><div><dt>Preço por kg</dt><dd>${brl(s.precoKg)}</dd></div><div><dt>Valor</dt><dd class="big">${brl(valor)}</dd></div></dl>
+    <div class="row"><button class="btn ghost" data-a="simular" data-id="${s.id}" ${dis}>Simular pesagem</button><button class="btn white" data-a="addPeso" data-id="${s.id}" ${liq>0&&!off?'':'disabled'}>Adicionar à venda</button></div>
+  </article>`;
+}
+function trocoBox(){const t=totais(),rec=parseMoney(S.recebido);return rec<t.total?{c:'troco falta',h:`<span>Faltam</span><strong>${brl(t.total-rec)}</strong>`}:{c:'troco',h:`<span>Troco</span><strong>${brl(rec-t.total)}</strong>`}}
+function vendaPanel(){
+  const t=totais(),tb=trocoBox();
+  let pg='';
+  if(S.forma==='dinheiro')pg=`<div class="cash"><label for="recebido">Valor recebido em dinheiro</label><input type="text" id="recebido" data-i="recebido" inputmode="numeric" data-m value="${esc(S.recebido)}" placeholder="0,00">
+    <div class="row">${[1000,2000,5000,10000].map(v=>`<button class="chip" data-a="quick" data-v="${v}">+ ${brl(v)}</button>`).join('')}<button class="chip" data-a="exato">Valor exato</button><button class="chip" data-a="limparRec">Limpar</button></div>
+    <div class="${tb.c}" id="troco">${tb.h}</div></div>`;
+  else if(S.forma==='pix')pg=`<div class="note">No sistema real, aqui aparece o QR Code do Pix gerado pelo banco e a venda é confirmada sozinha quando o pagamento cai. Neste protótipo, confirme manualmente.</div>`;
+  else if(S.forma)pg=`<div class="note">Passe ${brl(t.total)} na maquininha no ${FORMAS[S.forma].toLowerCase()} e finalize quando aprovar.</div>`;
+  return `<section class="panel venda"><h2>Venda atual</h2>
+    <div class="lista">${listaCart()}</div>
+    <div><label for="cliente">Cliente (programa de pontos)</label>
+      <div class="row"><select id="cliente" data-c="cliente" style="flex:1"><option value="">Sem identificação</option>${S.clientes.map(c=>`<option value="${c.id}" ${c.id===S.clienteId?'selected':''}>${esc(c.nome)} · ${esc(c.fone)}</option>`).join('')}</select><button class="btn line sm" data-a="novoCli">Novo</button></div>
+    </div>
+    ${S.novoCli?`<div class="form"><div><label for="nc-nome">Nome</label><input type="text" id="nc-nome"></div><div><label for="nc-fone">WhatsApp</label><input type="text" id="nc-fone" inputmode="tel" placeholder="(85) 9..."></div><button class="btn sm" data-a="salvarCli">Cadastrar</button></div>`:''}
+    ${t.c?`<div class="sw"><span>${esc(t.c.nome.split(' ')[0])} tem ${t.c.pontos} pontos${t.pode?'':' (resgate a partir de '+S.regras.pontosResgate+')'}</span>${t.pode?`<button class="chip ${S.resgate?'on':''}" data-a="resgate">${S.resgate?'Desconto aplicado':'Usar '+brl(S.regras.valorResgate)}</button>`:''}</div>`:''}
+    <div>${t.desc?`<div class="tot"><span>Subtotal</span><span>${brl(t.sub)}</span></div><div class="tot"><span>Desconto por pontos</span><span>− ${brl(t.desc)}</span></div>`:''}
+      <div class="tot g"><span>Total</span><strong>${brl(t.total)}</strong></div></div>
+    <div class="formas">${Object.keys(FORMAS).map(f=>`<button class="forma f-${f} ${S.forma===f?'on':(S.forma||S.pags)?'':'none'}" data-a="forma" data-f="${f}">${FORMAS[f]}</button>`).join('')}</div>
+    <div class="row"><button class="btn line sm" data-a="abrirDividir" ${S.cart.length?'':'disabled'}>Dividir conta</button><button class="btn line sm" data-a="abrirMisto" ${S.cart.length?'':'disabled'}>Pagamento misto</button></div>
+    ${S.pags?pagsBox():pg}
+    <div class="fim"><button class="btn go" id="finalizar" data-a="finalizar" ${podeFinalizar()?'':'disabled'}>Finalizar venda</button></div>
+  </section>`;
+}
+function vCaixa(){
+  const f=fxAberto(S.user.id),meus=fxDe(S.user.id),ult=meus[meus.length-1],nome=esc(S.user.nome);
+  const aviso=f?'':`<div class="banner" role="alert"><div><b>Caixa de ${nome} fechado${ult?` (Fluxo ${ult.n} fechado às ${hhmm(ult.fechamento)})`:''}.</b><span>A pesagem e o registro de vendas estão desabilitados. Selecione outro operador ou ${ult?'reabra':'abra'} o caixa. A reabertura fica registrada.</span></div>
+    <div class="row"><button class="btn line" data-a="sair">Selecionar outro operador</button><button class="btn" data-a="reabrir" data-id="${S.user.id}">${ult?'Reabrir':'Abrir'} caixa (Fluxo ${meus.length+1})</button></div></div>`;
+  return `<div class="head"><div><h1>Caixa</h1><p>Operador: ${nome} · ${f?'Fluxo '+f.n+' aberto às '+hhmm(f.abertura):'caixa fechado'} · ${S.vendas.filter(v=>v.op===S.user.id).length} vendas hoje</p></div></div>
+  ${aviso}
+  <div class="pdv"><div class="col">${S.produtos.filter(p=>p.destaque).map(p=>`<button class="pf" data-a="addProd" data-id="${p.id}" ${f?'':'disabled'}>${badge(p.id)}<span><small>Destaque</small><b>${esc(p.nome)}</b></span><strong>${brl(p.preco)}</strong><em>Adicionar à venda</em></button>`).join('')}<div class="scales">${S.balancas.map(scaleCard).join('')}</div>
+    <section class="panel"><h2>Outros itens</h2><div class="prods">${S.produtos.filter(p=>!p.destaque).map(p=>`<button class="prod ${p.cat}" data-a="addProd" data-id="${p.id}" ${f?'':'disabled'}>${badge(p.id,true)}<b>${esc(p.nome)}</b><span>${brl(p.preco)}</span></button>`).join('')}</div></section>
+  </div><aside class="col">${vendaPanel()}</aside></div>`;
+}
+function cardapioTexto(){const d=hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit'});return `Cardápio de hoje (${d})\n`+CATS.map(c=>{const it=S.cardapio.filter(x=>x.cat===c&&x.on);return it.length?`\n${c}\n`+it.map(x=>'• '+x.nome).join('\n'):''}).join('')+`\n\n${S.balancas[0]?S.balancas[0].nome+': '+brl(S.balancas[0].precoKg)+'/kg':''}`}
+function vCardapio(){
+  return `<div class="head"><div><h1>Cardápio do dia</h1><p>Marque o que está disponível hoje. É este cardápio que o assistente envia no WhatsApp.</p></div></div>
+  <div class="grid2"><section class="panel">
+    ${CATS.map(c=>`<div class="menu-cat"><h3>${c}</h3>${S.cardapio.map((x,k)=>x.cat!==c?'':`<div class="dish ${x.on?'':'off'}"><span>${esc(x.nome)}</span><div class="row"><button class="chip ${x.on?'on':''}" data-a="togPrato" data-k="${k}">${x.on?'Disponível':'Em falta'}</button><button class="x" data-a="rmPrato" data-k="${k}" aria-label="Remover ${esc(x.nome)}">×</button></div></div>`).join('')}</div>`).join('')}
+    <div class="form"><div><label for="np-nome">Novo prato</label><input type="text" id="np-nome"></div><div><label for="np-cat">Categoria</label><select id="np-cat">${CATS.map(c=>`<option>${c}</option>`).join('')}</select></div><button class="btn" data-a="addPrato">Adicionar</button></div>
+  </section>
+  <section class="panel"><h2>Como vai para o WhatsApp</h2><div class="bubble bot">${esc(cardapioTexto())}</div><button class="btn line" data-a="copiar" data-t="cardapio">Copiar texto</button></section></div>`;
+}
+function vRelatorios(){
+  const P={diario:'Diário',semanal:'Semanal',mensal:'Mensal',semestral:'Semestral',anual:'Anual'},I=intervalo(),F=S.fin,hojeS=ymd(new Date());
+  const cab=`<div class="head"><div><h1>Financeiro</h1><p>${I.t}</p></div>
+    <div class="tabs">${Object.keys(P).map(k=>`<button class="chip ${S.periodo===k?'on':''}" data-a="periodo" data-p="${k}">${P[k]}</button>`).join('')}<button class="btn sm" data-a="exportPdf">Exportar PDF</button></div></div>
+  <div class="row" style="align-items:center"><button class="chip" data-a="finAnt">‹ Anterior</button><input type="date" class="field" id="fin-data" data-c="finData" value="${S.refData}" max="${hojeS}" aria-label="Data de referência" style="width:auto;min-height:44px"><button class="chip" data-a="finProx" ${S.refData>=hojeS?'disabled':''}>Próximo ›</button><button class="chip" data-a="finHoje" ${S.refData===hojeS?'disabled':''}>Hoje</button><button class="chip" data-a="finAtualizar">Atualizar</button>${S.finCarregando?'<span class="pill">Carregando…</span>':''}</div>`;
+  if(!F)return cab+'<section class="panel"><h2>Carregando o financeiro…</h2></section>';
+  const b=F.buckets,a=F.total,max=Math.max(...b.map(x=>x.a.fat),1);
+  const abbr=c=>{const v=c/100;return v>=1000?(v/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mil':String(Math.round(v))};
+  return cab+`<div class="kpis">
+    <div class="kpi" style="background-color:var(--ink)"><span class="lbl">Faturamento</span><strong>${brl(a.fat)}</strong></div>
+    <div class="kpi" style="background-color:var(--comida)"><span class="lbl">Comida vendida</span><strong>${kg1(a.gCom)}</strong></div>
+    <div class="kpi" style="background-color:var(--acai)"><span class="lbl">Açaí vendido</span><strong>${kg1(a.gAcai)}</strong></div>
+    <div class="kpi" style="background-color:var(--bebida)"><span class="lbl">Vendas</span><strong>${a.n.toLocaleString('pt-BR')}</strong></div>
+    <div class="kpi" style="background-color:var(--doce)"><span class="lbl">Ticket médio</span><strong>${brl(a.n?Math.round(a.fat/a.n):0)}</strong></div>
+  </div>
+  <div class="grid2">
+    <section class="panel"><h2>Faturamento por ${I.por} (R$)</h2>${a.n?`<div class="chart">${b.map(x=>`<div class="bar ${x.hoje?'today':''}" title="${x.l}: ${brl(x.a.fat)}"><span>${b.length<=12&&x.a.fat?abbr(x.a.fat):''}</span><div class="track"><i style="height:${Math.max(1,x.a.fat/max*100)}%"></i></div><span>${x.l}</span></div>`).join('')}</div>`:'<div class="empty">Nenhuma venda neste período.</div>'}</section>
+    <section class="panel"><h2>Por forma de pagamento</h2>${Object.keys(FORMAS).map(f=>`<div class="hb"><b>${FORMAS[f]}</b><div class="t"><i style="width:${a.fat?a[f]/a.fat*100:0}%;background:var(--${f})"></i></div><span>${brl(a[f])} · ${a.fat?Math.round(a[f]/a.fat*100):0}%</span></div>`).join('')}
+      <div class="tot"><span>Outros itens vendidos</span><b>${a.itens.toLocaleString('pt-BR')} un.</b></div></section>
+    <section class="panel"><h2>Outros itens vendidos</h2><div class="tw"><table><thead><tr><th>Item</th><th class="n">Qtd.</th><th class="n">Valor</th></tr></thead><tbody>${F.produtos.map(x=>`<tr><td>${esc(x.nome)}</td><td class="n">${Number(x.qtd).toLocaleString('pt-BR')}</td><td class="n">${brl(Number(x.valor))}</td></tr>`).join('')||'<tr><td colspan="3">Nenhum item vendido.</td></tr>'}</tbody></table></div></section>
+  </div>
+  ${vendasFin()}
+  ${fluxosFin()}
+  <section class="panel"><h2>Registro de atividades</h2><div class="tw"><table><thead><tr><th>${S.periodo==='diario'?'Hora':'Data e hora'}</th><th>Quem fez</th><th>O que aconteceu</th></tr></thead><tbody>
+    ${F.log.map(l=>`<tr><td>${dataHora(l.ts)}</td><td><b>${esc(l.quem)}</b></td><td style="white-space:normal">${esc(l.txt)}</td></tr>`).join('')||'<tr><td colspan="3">Nada registrado neste período.</td></tr>'}
+  </tbody></table></div><div class="note">Aberturas, fechamentos, reaberturas, mudanças de preço e liberações de acesso ficam registradas com hora e usuário.</div></section>`;
+}
+function vProdutos(){
+  const CP={prato:'Prato',doce:'Sobremesa',bebida:'Bebida'},ops=v=>Object.keys(CP).map(k=>`<option value="${k}" ${k===v?'selected':''}>${CP[k]}</option>`).join('');
+  return `<div class="head"><div><h1>Produtos</h1><p>Itens de preço fixo que viram botão no Caixa. O produto em destaque aparece grande no topo da tela inicial.</p></div></div>
+  <section class="panel"><h2>Produtos cadastrados</h2><div class="tw"><table><thead><tr><th>Nome</th><th>Categoria</th><th>Preço (R$)</th><th>Tela inicial</th><th></th></tr></thead><tbody>
+    ${S.produtos.map(p=>`<tr><td><input type="text" id="pn-${p.id}" aria-label="Nome do produto" data-c="prod" data-id="${p.id}" data-k="nome" value="${esc(p.nome)}" style="min-width:180px"></td>
+      <td><select id="pc-${p.id}" aria-label="Categoria de ${esc(p.nome)}" data-c="prod" data-id="${p.id}" data-k="cat" style="min-width:140px">${ops(p.cat)}</select></td>
+      <td><input type="text" id="pp-${p.id}" aria-label="Preço de ${esc(p.nome)}" inputmode="numeric" data-m data-c="prod" data-id="${p.id}" data-k="preco" value="${num(p.preco)}" style="min-width:110px"></td>
+      <td><button class="chip ${p.destaque?'on':''}" data-a="togDestaque" data-id="${p.id}">${p.destaque?'Em destaque':'Destacar'}</button></td>
+      <td><button class="x" data-a="rmProd" data-id="${p.id}" aria-label="Remover ${esc(p.nome)}">×</button></td></tr>`).join('')}
+  </tbody></table></div>
+  <div class="form"><div><label for="np2-nome">Novo produto</label><input type="text" id="np2-nome"></div><div><label for="np2-cat">Categoria</label><select id="np2-cat">${ops('doce')}</select></div><div><label for="np2-preco">Preço (R$)</label><input type="text" id="np2-preco" inputmode="numeric" data-m placeholder="0,00"></div><button class="btn" data-a="novoProd">Cadastrar produto</button></div></section>
+  <section class="panel"><h2>Preço por kg</h2><div class="form">${S.balancas.map(s=>`<div><label for="pk-${s.id}">${esc(s.nome)} (R$ por kg)</label><input type="text" id="pk-${s.id}" inputmode="numeric" data-m data-c="bal" data-id="${s.id}" data-k="precoKg" value="${num(s.precoKg)}"></div>`).join('')}</div></section>`;
+}
+function vClientes(){
+  const R=S.regras;
+  return `<div class="head"><div><h1>Clientes e pontos</h1><p>${S.clientes.length} clientes cadastrados</p></div></div>
+  <section class="panel"><h2>Regras do programa</h2><div class="form">
+    <div><label for="r-base">Como pontua</label><select id="r-base" data-c="regra" ${isAdmin()?'':'disabled'} data-k="base"><option value="valor" ${R.base==='valor'?'selected':''}>1 ponto a cada R$ 1,00 gasto</option><option value="gramas" ${R.base==='gramas'?'selected':''}>1 ponto a cada 100 g</option></select></div>
+    <div><label for="r-pr">Pontos para resgatar</label><input type="text" id="r-pr" inputmode="numeric" data-c="regra" ${isAdmin()?'':'disabled'} data-k="pontosResgate" value="${R.pontosResgate}"></div>
+    <div><label for="r-vr">Vale em alimentação (R$)</label><input type="text" id="r-vr" inputmode="numeric" data-m data-c="regra" ${isAdmin()?'':'disabled'} data-k="valorResgate" value="${num(R.valorResgate)}"></div>
+    <div><label for="r-mg">Mínimo em 30 dias para ficar no grupo</label><input type="text" id="r-mg" inputmode="numeric" data-c="regra" ${isAdmin()?'':'disabled'} data-k="minGrupo" value="${R.minGrupo}"></div>
+  </div></section>
+  <section class="panel"><h2>Clientes</h2><div class="tw"><table><thead><tr><th>Cliente</th><th>WhatsApp</th><th class="n">Pontos</th><th class="n">Consumido</th><th class="n">Gasto</th><th class="n">Pontos em 30 dias</th><th>Grupo do WhatsApp</th></tr></thead><tbody>
+    ${S.clientes.slice().sort((x,y)=>y.pontos-x.pontos).map(c=>`<tr><td><b>${esc(c.nome)}</b></td><td>${esc(c.fone)}</td><td class="n">${c.pontos}${c.pontos>=R.pontosResgate?' <span class="pill ok">pode resgatar</span>':''}</td><td class="n">${kg1(c.g)}</td><td class="n">${brl(c.gasto)}</td><td class="n">${c.p30}</td><td>${c.p30>=R.minGrupo?'<span class="pill ok">Permanece</span>':'<span class="pill warn">Abaixo do mínimo</span>'}</td></tr>`).join('')}
+  </tbody></table></div>
+  <div class="note">Quem fica abaixo do mínimo é enviado ao n8n no evento "grupo", para o senhor decidir a regra de aviso ou remoção.</div></section>`;
+}
+function authHtml(){
+  if(S.auth==='ok')return '';
+  const msg=S.authMsg?`<div class="note" role="alert" style="color:var(--ink)">${esc(S.authMsg)}</div>`:'',T='<h1>Caixa do Restaurante</h1>';
+  if(S.auth==='carregando')return `<div class="panel">${T}<p style="margin:0">Carregando…</p></div>`;
+  if(S.auth==='erro')return `<div class="panel">${T}${msg}<div class="row"><button class="btn line" data-a="sair">Sair</button><button class="btn" data-a="reverificar">Tentar de novo</button></div></div>`;
+  if(S.auth==='pendente')return `<div class="panel"><h1>Aguardando liberação</h1><p style="margin:0">Olá, ${esc(S.perfil.nome)}. Sua conta foi criada, mas um administrador ainda precisa liberar o seu acesso.</p>${msg}<div class="row"><button class="btn line" data-a="sair">Sair</button><button class="btn" data-a="reverificar">Já fui liberado</button></div></div>`;
+  if(S.auth==='recuperar')return `<div class="panel"><h1>Criar nova senha</h1><div><label for="au-nova">Nova senha (mínimo 8 caracteres)</label><input type="password" id="au-nova" autocomplete="new-password"></div>${msg}<button class="btn go" data-enter data-a="definirSenha">Salvar nova senha</button></div>`;
+  const criar=S.authTab==='criar';
+  return `<div class="panel">${T}<div class="tabs"><button class="chip ${criar?'':'on'}" data-a="authTab" data-t="entrar">Entrar</button><button class="chip ${criar?'on':''}" data-a="authTab" data-t="criar">Criar conta</button></div>
+    ${criar?`<div><label for="au-nome">Nome</label><input type="text" id="au-nome" autocomplete="name"></div>`:''}
+    <div><label for="au-email">E-mail</label><input type="text" id="au-email" inputmode="email" autocomplete="username" autocapitalize="none"></div>
+    <div><label for="au-senha">Senha${criar?' (mínimo 8 caracteres)':''}</label><input type="password" id="au-senha" autocomplete="${criar?'new-password':'current-password'}"></div>
+    ${msg}
+    <button class="btn go" data-enter data-a="${criar?'criarConta':'entrar'}">${criar?'Criar conta':'Entrar'}</button>
+    ${criar?`<div class="note">A primeira conta criada vira administrador. As seguintes ficam aguardando a liberação de um administrador.</div>`:`<button class="btn line sm" data-a="esqueci">Esqueci minha senha</button>`}</div>`;
+}
+const authErr=e=>{const m=(e&&e.message)||String(e),M={'Invalid login credentials':'E-mail ou senha incorretos.','User already registered':'Já existe uma conta com esse e-mail.','Email not confirmed':'Confirme o seu e-mail pelo link que enviamos antes de entrar.','New password should be different from the old password.':'A nova senha precisa ser diferente da atual.'};return M[m]||m};
+const emailOk=e=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+async function aoSessao(sess){
+  if(!sess){S.auth='login';S.authTab='entrar';S.logged=false;S.perfil=null;S.perfis=null;S.modal=null;return render()}
+  if(S.recuperando){S.auth='recuperar';S.logged=false;return render()}
+  const r=await sb.from('perfis').select('*').eq('id',sess.user.id).maybeSingle();
+  if(r.error||!r.data){S.auth='erro';S.logged=false;S.authMsg=r.error?('Não foi possível carregar o seu perfil: '+r.error.message):'Sua conta existe, mas o perfil não foi encontrado. Confira se os arquivos SQL 001 e 002 foram executados.';return render()}
+  S.perfil=r.data;
+  if(!r.data.ativo){S.auth='pendente';S.logged=false;return render()}
+  S.user={id:r.data.id,nome:r.data.nome,login:r.data.login,perfil:r.data.perfil==='admin'?'Administrador':'Caixa',avatar:r.data.avatar||null,cor:r.data.cor||null};S.usuarios=[S.user];
+  S.auth='ok';S.logged=true;S.authMsg='';
+  S.pronto=false;render();carregarTudo();
+}
+const ERROS=[['clientes_telefone_key','Já existe um cliente com esse WhatsApp.'],['row-level security','Seu perfil não tem permissão para essa alteração.'],['Failed to fetch','Sem conexão com o banco de dados. Verifique a internet.']];
+async function q(p,rot){
+  try{const r=await p;if(r.error){const m=r.error.message||'';const t=ERROS.find(x=>m.includes(x[0]));toast(t?t[1]:(rot?rot+': ':'')+m);return null}return r.data===null||r.data===undefined?true:r.data}
+  catch(e){const m=(e&&e.message)||String(e),t=ERROS.find(x=>m.includes(x[0]));toast(t?t[1]:(rot?rot+': ':'')+m);return null}
+}
+const diaLocal=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+async function carregarPerfis(){
+  if(!sb||!S.perfil||S.perfil.perfil!=='admin')return;
+  const r=await q(sb.from('perfis').select('*').order('criado_em'),'Usuários');
+  if(!Array.isArray(r))return;
+  S.perfis=r;
+  S.usuarios=r.filter(u=>u.ativo).map(u=>({id:u.id,nome:u.nome,login:u.login,perfil:u.perfil==='admin'?'Administrador':'Caixa',avatar:u.avatar||null,cor:u.cor||null}));
+  S.user=S.usuarios.find(u=>u.id===S.perfil.id)||S.user;
+  if(S.view==='usuarios')render();
+}
+async function carregarBase(){
+  const [b,pr,cf,cl,p30,cd]=await Promise.all([
+    q(sb.from('balancas').select('*,taras(*)').eq('ativo',true).order('ordem').order('criado_em'),'Balanças'),
+    q(sb.from('produtos').select('*').eq('ativo',true).order('criado_em'),'Produtos'),
+    q(sb.from('config').select('*').eq('id',1).maybeSingle(),'Configuração'),
+    q(sb.from('clientes').select('*').order('nome'),'Clientes'),
+    q(sb.rpc('pontos_30_dias'),'Pontos'),
+    q(sb.from('cardapio_itens').select('*').order('criado_em'),'Cardápio')]);
+  if(Array.isArray(b)){const ant={};S.balancas.forEach(x=>ant[x.id]=x);
+    S.balancas=b.map(x=>{const ts=[{n:'Sem tara',g:0}].concat((x.taras||[]).slice().sort((m,n)=>m.gramas-n.gramas).map(t=>({n:t.nome,g:t.gramas}))),a=ant[x.id];
+      return{id:x.id,nome:x.nome,grupo:x.grupo,marca:x.marca,conexao:x.conexao,baud:String(x.baud),precoKg:x.preco_kg_centavos,bruto:a?a.bruto:0,tara:a?a.tara:(ts[1]?ts[1].g:0),conectada:a?a.conectada:true,taras:ts}})}
+  if(Array.isArray(pr))S.produtos=pr.map(x=>({id:x.id,nome:x.nome,preco:x.preco_centavos,cat:x.categoria,destaque:x.destaque}));
+  if(cf&&cf!==true){S.regras={base:cf.base_pontos,pontosResgate:cf.pontos_resgate,valorResgate:cf.valor_resgate_centavos,minGrupo:cf.min_pontos_grupo};S.fundo=cf.fundo_troco_centavos}
+  if(Array.isArray(cl)){const m={};(Array.isArray(p30)?p30:[]).forEach(x=>m[x.cliente_id]=Number(x.pontos));S.clientes=cl.map(x=>({id:x.id,nome:x.nome,fone:x.telefone,pontos:x.pontos,g:Number(x.gramas_total),gasto:Number(x.gasto_centavos),p30:m[x.id]||0}))}
+  if(Array.isArray(cd))S.cardapio=cd.map(x=>({id:x.id,cat:x.categoria,nome:x.nome,on:x.disponivel}));
+  // Se algum preço mudou, a venda em andamento acompanha o banco.
+  let mudou=false;
+  S.cart.forEach(i=>{let v=i.valor;if(i.grupo==='produto'){const x=S.produtos.find(y=>y.id===i.src);if(x)v=x.preco}else{const x=S.balancas.find(y=>y.id===i.src);if(x){i.precoKg=x.precoKg;v=Math.round(i.g*x.precoKg/1000)}}if(v!==i.valor){i.valor=v;mudou=true}});
+  if(mudou){S.pags=null;toast('Um preço mudou. A venda em andamento foi atualizada; confira o total.')}
+}
+async function carregarDia(){
+  const ini=new Date();ini.setHours(0,0,0,0);
+  const [fx,vs,at]=await Promise.all([
+    q(sb.from('fluxos_caixa').select('*').or('dia.eq.'+diaLocal()+',fechado_em.is.null').order('aberto_em'),'Fluxos de caixa'),
+    q(sb.from('vendas').select('*,venda_itens(*),venda_pagamentos(*)').gte('criado_em',ini.toISOString()).order('criado_em'),'Vendas'),
+    isAdmin()?q(sb.from('atividades').select('*').gte('criado_em',ini.toISOString()).order('id'),'Registro de atividades'):Promise.resolve([])]);
+  if(Array.isArray(fx))S.fluxos=fx.map(f=>({id:f.id,op:f.operador_id,n:f.numero,abertura:new Date(f.aberto_em),fechamento:f.fechado_em?new Date(f.fechado_em):null,contado:f.contado_centavos,fundo:f.fundo_centavos}));
+  if(Array.isArray(vs))S.vendas=vs.map(v=>{const ps=(v.venda_pagamentos||[]).slice().sort((a,b)=>a.ordem-b.ordem);return{id:v.id,n:v.numero,ts:new Date(v.criado_em),op:v.operador_id,fx:v.fluxo_id,cli:v.cliente_id||'',tipo:v.tipo,total:v.total_centavos,desc:v.desconto_centavos,forma:ps.length>1?'misto':(ps[0]||{}).forma,
+    itens:(v.venda_itens||[]).map(i=>({desc:i.descricao,grupo:i.grupo,cat:i.categoria,g:i.gramas||0,precoKg:i.preco_kg_centavos,valor:i.valor_centavos})),
+    pags:ps.map(x=>({rot:x.rotulo,forma:x.forma,valor:x.valor_centavos}))}});
+  if(Array.isArray(at))S.log=at.map(a=>({ts:new Date(a.criado_em),quem:nomeOp(a.usuario_id)||'Sistema',txt:a.texto}));
+}
+async function carregarTudo(){
+  await carregarPerfis();
+  await Promise.all([carregarBase(),carregarDia()]);
+  S.pronto=true;render();if(S.view==='financeiro')carregarFin();
+}
+function mudarRef(s){const r=refData(),P=S.periodo;
+  if(P==='diario')r.setDate(r.getDate()+s);else if(P==='semanal')r.setDate(r.getDate()+7*s);else if(P==='anual')r.setFullYear(r.getFullYear()+s);else r.setMonth(r.getMonth()+s,1);
+  const h=new Date();if(r>h){r.setTime(h.getTime())}
+  if(s<0&&(P==='mensal'||P==='semestral')){r.setMonth(r.getMonth()+1,0)}
+  S.refData=ymd(r);S.finLimite=200;carregarFin()}
+const salvar=(p,ok)=>q(p).then(async r=>{if(r&&ok)toast(ok);await carregarBase();render()});
+async function mudarPerfil(id,campos,ok){
+  const r=await sb.from('perfis').update(campos).eq('id',id);
+  if(r.error)toast(r.error.message);else if(ok)toast(ok);
+  await carregarPerfis();await carregarDia();render();
+}
+function vUsuarios(){
+  const P=S.perfis,pend=P?P.filter(u=>!u.ativo).length:0;
+  const linhas=!P?'<tr><td colspan="5">Carregando usuários…</td></tr>':P.map(u=>{const eu=S.perfil&&u.id===S.perfil.id;return `<tr><td><span class="av mini" style="background:${corOp(u)}">${avHtml(u)}</span><b>${esc(u.nome)}</b>${eu?' <span class="pill">você</span>':''}</td><td>${esc(u.login)}</td>
+      <td><select id="up-${u.id}" aria-label="Perfil de ${esc(u.nome)}" data-c="userPerfil" data-id="${u.id}" style="min-width:160px"><option value="caixa" ${u.perfil==='caixa'?'selected':''}>Caixa</option><option value="admin" ${u.perfil==='admin'?'selected':''}>Administrador</option></select></td>
+      <td>${u.ativo?'<span class="pill ok">Ativo</span>':'<span class="pill warn">Sem acesso</span>'}</td>
+      <td><button class="btn ${u.ativo?'line':''} sm" data-a="userAtivo" data-id="${u.id}">${u.ativo?'Desativar':'Liberar acesso'}</button></td></tr>`}).join('');
+  return `<div class="head"><div><h1>Usuários</h1><p>Cada pessoa entra com o próprio e-mail e senha. Só o perfil Administrador vê Financeiro, Produtos, Usuários, Balanças e WhatsApp.</p></div>${pend?`<span class="pill warn">${pend} aguardando liberação</span>`:''}</div>
+  <section class="panel"><h2>Contas</h2><div class="tw"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Situação</th><th></th></tr></thead><tbody>${linhas}</tbody></table></div></section>
+  <section class="panel"><h2>Cadastrar usuário</h2><div class="form"><div><label for="nu-nome">Nome</label><input type="text" id="nu-nome" autocomplete="off"></div><div><label for="nu-email">E-mail</label><input type="text" id="nu-email" inputmode="email" autocomplete="off" autocapitalize="none"></div><div><label for="nu-senha">Senha provisória (mínimo 8)</label><input type="password" id="nu-senha" autocomplete="new-password"></div><div><label for="nu-perfil">Perfil</label><select id="nu-perfil"><option value="caixa">Caixa</option><option value="admin">Administrador</option></select></div><button class="btn" data-a="novoUser">Cadastrar usuário</button></div>
+  <div class="note">O usuário cadastrado aqui já entra liberado. Peça que ele troque a senha provisória em "Minha conta" no primeiro acesso. Quem criar a conta sozinho pela tela de entrada fica aguardando a sua liberação.</div></section>`;
+}
+function vBalancas(){
+  const sel=(id,k,v,ops)=>`<select id="${k}-${id}" data-c="bal" data-id="${id}" data-k="${k}">${ops.map(o=>`<option ${o===v?'selected':''}>${o}</option>`).join('')}</select>`;
+  return `<div class="head"><div><h1>Balanças</h1><p>Cada balança aparece como um card no Caixa. Pode cadastrar quantas precisar.</p></div><button class="btn" data-a="addBal">Adicionar balança</button></div>
+  <div class="grid2">${S.balancas.map(s=>`<section class="panel" style="border-color:var(--${s.grupo})">
+    <div class="head"><h2>${esc(s.nome)}</h2><span class="pill ${s.conectada?'ok':'warn'}">${s.conectada?'Conectada':'Desconectada'}</span></div>
+    <div class="form">
+      <div><label for="nome-${s.id}">Nome</label><input type="text" id="nome-${s.id}" data-c="bal" data-id="${s.id}" data-k="nome" value="${esc(s.nome)}"></div>
+      <div><label for="grupo-${s.id}">Soma nos relatórios como</label><select id="grupo-${s.id}" data-c="bal" data-id="${s.id}" data-k="grupo"><option value="comida" ${s.grupo==='comida'?'selected':''}>Comida</option><option value="acai" ${s.grupo==='acai'?'selected':''}>Açaí</option></select></div>
+      <div><label for="marca-${s.id}">Marca / protocolo</label>${sel(s.id,'marca',s.marca,['Toledo Prix','Filizola','Urano'])}</div>
+      <div><label for="conexao-${s.id}">Conexão</label>${sel(s.id,'conexao',s.conexao,['USB (serial)','Bluetooth (serial)'])}</div>
+      <div><label for="baud-${s.id}">Velocidade (baud)</label>${sel(s.id,'baud',s.baud,['2400','4800','9600','19200'])}</div>
+      <div><label for="precoKg-${s.id}">Preço por kg (R$)</label><input type="text" id="precoKg-${s.id}" inputmode="numeric" data-m data-c="bal" data-id="${s.id}" data-k="precoKg" value="${num(s.precoKg)}"></div>
+    </div>
+    <div><span class="lbl">Taras cadastradas</span><div class="row" style="margin-top:6px">${s.taras.filter(t=>t.g).map(t=>`<span class="pill">${esc(t.n)} · ${t.g} g</span>`).join('')}</div></div>
+    <div class="row"><button class="btn line" data-a="conectar" data-id="${s.id}">${s.conectada?'Desconectar':'Conectar'}</button><button class="btn line" data-a="testar" data-id="${s.id}">Testar leitura</button></div>
+  </section>`).join('')}</div>
+  <div class="note">Neste protótipo a leitura é simulada. No sistema real, o botão Conectar abre a lista de portas do computador (Chrome ou Edge) e o peso passa a chegar sozinho da balança.</div>`;
+}
+function resumoTexto(){
+  const a=aggVendas(S.vendas),it={};S.vendas.forEach(v=>v.itens.forEach(i=>{if(i.grupo==='produto')it[i.desc]=(it[i.desc]||0)+1}));
+  return `Resumo de hoje (${hoje.toLocaleDateString('pt-BR')})\n\nCardápio: ${S.cardapio.filter(x=>x.on&&x.cat==='Pratos quentes').map(x=>x.nome).join(', ')}\n\nComida vendida: ${kg1(a.gCom)}\nAçaí vendido: ${kg1(a.gAcai)}\nOutros itens: ${Object.keys(it).map(k=>k+' '+it[k]).join(', ')||'nenhum'}\n\nVendas: ${a.n}\nTotal: ${brl(a.fat)}\nPix ${brl(a.pix)} · Débito ${brl(a.debito)} · Crédito ${brl(a.credito)} · Dinheiro ${brl(a.dinheiro)}`;
+}
+function payload(){
+  const a=aggVendas(S.vendas);
+  return JSON.stringify({evento:'resumo_do_dia',data:hoje.toISOString().slice(0,10),cardapio:S.cardapio.filter(x=>x.on).map(x=>x.nome),comida_kg:+(a.gCom/1000).toFixed(3),acai_kg:+(a.gAcai/1000).toFixed(3),outros_itens:a.itens,vendas:a.n,total:a.fat/100,por_forma:{pix:a.pix/100,credito:a.credito/100,debito:a.debito/100,dinheiro:a.dinheiro/100}},null,2);
+}
+function vWhats(){
+  const E={resumo:'Resumo do dia (quando o senhor perguntar ao assistente)',cardapio:'Cardápio do dia',pontos:'Pontos do cliente após cada compra',grupo:'Clientes abaixo do mínimo do grupo'};
+  return `<div class="head"><div><h1>WhatsApp e n8n</h1><p>O sistema entrega os dados ao n8n; o fluxo e as mensagens ficam por conta do senhor.</p></div></div>
+  <div class="grid2"><section class="panel"><h2>Conexão</h2>
+    <div><label for="wa-url">Endereço do webhook no n8n</label><input type="url" id="wa-url" data-c="waUrl" value="${esc(S.wa.url)}" placeholder="https://seu-n8n/webhook/restaurante"></div>
+    <h3>O que o sistema envia</h3>${Object.keys(E).map(k=>`<label class="sw" for="ev-${k}">${E[k]}<input type="checkbox" id="ev-${k}" data-c="waEv" data-k="${k}" ${S.wa.eventos[k]?'checked':''}></label>`).join('')}
+    <h3>Exemplo do que chega no n8n</h3><pre>${esc(payload())}</pre><button class="btn line" data-a="copiar" data-t="payload">Copiar exemplo</button>
+  </section>
+  <section class="panel"><h2>Como fica a conversa</h2><div class="bubble me">Resumo do dia</div><div class="bubble bot">${esc(resumoTexto())}</div><button class="btn line" data-a="copiar" data-t="resumo">Copiar resumo</button></section></div>`;
+}
+const RENDER={caixa:vCaixa,cardapio:vCardapio,produtos:vProdutos,financeiro:vRelatorios,clientes:vClientes,usuarios:vUsuarios,balancas:vBalancas,whatsapp:vWhats};
+function render(){
+  if(!isAdmin()&&SO_ADMIN.includes(S.view))S.view='caixa';
+  $('.app').className='app'+(S.menu?'':' min');
+  $('#nav').innerHTML=`<div class="brand"><i>R</i><span>Restaurante<small>Dados reais · balança simulada</small></span></div>`+VIEWS.filter(v=>isAdmin()||!SO_ADMIN.includes(v[0])).map(v=>`<button class="nav ${S.view===v[0]?'on':''}" data-a="ir" data-v="${v[0]}">${ico(v[0])}<span>${v[1]}</span></button>`).join('');
+  const fa=fxAberto(S.user.id),nf=fxDe(S.user.id).length,ini=S.user.nome.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
+  $('#top').innerHTML=`<button class="ib" data-a="menu" aria-label="Mostrar ou esconder o menu lateral">${ico('menu')}</button>
+    <div class="tinfo"><b>${hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit'})}</b><span id="clock">${hhmm(new Date())}</span></div>
+    <div class="inds">${S.balancas.map(b=>`<span class="ind" title="Balança ${esc(b.nome)}: ${b.conectada?'conectada':'desconectada'}"><i class="dot ${b.conectada?'':'warn'}"></i><span><small>Balança</small><b>${esc(b.nome)}</b></span></span>`).join('')}<span class="ind"><i class="dot ${fa?'':'bad'}"></i><span><small>Caixa</small><b>${fa?`Aberto · Fluxo ${fa.n} · ${hhmm(fa.abertura)}`:'Fechado'}</b></span></span></div>
+    <div class="parcial ${S.cart.length?'tem':''} ${S.bump?'bump':''}" role="status"><span>Venda atual<br>${S.cart.length} ${S.cart.length===1?'item':'itens'}</span><strong>${brl(totais().total)}</strong></div>
+    <div class="tright">${fa?`<button class="btn line sm" data-a="abrirFechar">Fechar caixa</button>`:`<button class="btn sm" data-a="reabrir" data-id="${S.user.id}">${nf?'Reabrir':'Abrir'} caixa</button>`}
+      <button class="user" data-a="conta" aria-label="Meu perfil: ${esc(S.user.nome)}"><span class="av">${avHtml(S.user)}</span><span class="who"><b>${esc(S.user.nome)}</b><span>${S.user.perfil} · perfil</span></span></button></div>`;
+  S.bump=false;
+  if($('#top').style&&$('#top').style.setProperty)$('#top').style.setProperty('--op',corOp(S.user));
+  const M=$('#modal'),mh=S.logged&&S.modal&&(fa||S.modal==='conta')?modalHtml(fa):'';M.style.display=mh?'grid':'none';M.innerHTML=mh;
+  $('#main').className=S.view==='caixa'?'fixo':'';
+  $('#main').innerHTML=S.pronto?RENDER[S.view]():'<section class="panel"><h2>Carregando dados…</h2></section>';
+  const L=$('#login'),ah=authHtml();L.style.display=ah?'grid':'none';
+  if(ah!==L._h){const k={};['#au-nome','#au-email'].forEach(i=>{const e=L.querySelector?L.querySelector(i):null;if(e)k[i]=e.value});L.innerHTML=ah;L._h=ah;Object.keys(k).forEach(i=>{const e=L.querySelector(i);if(e)e.value=k[i]})}
+}
+function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',4500)}
+const bal=id=>S.balancas.find(b=>b.id===id);
 
--- ---------------------------------------------------------------------
--- Perfil do operador: foto (imagem pequena guardada no próprio perfil) e cor de fundo.
--- ---------------------------------------------------------------------
-alter table public.perfis add column if not exists avatar text;
-alter table public.perfis add column if not exists cor text;
-
--- O próprio usuário altera nome, foto e cor. Perfil (admin/caixa) e acesso continuam só com o administrador.
-create or replace function public.atualizar_meu_perfil(p_nome text, p_avatar text default null, p_cor text default null)
-returns public.perfis
-language plpgsql security definer set search_path = public as $$
-declare
-  v      public.perfis;
-  v_nome text := trim(coalesce(p_nome, ''));
-begin
-  if auth.uid() is null or not public.eh_ativo() then
-    raise exception 'Usuário sem acesso.';
-  end if;
-  if length(v_nome) < 1 or length(v_nome) > 60 then
-    raise exception 'O nome precisa ter entre 1 e 60 caracteres.';
-  end if;
-  if p_avatar is not null and (p_avatar not like 'data:image/%' or length(p_avatar) > 200000) then
-    raise exception 'Imagem inválida ou grande demais.';
-  end if;
-  if p_cor is not null and p_cor !~ '^#[0-9A-Fa-f]{6}$' then
-    raise exception 'Cor inválida.';
-  end if;
-  update public.perfis set nome = v_nome, avatar = p_avatar, cor = p_cor where id = auth.uid() returning * into v;
-  return v;
-end $$;
-
-revoke execute on function public.atualizar_meu_perfil(text, text, text) from public, anon;
-grant execute on function public.atualizar_meu_perfil(text, text, text) to authenticated;
-
--- Fim do 005_financeiro_e_perfis.sql
+/* ---------- ações ---------- */
+const A={
+  ir:e=>{S.view=e.dataset.v;if(S.view==='usuarios')carregarPerfis();if(S.view==='financeiro')carregarFin();if(typeof window!=='undefined'&&window.innerWidth<=980)S.menu=false;try{location.hash=S.view}catch(_){}},
+  sair:()=>{S.modal=null;S.recuperando=false;if(sb)sb.auth.signOut().then(()=>{},()=>{});else aoSessao(null);return true},
+  conta:()=>{S.conta={nome:S.user.nome,avatar:S.user.avatar||null,cor:corOp(S.user),senha:''};S.modal='conta'},
+  contaCor:e=>{S.conta.cor=e.dataset.cor},
+  avatarTirar:()=>{S.conta.avatar=null},
+  salvarPerfil:()=>{const nome=(S.conta.nome||'').trim();if(!nome){toast('Digite o nome que aparece no sistema.');return true}
+    q(sb.rpc('atualizar_meu_perfil',{p_nome:nome,p_avatar:S.conta.avatar,p_cor:S.conta.cor}),'Perfil').then(r=>{
+      if(r&&r.id){S.perfil=r;Object.assign(S.user,{nome:r.nome,avatar:r.avatar||null,cor:r.cor||null});if(S.perfis){const i=S.perfis.findIndex(x=>x.id===r.id);if(i>=0)S.perfis[i]=r}S.conta.nome=r.nome;toast('Perfil salvo.')}
+      render()});return true},
+  authTab:e=>{S.authTab=e.dataset.t;S.authMsg=''},
+  entrar:()=>{const email=$('#au-email').value.trim().toLowerCase(),senha=$('#au-senha').value;
+    if(!emailOk(email)||!senha){S.authMsg='Digite o e-mail e a senha.';return}
+    S.authMsg='Entrando…';render();
+    sb.auth.signInWithPassword({email,password:senha}).then(r=>{if(r.error){S.authMsg=authErr(r.error);render()}},e=>{S.authMsg=authErr(e);render()});return true},
+  criarConta:()=>{const nome=$('#au-nome').value.trim(),email=$('#au-email').value.trim().toLowerCase(),senha=$('#au-senha').value;
+    if(!nome||!emailOk(email)){S.authMsg='Preencha o nome e um e-mail válido.';return}
+    if(senha.length<8){S.authMsg='A senha precisa ter pelo menos 8 caracteres.';return}
+    S.authMsg='Criando a conta…';render();
+    sb.auth.signUp({email,password:senha,options:{data:{nome}}}).then(r=>{
+      if(r.error){S.authMsg=authErr(r.error);return render()}
+      if(!r.data.session){S.authTab='entrar';S.authMsg=r.data.user&&r.data.user.identities&&!r.data.user.identities.length?'Já existe uma conta com esse e-mail.':'Conta criada. Confirme o e-mail pelo link que enviamos e depois entre.';render()}
+    },e=>{S.authMsg=authErr(e);render()});return true},
+  esqueci:()=>{const email=$('#au-email').value.trim().toLowerCase();
+    if(!emailOk(email)){S.authMsg='Digite o seu e-mail no campo acima e toque de novo em "Esqueci minha senha".';return}
+    S.authMsg='Enviando…';render();
+    sb.auth.resetPasswordForEmail(email,{redirectTo:location.origin+location.pathname}).then(r=>{S.authMsg=r.error?authErr(r.error):'Se esse e-mail tiver conta, enviamos um link para criar uma nova senha.';render()});return true},
+  definirSenha:()=>{const s=$('#au-nova').value;if(s.length<8){S.authMsg='A senha precisa ter pelo menos 8 caracteres.';return}
+    sb.auth.updateUser({password:s}).then(async r=>{if(r.error){S.authMsg=authErr(r.error);return render()}
+      S.recuperando=false;S.authMsg='';toast('Senha alterada.');const g=await sb.auth.getSession();aoSessao(g.data.session)});return true},
+  reverificar:()=>{S.authMsg='';sb.auth.getSession().then(g=>aoSessao(g.data.session));return true},
+  salvarSenha:()=>{const s=$('#cs-nova').value;if(s.length<8){toast('A senha precisa ter pelo menos 8 caracteres.');return true}
+    sb.auth.updateUser({password:s}).then(r=>{if(r.error)return toast(authErr(r.error));if(S.conta)S.conta.senha='';toast('Senha alterada.');render()});return true},
+  userAtivo:e=>{const u=S.perfis.find(x=>x.id===e.dataset.id);mudarPerfil(u.id,{ativo:!u.ativo},u.ativo?'Acesso de '+u.nome+' desativado.':'Acesso de '+u.nome+' liberado.');return true},
+  novoUser:()=>{const nome=$('#nu-nome').value.trim(),email=$('#nu-email').value.trim().toLowerCase(),senha=$('#nu-senha').value,perfil=$('#nu-perfil').value;
+    if(!nome||!emailOk(email)){toast('Preencha o nome e um e-mail válido.');return true}
+    if(senha.length<8){toast('A senha provisória precisa ter pelo menos 8 caracteres.');return true}
+    toast('Cadastrando…');
+    const tmp=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:'sb-cadastro-temporario'}});
+    tmp.auth.signUp({email,password:senha,options:{data:{nome}}}).then(async r=>{
+      if(r.error)return toast(authErr(r.error));
+      const u=r.data.user;if(!u||(u.identities&&!u.identities.length))return toast('Já existe uma conta com esse e-mail.');
+      await mudarPerfil(u.id,{ativo:true,perfil,nome},nome+' cadastrado e liberado.');
+    },e=>toast(authErr(e)));return true},
+  menu:()=>{S.menu=!S.menu},
+  abrirFechar:()=>{S.modal='fechar'},
+  cancelar:()=>{S.modal=null},
+  confirmarFechar:()=>{const v=$('#md-contado').value.trim();if(!v){toast('Informe o dinheiro contado na gaveta.');return true}
+    const f=fxAberto(S.user.id);
+    q(sb.rpc('fechar_caixa',{p_fluxo:f.id,p_contado_centavos:parseMoney(v)})).then(async r=>{if(r){S.modal=null;toast(`Fluxo ${f.n} fechado. A pesagem fica desabilitada até reabrir o caixa ou trocar de operador.`)}await carregarDia();render()});return true},
+  reabrir:e=>{const id=e.dataset.id;if(fxAberto(id))return;
+    q(sb.rpc('abrir_caixa',{p_operador:id})).then(async r=>{if(r&&r.numero)toast(`Caixa ${r.numero>1?'reaberto':'aberto'}: Fluxo ${r.numero}.`);await carregarDia();render()});return true},
+  tara:e=>{bal(e.dataset.id).tara=+e.dataset.g},
+  simular:e=>{if(!fxAberto(S.user.id))return;const s=bal(e.dataset.id);s.bruto=s.tara+(s.grupo==='acai'?200+Math.floor(Math.random()*400):250+Math.floor(Math.random()*550))},
+  addPeso:e=>{const s=bal(e.dataset.id),g=Math.max(0,s.bruto-s.tara);if(!g||!fxAberto(S.user.id))return;S.bump=true;S.pags=null;S.cart.push({src:s.id,tara:s.tara,desc:s.nome,grupo:s.grupo,g,precoKg:s.precoKg,valor:Math.round(g*s.precoKg/1000)});s.bruto=0},
+  addProd:e=>{if(!fxAberto(S.user.id))return;const p=S.produtos.find(x=>x.id===e.dataset.id);S.bump=true;S.pags=null;S.cart.push({src:p.id,desc:p.nome,grupo:'produto',cat:p.cat,valor:p.preco})},
+  rmItem:e=>{S.cart.splice(+e.dataset.k,1);S.pags=null},
+  novoCli:()=>{S.novoCli=!S.novoCli},
+  salvarCli:()=>{const n=$('#nc-nome').value.trim(),f=$('#nc-fone').value.trim();if(!n||!f){toast('Preencha nome e WhatsApp do cliente.');return true}
+    q(sb.from('clientes').insert({nome:n,telefone:f}).select().single(),'Cliente').then(async r=>{if(r&&r.id){await carregarBase();S.clienteId=r.id;S.novoCli=false;toast(n+' cadastrado no programa de pontos.')}render()});return true},
+  resgate:()=>{S.resgate=!S.resgate;S.pags=null},
+  forma:e=>{S.forma=e.dataset.f;S.pags=null},
+  limparPags:()=>{S.pags=null},
+  limparFil:()=>{S.fil={forma:'',tipo:'',op:'',cli:''};S.finLimite=200;carregarFin();return true},
+  exportPdf:()=>{exportPdf();return true},
+  todas:()=>{S.todas=!S.todas},
+  abrirMisto:()=>{if(!S.cart.length)return;if(!(S.pags&&S.pags.tipo==='misto'))S.mx={pix:'',credito:'',debito:'',dinheiro:'',rec:''};S.modal='misto'},
+  mxResto:e=>{const f=e.dataset.f,v=Math.max(0,parseMoney(S.mx[f])+mistoInfo().falta);S.mx[f]=v?num(v):''},
+  confirmarMisto:()=>{const m=mistoInfo();if(!m.ok)return;const ls=Object.keys(FORMAS).filter(f=>parseMoney(S.mx[f])>0).map((f,k)=>({rot:'Parte '+(k+1),forma:f,valor:parseMoney(S.mx[f])}));
+    if(ls.length===1){S.pags=null;S.forma=ls[0].forma;S.recebido=ls[0].forma==='dinheiro'?(S.mx.rec||num(m.t)):''}else{S.pags={tipo:'misto',linhas:ls,troco:m.troco};S.forma=''}S.modal=null},
+  abrirDividir:()=>{if(!S.cart.length)return;if(!(S.pags&&S.pags.tipo==='dividida')){S.dv=[{valor:'',forma:''},{valor:'',forma:''}];dvIgual()}S.modal='dividir'},
+  dvForma:e=>{S.dv[+e.dataset.k].forma=e.dataset.f},
+  dvMais:()=>{if(S.dv.length<6){S.dv.push({valor:'',forma:''});dvIgual()}},
+  dvMenos:e=>{S.dv.splice(+e.dataset.k,1);dvIgual()},
+  dvIgualar:()=>{dvIgual()},
+  confirmarDiv:()=>{if(!dvInfo().ok)return;S.pags={tipo:'dividida',linhas:S.dv.map((d,k)=>({rot:'Pessoa '+(k+1),forma:d.forma,valor:parseMoney(d.valor)}))};S.forma='';S.modal=null},
+  quick:e=>{S.recebido=num(parseMoney(S.recebido)+ +e.dataset.v)},
+  exato:()=>{S.recebido=num(totais().total)},
+  limparRec:()=>{S.recebido=''},
+  finalizar:()=>{
+    if(!podeFinalizar()||S.enviando)return true;
+    const t=totais(),rec=parseMoney(S.recebido);
+    const pags=S.pags?S.pags.linhas.map(l=>({rotulo:l.rot,forma:l.forma,valor_centavos:l.valor,recebido_centavos:l.forma==='dinheiro'&&S.pags.troco?l.valor+S.pags.troco:null}))
+      :[{rotulo:'',forma:S.forma,valor_centavos:t.total,recebido_centavos:S.forma==='dinheiro'?rec:null}];
+    const p={cliente_id:S.clienteId||null,usar_resgate:!!t.desc,tipo:S.pags?S.pags.tipo:'simples',
+      itens:S.cart.map(i=>i.grupo==='produto'?{produto_id:i.src}:{balanca_id:i.src,gramas:i.g,tara_gramas:i.tara||0}),pagamentos:pags};
+    const troco=S.pags?(S.pags.troco||0):S.forma==='dinheiro'?rec-t.total:0,nomeC=t.c?t.c.nome.split(' ')[0]:'';
+    const como=S.pags?'('+S.pags.linhas.map(l=>FORMAS[l.forma]+' '+brl(l.valor)).join(' + ')+')':'no '+FORMAS[S.forma].toLowerCase();
+    S.enviando=true;toast('Registrando a venda…');
+    q(sb.rpc('registrar_venda',{p})).then(async r=>{S.enviando=false;
+      if(!r||!r.numero){await carregarBase();return render()}
+      toast(`Venda nº ${r.numero} de ${brl(r.total_centavos)} registrada ${como}`+(troco?` · Troco ${brl(troco)}`:'')+(r.pontos_ganhos?` · ${nomeC} ganhou ${r.pontos_ganhos} pontos`:''));
+      S.cart=[];S.clienteId='';S.resgate=false;S.forma='';S.pags=null;S.recebido='';S.novoCli=false;S.balancas.forEach(x=>x.bruto=0);
+      await Promise.all([carregarDia(),carregarBase()]);render()});return true},
+  togDestaque:e=>{const x=S.produtos.find(y=>y.id===e.dataset.id);salvar(sb.from('produtos').update({destaque:!x.destaque}).eq('id',x.id));return true},
+  rmProd:e=>{salvar(sb.from('produtos').update({ativo:false}).eq('id',e.dataset.id),'Produto removido do Caixa.');return true},
+  novoProd:()=>{const n=$('#np2-nome').value.trim(),v=parseMoney($('#np2-preco').value);if(!n||!v){toast('Preencha o nome e o preço do produto.');return true}
+    salvar(sb.from('produtos').insert({nome:n,categoria:$('#np2-cat').value,preco_centavos:v}),n+' cadastrado. Já aparece no Caixa.');return true},
+  togPrato:e=>{const x=S.cardapio[+e.dataset.k];salvar(sb.from('cardapio_itens').update({disponivel:!x.on}).eq('id',x.id));return true},
+  rmPrato:e=>{salvar(sb.from('cardapio_itens').delete().eq('id',S.cardapio[+e.dataset.k].id));return true},
+  addPrato:()=>{const n=$('#np-nome').value.trim();if(!n){toast('Digite o nome do prato.');return true}
+    salvar(sb.from('cardapio_itens').insert({categoria:$('#np-cat').value,nome:n}));return true},
+  periodo:e=>{S.periodo=e.dataset.p;S.finLimite=200;carregarFin();return true},
+  finAnt:()=>{mudarRef(-1);return true},
+  finProx:()=>{mudarRef(1);return true},
+  finHoje:()=>{S.refData=ymd(new Date());S.finLimite=200;carregarFin();return true},
+  finAtualizar:()=>{carregarFin();return true},
+  finMais:()=>{S.finLimite+=200;carregarFin();return true},
+  fechar:e=>{const id=e.dataset.id;
+    q(sb.rpc('fechar_caixa',{p_fluxo:id,p_contado_centavos:parseMoney(S.contado[id])})).then(async r=>{if(r){delete S.contado[id];toast(`Fluxo ${e.dataset.n} fechado.`)}await carregarDia();carregarFin()});return true},
+  addBal:()=>{const n=S.balancas.length+1;salvar(sb.from('balancas').insert({nome:'Balança '+n,grupo:'comida',preco_kg_centavos:6990,ordem:n}),'Balança adicionada. Ela já aparece no Caixa.');return true},
+  conectar:e=>{const s=bal(e.dataset.id);s.conectada=!s.conectada},
+  testar:e=>{const s=bal(e.dataset.id);if(!s.conectada)return toast('Conecte a balança antes de testar.');toast(`${s.nome}: leitura de teste ${kg(300+Math.floor(Math.random()*400))} (simulada).`)},
+  copiar:e=>{const txt={cardapio:cardapioTexto,resumo:resumoTexto,payload}[e.dataset.t]();try{navigator.clipboard.writeText(txt).then(()=>toast('Copiado.'),()=>toast('Não foi possível copiar aqui. Selecione o texto e copie.'))}catch(_){toast('Não foi possível copiar aqui. Selecione o texto e copie.')}return true}
+};
+const C={
+  taraManual:e=>{bal(e.dataset.id).tara=Math.max(0,parseInt(e.value,10)||0)},
+  cliente:e=>{S.clienteId=e.value;S.resgate=false;S.pags=null},
+  regra:e=>{const k=e.dataset.k,M={base:'base_pontos',pontosResgate:'pontos_resgate',valorResgate:'valor_resgate_centavos',minGrupo:'min_pontos_grupo'},v=k==='base'?e.value:k==='valorResgate'?parseMoney(e.value):Math.max(0,parseInt(e.value,10)||0);
+    if(k==='pontosResgate'&&v<1)return toast('Os pontos para resgatar precisam ser pelo menos 1.');
+    salvar(sb.from('config').update({[M[k]]:v}).eq('id',1),'Regra atualizada.')},
+  contado:e=>{S.contado[e.dataset.id]=e.value.trim()},
+  bal:e=>{const s=bal(e.dataset.id),k=e.dataset.k;let c;
+    if(k==='precoKg'){const v=parseMoney(e.value);if(!v||v===s.precoKg)return;c={preco_kg_centavos:v}}
+    else if(k==='baud')c={baud:parseInt(e.value,10)};
+    else if(k==='nome'){const n=e.value.trim();if(!n||n===s.nome)return;c={nome:n}}
+    else c={[k]:e.value};
+    salvar(sb.from('balancas').update(c).eq('id',s.id),'Balança atualizada.')},
+  prod:e=>{const x=S.produtos.find(y=>y.id===e.dataset.id),k=e.dataset.k;let c;
+    if(k==='preco'){const v=parseMoney(e.value);if(!v||v===x.preco)return;c={preco_centavos:v}}
+    else if(k==='nome'){const n=e.value.trim();if(!n||n===x.nome)return;c={nome:n}}
+    else c={categoria:e.value};
+    salvar(sb.from('produtos').update(c).eq('id',x.id),'Produto atualizado.')},
+  avatarArq:e=>{const f=e.files&&e.files[0];if(!f)return;if(!/^image\//.test(f.type))return toast('Escolha um arquivo de imagem.');
+    const rd=new FileReader();rd.onload=()=>{const im=new Image();
+      im.onload=()=>{const n=160,cv=document.createElement('canvas');cv.width=cv.height=n;const s=Math.min(im.width,im.height);cv.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,n,n);S.conta.avatar=cv.toDataURL('image/jpeg',.82);render()};
+      im.onerror=()=>toast('Não foi possível ler essa imagem.');im.src=rd.result};rd.readAsDataURL(f)},
+  fil:e=>{S.fil[e.dataset.k]=e.value;S.finLimite=200;carregarFin()},
+  finData:e=>{if(e.value){S.refData=e.value;S.finLimite=200;carregarFin()}},
+  userPerfil:e=>{const u=S.perfis.find(x=>x.id===e.dataset.id);mudarPerfil(u.id,{perfil:e.value},'Perfil de '+u.nome+' alterado.')},
+  waUrl:e=>{S.wa.url=e.value.trim()},
+  waEv:e=>{S.wa.eventos[e.dataset.k]=e.checked}
+};
+document.addEventListener('click',ev=>{if(S.menu&&window.innerWidth<=980&&!ev.target.closest('nav')&&!ev.target.closest('[data-a="menu"]')){S.menu=false;render();return}const e=ev.target.closest('[data-a]');if(!e||e.disabled)return;const keep=A[e.dataset.a](e);if(!keep)render()});
+document.addEventListener('change',ev=>{const e=ev.target.closest('[data-c]');if(!e)return;C[e.dataset.c](e);render()});
+document.addEventListener('input',ev=>{const t=ev.target;
+  if(S.conta&&t.id==='cs-nome')S.conta.nome=t.value;
+  if(S.conta&&t.id==='cs-nova')S.conta.senha=t.value;
+  if(t.dataset&&t.dataset.m!==undefined){const d=t.value.replace(/\D/g,'');t.value=d?num(parseInt(d,10)):''}
+  if(t.id==='recebido'){S.recebido=t.value;const tb=trocoBox(),x=$('#troco');x.className=tb.c;x.innerHTML=tb.h;$('#finalizar').disabled=!podeFinalizar()}
+  else if(t.dataset.i==='mx'){S.mx[t.dataset.f]=t.value;const m=mistoInfo();$('#mx-status').innerHTML=statusBox(m);$('#mx-ok').disabled=!m.ok;$('#mx-troco').textContent=m.troco?'Troco '+brl(m.troco):''}
+  else if(t.dataset.i==='dv'){S.dv[+t.dataset.k].valor=t.value;const m=dvInfo();$('#dv-status').innerHTML=statusBox(m,!m.falta&&!m.ok);$('#dv-ok').disabled=!m.ok}
+});
+document.addEventListener('keydown',ev=>{if(ev.key!=='Enter')return;const cx=ev.target.closest&&ev.target.closest('#login');const b=cx&&cx.querySelector('[data-enter]');if(b){ev.preventDefault();b.click()}});
+function rota(){const h=(location.hash||'').slice(1);if(RENDER[h])S.view=h;render()}
+window.addEventListener('hashchange',rota);
+rota();
+if(!sb){S.auth='erro';S.authMsg='Não foi possível carregar a conexão com o banco de dados. Verifique a internet e recarregue a página.';render()}
+else sb.auth.onAuthStateChange((ev,sess)=>{
+  if(ev==='PASSWORD_RECOVERY')S.recuperando=true;
+  if(sess&&S.auth==='ok'&&S.perfil&&S.perfil.id===sess.user.id&&!S.recuperando)return;
+  setTimeout(()=>aoSessao(sess),0);
+});
+setInterval(()=>{const c=$('#clock');if(c)c.textContent=hhmm(new Date())},30000);
+</script>
+</body>
+</html>
