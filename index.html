@@ -897,16 +897,17 @@ function vWhats(){
       <div><label for="adm-fone">WhatsApp com DDD</label><input type="text" id="adm-fone" inputmode="tel" placeholder="(85) 9..." autocomplete="off"></div>
       <button class="btn" data-a="admAdd">Liberar este número</button></div>
   </section>
-  <section class="panel"><h2>3. O assistente do financeiro</h2>
+  <section class="panel"><h2>3. Joana, a assistente do financeiro</h2>
     <p style="margin:0">Uma consulta só responde a tudo: o n8n manda o número de quem escreveu e o texto da mensagem, e o banco devolve a resposta pronta no campo <b>texto</b>. Se o campo <b>responder</b> vier como falso, o fluxo não envia nada.</p>
+    <div class="note" style="color:var(--ink)"><b>Ela só responde quando é chamada.</b> A mensagem precisa trazer o nome <b>Joana</b> ou a palavra <b>restaurante</b>. Sem isso ela fica calada e a mensagem segue o caminho normal do outro robô. Cada mensagem vale por si: não existe assunto em andamento nem memória da conversa anterior.</div>
     <pre class="cod">POST ${esc(url('n8n_pergunta'))}
 
 ${esc(JSON.stringify({p_token:tk||'COLE_AQUI_A_CHAVE_DE_ACESSO',p_telefone:'={{ $json.body.phone }}',p_texto:'={{ $json.body.text.message }}'},null,2))}</pre>
     <div class="row">${cp(url('n8n_pergunta'),'Copiar endereço')}${cp(JSON.stringify({p_token:tk||'COLE_AQUI_A_CHAVE_DE_ACESSO',p_telefone:'={{ $json.body.phone }}',p_texto:'={{ $json.body.text.message }}'},null,2),'Copiar corpo')}</div>
     <div class="form"><div><label for="pg-fone">Perguntar como</label><select id="pg-fone">${(N.admins||[]).filter(a=>a.ativo).map(a=>`<option value="${esc(a.telefone)}">${esc(a.nome)} · ${esc(a.telefone)}</option>`).join('')||'<option value="">Cadastre um número acima</option>'}</select></div>
-      <div><label for="pg-txt">Pergunta</label><input type="text" id="pg-txt" value="${esc(N.pergunta||'quanto foi faturado hoje')}" autocomplete="off"></div>
+      <div><label for="pg-txt">Pergunta</label><input type="text" id="pg-txt" value="${esc(N.pergunta||'Joana, quanto foi faturado hoje?')}" autocomplete="off"></div>
       <button class="btn" data-a="n8nPerguntar" ${tk&&(N.admins||[]).some(a=>a.ativo)?'':'disabled'}>Testar a pergunta</button></div>
-    <div class="note">Perguntas que ele entende: faturamento de hoje, de ontem, do dia 12/11, de novembro, do mês, da semana · últimas 5 vendas · quem está no caixa · quem operou hoje · resumo · detalhamento · cardápio.</div>
+    <div class="note">Comece por "Joana," e peça: faturamento de hoje, de ontem, do dia 12/11, de novembro, do mês, da semana · últimas 5 vendas · quem está no caixa · quem operou hoje · resumo · detalhamento · cardápio.</div>
   </section>
   <section class="panel"><h2>4. Outras consultas para o n8n</h2>
     <p style="margin:0">Em cada nó "HTTP Request": método <b>POST</b>, o endereço da consulta, os dois cabeçalhos abaixo e o corpo em JSON.</p>
@@ -987,7 +988,7 @@ const A={
     anon.rpc('n8n_pergunta',{p_token:S.n8n.token,p_telefone:fone,p_texto:txt}).then(r=>{
       S.n8n.teste=r.error?{nome:'Pergunta: '+txt,erro:r.error.message}
         :{nome:'Pergunta: '+txt,texto:(r.data&&r.data.texto)||'',json:JSON.stringify(r.data,null,2),
-          aviso:r.data&&!r.data.responder?(r.data.autorizado?'O assistente ficou em silêncio: a mensagem não parece uma pergunta para ele.':'Número não autorizado: o fluxo não envia resposta nenhuma.'):''};
+          aviso:r.data&&!r.data.responder?(r.data.autorizado?'Joana ficou em silêncio: a mensagem não a chamou pelo nome nem falou em restaurante, então ela deixa passar.':'Número não autorizado: o fluxo não envia resposta nenhuma.'):''};
       render()},er=>{S.n8n.teste={nome:'Pergunta: '+txt,erro:String(er&&er.message||er)};render()});return true},
   n8nGerar:()=>{if(S.n8n&&S.n8n.token&&!S.n8n.confTroca){S.n8n.confTroca=true;return}
     q(sb.rpc('n8n_gerar_token'),'Chave do n8n').then(async r=>{if(typeof r==='string')toast('Chave de acesso gerada.');if(S.n8n)S.n8n.confTroca=false;await carregarN8n();render()});return true},
