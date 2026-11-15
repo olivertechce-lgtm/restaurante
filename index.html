@@ -320,14 +320,14 @@ input[type=range]{width:100%;accent-color:var(--op,var(--ink));min-height:32px}
 .consulta p{margin:0;color:var(--muted);font-size:14.5px}
 .pasta{display:flex;flex-direction:column;min-height:0}
 .abas{display:flex;gap:4px;align-items:flex-end;padding:0;margin-bottom:-2px;position:relative;z-index:2}
-.aba{flex:1 1 0;min-width:0;max-width:280px;overflow:hidden;min-height:46px;border:2px solid var(--line);border-bottom:0;border-radius:14px 14px 0 0;background:#e9e6f2;color:var(--muted);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;padding:4px 12px;text-align:left;cursor:pointer}
+.aba{flex:1 1 0;min-width:0;max-width:280px;overflow:hidden;min-height:46px;position:relative;z-index:1;border:2px solid var(--line);border-bottom:0;border-radius:14px 14px 0 0;background:#e9e6f2;color:var(--muted);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;padding:4px 12px;text-align:left;cursor:pointer}
 .aba b{font-size:13px;white-space:nowrap}
 .aba small{font-size:11px;font-weight:700;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
 .aba:hover{background:#f3f1f8}
-.aba.on{background:#fff;border-color:var(--op,var(--ink));color:var(--ink);min-height:56px;cursor:default}
+.aba.on{background:#fff;border-color:var(--op,var(--ink));color:var(--ink);min-height:56px;cursor:default;z-index:3}
 .aba.espera{background:#fff4d6;border-color:#d98a00;color:#6b4300}
 .aba.mais{flex:0 0 auto;min-width:64px;border-style:dashed;align-items:center;text-align:center}
-.folha{background:#fff;border:2px solid var(--op,var(--ink));border-radius:0 0 18px 18px;padding:14px;box-shadow:0 10px 30px -18px rgba(28,26,39,.5)}
+.folha{position:relative;z-index:2;background:#fff;border:2px solid var(--op,var(--ink));border-radius:0 0 18px 18px;padding:14px;box-shadow:0 10px 30px -18px rgba(28,26,39,.5)}
 @keyframes trocaAba{0%{opacity:.15;transform:translateY(5px)}70%{opacity:1}100%{transform:translateY(0)}}
 @media (prefers-reduced-motion:no-preference){.folha.piscar{animation:trocaAba .3s ease-out}}
 .teclas{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -338,7 +338,12 @@ input[type=range]{width:100%;accent-color:var(--op,var(--ink));min-height:32px}
 .foto-esc{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;border:1px dashed var(--line);border-radius:10px;cursor:pointer;font-size:12px;color:var(--muted);overflow:hidden}
 .mini{width:42px;height:42px;object-fit:cover;display:block;border-radius:9px}
 .x.sm{width:28px;height:28px;font-size:16px}
-.chip.sug{font-weight:600}
+.chip.sug{font-weight:600;width:100%;justify-content:flex-start;text-align:left;line-height:1.15;padding:6px 12px}
+.sugs{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:8px}
+.quadro{border:2px solid var(--qc,var(--line));border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.quadro+.quadro{margin-top:4px}
+.quadro h3{color:var(--qc,var(--ink));font-size:15px;letter-spacing:.02em;text-transform:uppercase}
+.quadro.prato{--qc:#5f6f2a}.quadro.doce{--qc:var(--doce)}.quadro.bebida{--qc:var(--bebida)}
 .pf{--c:#5f6f2a}.prod.prato{--c:#5f6f2a}.prod.doce{--c:var(--doce)}.prod.bebida{--c:var(--bebida)}
 .comfoto{background-image:linear-gradient(118deg,var(--c) 52%,rgba(0,0,0,.10) 76%,rgba(0,0,0,0) 92%),var(--foto) !important;background-repeat:no-repeat,no-repeat;background-position:center,right bottom;background-size:auto,52% auto}
 .pf.comfoto{background-image:linear-gradient(100deg,var(--c) 70%,rgba(0,0,0,.08) 86%,rgba(0,0,0,0) 97%),var(--foto) !important;background-size:auto,auto 100%}
@@ -457,10 +462,12 @@ const prodFoco=()=>S.produtos.find(p=>p.id===S.foco);
 const balComida=()=>S.balancas.find(b=>b.grupo==='comida')||S.balancas[0];
 const balAcai=()=>S.balancas.find(b=>b.grupo==='acai')||S.balancas[1]||S.balancas[0];
 // A ordem do Tab: balanças primeiro, depois os produtos em destaque e os demais.
-const focoLista=()=>S.balancas.map(b=>b.id)
-  .concat(S.produtos.filter(p=>p.destaque).map(p=>p.id))
-  .concat(S.produtos.filter(p=>!p.destaque).map(p=>p.id));
+const CATORD=['prato','doce','bebida'],CATNOME={prato:'Pratos',doce:'Sobremesas',bebida:'Bebidas'};
+const catPos=c=>{const i=CATORD.indexOf(c);return i<0?CATORD.length:i};
+const prodsOrd=()=>S.produtos.slice().sort((a,b)=>catPos(a.cat)-catPos(b.cat)||a.nome.localeCompare(b.nome,'pt'));
+const focoLista=()=>S.balancas.map(b=>b.id).concat(prodsOrd().map(p=>p.id));
 function focoProx(){const L=focoLista();if(!L.length)return '';const i=L.indexOf(S.foco);return L[(i+1)%L.length]}
+function focoAnt(){const L=focoLista();if(!L.length)return '';const i=L.indexOf(S.foco);return L[(i-1+L.length)%L.length]}
 function focoBal(){const c=balComida(),a=balAcai();if(!c||!a)return c?c.id:'';return S.foco===c.id?a.id:c.id}
 function focoValido(){const L=focoLista();if(!L.length){S.foco='';return}if(L.indexOf(S.foco)<0)S.foco=L[0]}
 function tirarUm(id){for(let i=S.cart.length-1;i>=0;i--)if(S.cart[i].src===id){const n=S.cart[i].desc;S.cart.splice(i,1);S.pags=null;return n}return ''}
@@ -658,7 +665,7 @@ function scaleCard(s){
   const liq=Math.max(0,s.bruto-s.tara),valor=Math.round(liq*s.precoKg/1000),off=!fxAberto(S.user.id);
   const sel=!off&&S.foco===s.id;
   const tecla=(k,r,c)=>`<button class="tecla ${c||''}" data-a="tecla" data-id="${s.id}" data-k="${k}" aria-label="${r||k}">${r||k}</button>`;
-  const teclado=sel?`<div class="teclas">${[1,2,3,4,5,6,7,8,9].map(n=>tecla(n)).join('')}${tecla('limpar','C','sec')}${tecla(0,'0')}${tecla('apagar','←','sec')}</div>`:'';
+  const teclado=`<div class="teclas">${[1,2,3,4,5,6,7,8,9].map(n=>tecla(n)).join('')}${tecla('limpar','C','sec')}${tecla(0,'0')}${tecla('apagar','←','sec')}</div>`;
   return `<article class="scale ${s.grupo} ${off?'off':''} ${sel?'sel':''}" data-a="focar" data-id="${s.id}">
     ${badge(s.id)}<header><h2>${esc(s.nome)}</h2><span class="pill onc">${sel?'digitando aqui':brl(s.precoKg)+'/kg'}</span></header>
     <div class="peso"><span class="lbl">${sel?'Digite as gramas':'Toque para digitar aqui'}</span><strong>${kg(s.bruto)}${sel?'<i class="cur"></i>':''}</strong></div>
@@ -698,9 +705,13 @@ function vCaixa(){
     <div class="row"><button class="btn line" data-a="sair">Selecionar outro operador</button><button class="btn" data-a="reabrir" data-id="${S.user.id}">${ult?'Reabrir':'Abrir'} caixa (Fluxo ${meus.length+1})</button></div></div>`;
   return `<div class="head"><div><h1>Caixa</h1><p>Operador: ${nome} · ${f?'Fluxo '+f.n+' aberto às '+hhmm(f.abertura):'caixa fechado'} · ${S.vendas.filter(v=>v.op===S.user.id).length} vendas hoje</p></div></div>
   ${aviso}
-  ${f?`<div class="pasta">${abasHtml()}<div class="folha ${S.abaPisca?'piscar':''}">`:'<div class="folha">'}<div class="pdv"><div class="col">${S.produtos.filter(p=>p.destaque).map(p=>`<button class="pf ${S.foco===p.id?'sel':''} ${p.imagem?'comfoto':''}" ${p.imagem?`style="--foto:url('${esc(p.imagem)}')"`:''} data-a="addProd" data-id="${p.id}" ${f?'':'disabled'}>${badge(p.id)}<span><small>Destaque</small><b>${esc(p.nome)}</b></span><strong>${brl(p.preco)}</strong><em>Adicionar à venda</em></button>`).join('')}<div class="scales">${S.balancas.map(scaleCard).join('')}</div>
-    ${f&&S.balancas.length?`<div class="note dica">Digite as gramas: <b>452</b> é 0,452 kg e <b>1257</b> é 1,257 kg. <b>Tab</b> percorre as balanças e depois os produtos · <b>Enter</b> adiciona (em produto, +1 a cada toque) · <b>Backspace</b> apaga o número ou tira 1 unidade do produto.</div>`:''}
-    <section class="panel"><h2>Outros itens</h2><div class="prods">${S.produtos.filter(p=>!p.destaque).map(p=>`<button class="prod ${p.cat} ${S.foco===p.id?'sel':''} ${p.imagem?'comfoto':''}" ${p.imagem?`style="--foto:url('${esc(p.imagem)}')"`:''} data-a="addProd" data-id="${p.id}" ${f?'':'disabled'}>${badge(p.id,true)}<b>${esc(p.nome)}</b><span>${brl(p.preco)}</span></button>`).join('')}</div></section>
+  ${f?`<div class="pasta">${abasHtml()}<div class="folha ${S.abaPisca?'piscar':''}">`:'<div class="folha">'}<div class="pdv"><div class="col"><div class="scales">${S.balancas.map(scaleCard).join('')}</div>
+    ${f&&S.balancas.length?`<div class="note dica">Digite as gramas: <b>452</b> é 0,452 kg e <b>1257</b> é 1,257 kg. <b>Tab</b> avança a seleção e <b>Shift+Tab</b> volta · <b>Enter</b> adiciona (em produto, +1 a cada toque) · <b>Backspace</b> apaga o número ou tira 1 unidade do produto.</div>`:''}
+    <section class="panel"><h2>Outros itens</h2>
+      ${(()=>{const ps=prodsOrd();const bloco=(c,nome)=>{const its=ps.filter(p=>(catPos(p.cat)===catPos(c)));if(!its.length)return '';
+        return `<div class="quadro ${esc(c)}"><h3>${esc(nome)}</h3><div class="prods">${its.map(p=>`<button class="prod ${p.cat} ${S.foco===p.id?'sel':''} ${p.imagem?'comfoto':''}" ${p.imagem?`style="--foto:url('${esc(p.imagem)}')"`:''} data-a="addProd" data-id="${p.id}" ${f?'':'disabled'}>${badge(p.id,true)}<b>${esc(p.nome)}</b><span>${brl(p.preco)}</span></button>`).join('')}</div></div>`};
+        return CATORD.map(c=>bloco(c,CATNOME[c])).join('')||'<div class="empty">Nenhum produto cadastrado ainda.</div>'})()}
+    </section>
   </div><aside class="col">${vendaPanel()}</aside></div></div>${f?'</div>':''}`;
 }
 function cardapioTexto(){
@@ -716,12 +727,12 @@ function cardapioTexto(){
 function vCardapio(){
   return `<div class="head"><div><h1>Cardápio do dia</h1><p>Marque o que está disponível hoje. É este cardápio que o assistente envia no WhatsApp.</p></div></div>
   <div class="grid2"><section class="panel">
-    ${CATS.map(c=>`<div class="menu-cat"><h3>${c}</h3>${S.cardapio.map((x,k)=>x.cat!==c?'':`<div class="dish ${x.on?'':'off'}"><span>${esc(x.nome)}</span><div class="row"><button class="chip ${x.on?'on':''}" data-a="togPrato" data-k="${k}">${x.on?'Disponível':'Em falta'}</button><button class="x" data-a="rmPrato" data-k="${k}" aria-label="Remover ${esc(x.nome)}">×</button></div></div>`).join('')}</div>`).join('')}
+    ${CATS.map(c=>`<div class="menu-cat"><h3>${c}</h3>${S.cardapio.map((x,k)=>({x,k})).filter(o=>o.x.cat===c).sort((a,b)=>a.x.nome.localeCompare(b.x.nome,'pt')).map(({x,k})=>`<div class="dish ${x.on?'':'off'}"><span>${esc(x.nome)}</span><div class="row"><button class="chip ${x.on?'on':''}" data-a="togPrato" data-k="${k}">${x.on?'Disponível':'Em falta'}</button><button class="x" data-a="rmPrato" data-k="${k}" aria-label="Remover ${esc(x.nome)}">×</button></div></div>`).join('')}</div>`).join('')}
     <div class="form"><div><label for="np-nome">Novo prato</label><input type="text" id="np-nome"></div><div><label for="np-cat">Categoria</label><select id="np-cat">${CATS.map(c=>`<option>${c}</option>`).join('')}</select></div><button class="btn" data-a="addPrato">Adicionar</button></div>
   </section>
   <section class="panel"><h2>Como vai para o WhatsApp</h2><p style="margin:0">É exatamente esta mensagem que será enviada quando o envio automático for ligado.</p><div class="bubble bot">${esc(cardapioTexto())}</div><button class="btn line" data-a="copiar" data-t="cardapio">Copiar texto</button></section></div>
   <section class="panel"><h2>Pratos comuns</h2><p style="margin:0">Toque para colocar no cardápio de hoje. Os que já estão aparecem marcados.</p>
-    ${SUGESTOES.map(([c,ns])=>`<div class="menu-cat"><h3>${EMOJI[c]||''} ${esc(c)}</h3><div class="row">${ns.map(n=>{const ja=S.cardapio.some(x=>x.cat===c&&x.nome.toLowerCase()===n.toLowerCase());
+    ${SUGESTOES.map(([c,ns])=>`<div class="menu-cat"><h3>${EMOJI[c]||''} ${esc(c)}</h3><div class="sugs">${ns.slice().sort((a,b)=>a.localeCompare(b,'pt')).map(n=>{const ja=S.cardapio.some(x=>x.cat===c&&x.nome.toLowerCase()===n.toLowerCase());
       return `<button class="chip sug ${ja?'on':''}" data-a="sugAdd" data-c="${esc(c)}" data-n="${esc(n)}" ${ja?'disabled':''}>${ja?'✓':'+'} ${esc(n)}</button>`}).join('')}</div></div>`).join('')}
   </section>`;
 }
@@ -754,13 +765,12 @@ function vRelatorios(){
 }
 function vProdutos(){
   const CP={prato:'Prato',doce:'Sobremesa',bebida:'Bebida'},ops=v=>Object.keys(CP).map(k=>`<option value="${k}" ${k===v?'selected':''}>${CP[k]}</option>`).join('');
-  return `<div class="head"><div><h1>Produtos</h1><p>Itens de preço fixo que viram botão no Caixa. O produto em destaque aparece grande no topo da tela inicial.</p></div></div>
-  <section class="panel"><h2>Produtos cadastrados</h2><div class="tw"><table><thead><tr><th>Foto</th><th>Nome</th><th>Categoria</th><th>Preço (R$)</th><th>Tela inicial</th><th></th></tr></thead><tbody>
+  return `<div class="head"><div><h1>Produtos</h1><p>Itens de preço fixo que viram botão no Caixa, agrupados por categoria: pratos, sobremesas e bebidas.</p></div></div>
+  <section class="panel"><h2>Produtos cadastrados</h2><div class="tw"><table><thead><tr><th>Foto</th><th>Nome</th><th>Categoria</th><th>Preço (R$)</th><th></th></tr></thead><tbody>
     ${S.produtos.map(p=>`<tr><td><label class="foto-esc" for="pi-${p.id}" title="Escolher foto de ${esc(p.nome)}">${p.imagem?`<img class="mini" src="${esc(p.imagem)}" alt="">`:'<span>+ foto</span>'}</label><input type="file" id="pi-${p.id}" accept="image/*" data-c="prodFoto" data-id="${p.id}" hidden>${p.imagem?`<button class="x sm" data-a="prodFotoTirar" data-id="${p.id}" aria-label="Remover a foto de ${esc(p.nome)}">×</button>`:''}</td>
       <td><input type="text" id="pn-${p.id}" aria-label="Nome do produto" data-c="prod" data-id="${p.id}" data-k="nome" value="${esc(p.nome)}" style="min-width:180px"></td>
       <td><select id="pc-${p.id}" aria-label="Categoria de ${esc(p.nome)}" data-c="prod" data-id="${p.id}" data-k="cat" style="min-width:140px">${ops(p.cat)}</select></td>
       <td><input type="text" id="pp-${p.id}" aria-label="Preço de ${esc(p.nome)}" inputmode="numeric" data-m data-c="prod" data-id="${p.id}" data-k="preco" value="${num(p.preco)}" style="min-width:110px"></td>
-      <td><button class="chip ${p.destaque?'on':''}" data-a="togDestaque" data-id="${p.id}">${p.destaque?'Em destaque':'Destacar'}</button></td>
       <td><button class="x" data-a="rmProd" data-id="${p.id}" aria-label="Remover ${esc(p.nome)}">×</button></td></tr>`).join('')}
   </tbody></table></div>
   <div class="form"><div><label for="np2-nome">Novo produto</label><input type="text" id="np2-nome"></div><div><label for="np2-cat">Categoria</label><select id="np2-cat">${ops('doce')}</select></div><div><label for="np2-preco">Preço (R$)</label><input type="text" id="np2-preco" inputmode="numeric" data-m placeholder="0,00"></div><button class="btn" data-a="novoProd">Cadastrar produto</button></div></section>
@@ -1194,7 +1204,6 @@ const A={
         const esp=S.abas.filter(a=>a.cart.length).length;if(esp)setTimeout(()=>toast(esp===1?'Lembrete: há 1 venda em espera nas abas.':'Lembrete: há '+esp+' vendas em espera nas abas.'),3500)}
       S.balancas.forEach(x=>x.bruto=0);
       await Promise.all([carregarDia(),carregarBase()]);render()});return true},
-  togDestaque:e=>{const x=S.produtos.find(y=>y.id===e.dataset.id);salvar(sb.from('produtos').update({destaque:!x.destaque}).eq('id',x.id));return true},
   rmProd:e=>{salvar(sb.from('produtos').update({ativo:false}).eq('id',e.dataset.id),'Produto removido do Caixa.');return true},
   novoProd:()=>{const n=$('#np2-nome').value.trim(),v=parseMoney($('#np2-preco').value);if(!n||!v){toast('Preencha o nome e o preço do produto.');return true}
     salvar(sb.from('produtos').insert({nome:n,categoria:$('#np2-cat').value,preco_centavos:v}),n+' cadastrado. Já aparece no Caixa.');return true},
@@ -1271,7 +1280,7 @@ document.addEventListener('keydown',ev=>{
   if(al&&(al.tagName==='INPUT'||al.tagName==='SELECT'||al.tagName==='TEXTAREA'||al.isContentEditable))return;
   if(!fxAberto(S.user.id)||!S.balancas.length)return;
   focoValido();const s=balFoco(),pr=prodFoco();
-  if(ev.key==='Tab'){ev.preventDefault();S.foco=focoProx();return render()}
+  if(ev.key==='Tab'){ev.preventDefault();S.foco=ev.shiftKey?focoAnt():focoProx();return render()}
   if(ev.key>='0'&&ev.key<='9'){const b=s||balComida();if(!b)return;ev.preventDefault();
     S.foco=b.id;b.bruto=Math.min(99999,(b.bruto||0)*10+(+ev.key));return render()}
   if(ev.key==='Backspace'){ev.preventDefault();
