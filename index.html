@@ -98,6 +98,7 @@ main{flex:1;min-height:0;overflow:auto;padding:24px;display:flex;flex-direction:
 tr.cont td{color:var(--muted)}
 @media (min-width:1101px) and (min-height:701px){
   main.fixo{overflow:hidden}
+  main.fixo .folha{flex:1;min-height:0;display:flex;flex-direction:column}
   main.fixo .pdv{flex:1;min-height:0;align-items:stretch}
   main.fixo .pdv>.col{overflow:auto;min-height:0;padding:14px 14px 4px 0}
   main.fixo .pdv>aside.col{padding:0}
@@ -316,13 +317,23 @@ input[type=range]{width:100%;accent-color:var(--op,var(--ink));min-height:32px}
 .consulta{border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px}
 .consulta h3{font-size:17px}
 .consulta p{margin:0;color:var(--muted);font-size:14.5px}
-.abas{display:flex;gap:6px}
-.aba{flex:1 1 0;min-width:0;overflow:hidden;min-height:54px;border-radius:14px;border:2px solid var(--line);background:#fff;color:var(--ink);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:2px;padding:4px 8px;text-align:left;cursor:pointer}
+.abas{display:flex;gap:4px;align-items:flex-end;padding:0 10px;margin-bottom:-2px;position:relative;z-index:2}
+.aba{flex:1 1 0;min-width:0;overflow:hidden;min-height:46px;border:2px solid var(--line);border-bottom:0;border-radius:14px 14px 0 0;background:#e9e6f2;color:var(--muted);display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;padding:4px 12px;text-align:left;cursor:pointer}
 .aba b{font-size:13px;white-space:nowrap}
-.aba small{font-size:11px;font-weight:700;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
-.aba.on{background:var(--op);border-color:var(--op);color:#fff}
+.aba small{font-size:11px;font-weight:700;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.aba:hover{background:#f3f1f8}
+.aba.on{background:#fff;border-color:var(--op,var(--ink));color:var(--ink);min-height:56px;cursor:default}
 .aba.espera{background:#fff4d6;border-color:#d98a00;color:#6b4300}
-.aba.mais{flex:0 0 auto;min-width:62px;border-style:dashed;align-items:center;text-align:center;color:var(--muted)}
+.aba.mais{flex:0 0 auto;min-width:64px;border-style:dashed;align-items:center;text-align:center}
+.folha{background:#fff;border:2px solid var(--op,var(--ink));border-radius:18px;padding:14px;box-shadow:0 10px 30px -18px rgba(28,26,39,.5)}
+.folha .pdv{align-items:start}
+.scale.sel{outline:3px solid #fff;outline-offset:-7px;box-shadow:0 0 0 4px var(--op,var(--ink))}
+.scale.sel .peso{background:rgba(0,0,0,.34)}
+.cur{display:inline-block;width:3px;height:.8em;margin-left:6px;background:currentColor;vertical-align:-2px}
+@media (prefers-reduced-motion:no-preference){.cur{animation:pisca 1s steps(1) infinite}}
+@keyframes pisca{50%{opacity:0}}
+.note.dica{background:#fff;border:1px dashed var(--line);color:var(--muted)}
+@media (max-width:560px){.folha{padding:10px;border-radius:14px}.aba{padding:4px 8px}}
 .vhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .vhead h2{margin:0}
 .chip.sm{min-height:36px;padding:0 12px;font-size:13px}
@@ -371,7 +382,7 @@ const S={
   clientes:[],
   regras:{base:'valor',pontosResgate:100,valorResgate:1000,minGrupo:50},
   cardapio:[],
-  abas:[],aba:0,abaConf:false,abasDe:'',cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,
+  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,
   periodo:'diario',refData:'',fin:null,finSeq:0,finLimite:200,finCarregando:false,contado:{},fluxos:[],log:[],modal:null,menu:(typeof window!=='undefined'&&window.innerWidth>980),fundo:10000,
   wa:{url:'',eventos:{resumo:true,cardapio:true,pontos:true,grupo:false}},
   vendas:[]
@@ -401,11 +412,23 @@ const totais=()=>totaisDe(S);
 /* ---------- vendas em abas (até 4 em aberto) ----------
    A venda da aba ativa vive em S.cart, S.forma etc., como sempre. As outras ficam guardadas em S.abas. */
 const MAX_ABAS=4,CAMPOS=['cart','pags','mx','dv','clienteId','resgate','forma','recebido','novoCli'];
-const vendaVazia=()=>({cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false});
-function abaGuardar(){const a=S.abas[S.aba];if(a)CAMPOS.forEach(k=>a[k]=S[k])}
-function abaCarregar(k){S.aba=k;const a=S.abas[k];CAMPOS.forEach(c=>S[c]=a[c]);S.abaConf=false}
+const vendaVazia=()=>({cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,pesos:null});
+function abaGuardar(){const a=S.abas[S.aba];if(a){CAMPOS.forEach(k=>a[k]=S[k]);a.pesos=S.balancas.map(b=>({id:b.id,bruto:b.bruto,tara:b.tara}))}}
+function abaCarregar(k){S.aba=k;const a=S.abas[k];CAMPOS.forEach(c=>S[c]=a[c]);
+  // Cada venda tem a sua pesagem em andamento: trocar de aba troca o que está na tela.
+  const ps=Array.isArray(a.pesos)?a.pesos:null;
+  S.balancas.forEach(b=>{const x=ps?ps.find(y=>y.id===b.id):null;b.bruto=x?(+x.bruto||0):0;if(x&&typeof x.tara==='number')b.tara=x.tara});
+  S.abaConf=false}
 function abasReset(){S.abas=[Object.assign({n:1},vendaVazia())];abaCarregar(0)}
 const abaLivre=a=>!a.cart.length&&!a.clienteId;
+/* ---------- digitação das gramas pelo teclado ----------
+   Sem balança ligada, o peso é digitado: o card selecionado recebe os números,
+   Tab alterna entre comida e açaí, Enter adiciona à venda e já pula para o outro. */
+const balFoco=()=>S.balancas.find(b=>b.id===S.foco);
+const balComida=()=>S.balancas.find(b=>b.grupo==='comida')||S.balancas[0];
+const balAcai=()=>S.balancas.find(b=>b.grupo==='acai')||S.balancas[1]||S.balancas[0];
+function focoProx(){const c=balComida(),a=balAcai();if(!c||!a)return c?c.id:'';return S.foco===c.id?a.id:c.id}
+function focoValido(){if(!S.balancas.length){S.foco='';return}if(!balFoco()){const c=balComida();S.foco=c?c.id:''}}
 const abasComItens=()=>{abaGuardar();return S.abas.filter(a=>a.cart.length).length};
 const abaNumLivre=()=>{for(let n=1;n<=MAX_ABAS;n++)if(!S.abas.some(a=>a.n===n))return n;return 0};
 function abaTirar(k){S.abas.splice(k,1);if(!S.abas.length)return abasReset();abaCarregar(Math.min(k,S.abas.length-1))}
@@ -598,9 +621,10 @@ const isAdmin=()=>S.user.perfil==='Administrador';
 /* ---------- telas ---------- */
 function scaleCard(s){
   const liq=Math.max(0,s.bruto-s.tara),valor=Math.round(liq*s.precoKg/1000),custom=!s.taras.some(t=>t.g===s.tara),off=!fxAberto(S.user.id),dis=off?'disabled':'';
-  return `<article class="scale ${s.grupo} ${off?'off':''}">
-    ${badge(s.id)}<header><h2>${esc(s.nome)}</h2><span class="pill onc">${s.conectada?'Conectada':'Desconectada'} · ${esc(s.marca)}</span></header>
-    <div class="peso"><span class="lbl">Peso na balança</span><strong>${kg(s.bruto)}</strong></div>
+  const sel=!off&&S.foco===s.id;
+  return `<article class="scale ${s.grupo} ${off?'off':''} ${sel?'sel':''}" data-a="focar" data-id="${s.id}">
+    ${badge(s.id)}<header><h2>${esc(s.nome)}</h2><span class="pill onc">${sel?'digitando aqui':esc(s.marca)}</span></header>
+    <div class="peso"><span class="lbl">${sel?'Digite as gramas no teclado':'Peso (toque para digitar aqui)'}</span><strong>${kg(s.bruto)}${sel?'<i class="cur"></i>':''}</strong></div>
     <div class="taras"><span class="lbl">Tara (peso do recipiente)</span>
       ${s.taras.map(t=>`<button class="chip ${s.tara===t.g?'on':''}" data-a="tara" data-id="${s.id}" data-g="${t.g}" ${dis}>${esc(t.n)}${t.g?' '+t.g+' g':''}</button>`).join('')}
       <label class="chip inp ${custom?'on':''}" for="tara-${s.id}">Outra <input id="tara-${s.id}" data-c="taraManual" data-id="${s.id}" inputmode="numeric" value="${custom?s.tara:''}" placeholder="g" ${dis}></label>
@@ -619,7 +643,7 @@ function vendaPanel(){
   else if(S.forma==='pix')pg=`<div class="note">No sistema real, aqui aparece o QR Code do Pix gerado pelo banco e a venda é confirmada sozinha quando o pagamento cai. Neste protótipo, confirme manualmente.</div>`;
   else if(S.forma)pg=`<div class="note">Passe ${brl(t.total)} na maquininha no ${FORMAS[S.forma].toLowerCase()} e finalize quando aprovar.</div>`;
   const atual=S.abas[S.aba]||{n:1},temOutra=S.abas.length>1;
-  return `<section class="panel venda">${abasHtml()}<div class="vhead"><h2>Venda ${atual.n}</h2>${(S.cart.length||temOutra)?`<button class="chip sm ${S.abaConf?'perigo':''}" data-a="abaDescartar">${S.abaConf?'Confirmar: descartar':(S.cart.length?'Descartar venda':'Fechar aba')}</button>`:''}</div>
+  return `<section class="panel venda"><div class="vhead"><h2>Venda ${atual.n}</h2>${(S.cart.length||temOutra)?`<button class="chip sm ${S.abaConf?'perigo':''}" data-a="abaDescartar">${S.abaConf?'Confirmar: descartar':(S.cart.length?'Descartar venda':'Fechar aba')}</button>`:''}</div>
     <div class="lista">${listaCart()}</div>
     <div><label for="cliente">Cliente (programa de pontos)</label>
       <div class="row"><select id="cliente" data-c="cliente" style="flex:1"><option value="">Sem identificação</option>${S.clientes.map(c=>`<option value="${c.id}" ${c.id===S.clienteId?'selected':''}>${esc(c.nome)} · ${esc(c.fone)}</option>`).join('')}</select><button class="btn line sm" data-a="novoCli">Novo</button></div>
@@ -640,9 +664,11 @@ function vCaixa(){
     <div class="row"><button class="btn line" data-a="sair">Selecionar outro operador</button><button class="btn" data-a="reabrir" data-id="${S.user.id}">${ult?'Reabrir':'Abrir'} caixa (Fluxo ${meus.length+1})</button></div></div>`;
   return `<div class="head"><div><h1>Caixa</h1><p>Operador: ${nome} · ${f?'Fluxo '+f.n+' aberto às '+hhmm(f.abertura):'caixa fechado'} · ${S.vendas.filter(v=>v.op===S.user.id).length} vendas hoje</p></div></div>
   ${aviso}
-  <div class="pdv"><div class="col">${S.produtos.filter(p=>p.destaque).map(p=>`<button class="pf" data-a="addProd" data-id="${p.id}" ${f?'':'disabled'}>${badge(p.id)}<span><small>Destaque</small><b>${esc(p.nome)}</b></span><strong>${brl(p.preco)}</strong><em>Adicionar à venda</em></button>`).join('')}<div class="scales">${S.balancas.map(scaleCard).join('')}</div>
+  ${f?abasHtml():''}
+  <div class="folha"><div class="pdv"><div class="col">${S.produtos.filter(p=>p.destaque).map(p=>`<button class="pf" data-a="addProd" data-id="${p.id}" ${f?'':'disabled'}>${badge(p.id)}<span><small>Destaque</small><b>${esc(p.nome)}</b></span><strong>${brl(p.preco)}</strong><em>Adicionar à venda</em></button>`).join('')}<div class="scales">${S.balancas.map(scaleCard).join('')}</div>
+    ${f&&S.balancas.length?`<div class="note dica">Digite as gramas no teclado: <b>452</b> é 0,452 kg e <b>1257</b> é 1,257 kg. <b>Tab</b> troca entre ${esc(balComida()?balComida().nome:'')} e ${esc(balAcai()?balAcai().nome:'')} · <b>Enter</b> adiciona à venda e já passa para a outra · <b>Backspace</b> apaga.</div>`:''}
     <section class="panel"><h2>Outros itens</h2><div class="prods">${S.produtos.filter(p=>!p.destaque).map(p=>`<button class="prod ${p.cat}" data-a="addProd" data-id="${p.id}" ${f?'':'disabled'}>${badge(p.id,true)}<b>${esc(p.nome)}</b><span>${brl(p.preco)}</span></button>`).join('')}</div></section>
-  </div><aside class="col">${vendaPanel()}</aside></div>`;
+  </div><aside class="col">${vendaPanel()}</aside></div></div>`;
 }
 function cardapioTexto(){const d=hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit'});return `Cardápio de hoje (${d})\n`+CATS.map(c=>{const it=S.cardapio.filter(x=>x.cat===c&&x.on);return it.length?`\n${c}\n`+it.map(x=>'• '+x.nome).join('\n'):''}).join('')+`\n\n${S.balancas[0]?S.balancas[0].nome+': '+brl(S.balancas[0].precoKg)+'/kg':''}`}
 function vCardapio(){
@@ -925,6 +951,7 @@ ${esc(corpo(x))}</pre><div class="row">${cp(url(f),'Copiar endereço')}${cp(corp
 const RENDER={caixa:vCaixa,cardapio:vCardapio,produtos:vProdutos,financeiro:vRelatorios,clientes:vClientes,usuarios:vUsuarios,balancas:vBalancas,whatsapp:vWhats};
 function render(){
   if(!S.abas.length)abasReset();
+  focoValido();
   abasSalvar();
   if(!isAdmin()&&SO_ADMIN.includes(S.view))S.view='caixa';
   $('.app').className='app'+(S.menu?'':' min')+(S.logged&&emTeste()?' teste':'');
@@ -940,7 +967,12 @@ function render(){
   if(document.documentElement&&document.documentElement.style)document.documentElement.style.setProperty('--op',S.logged?corOp(S.user):PADRAO);
   const M=$('#modal'),mh=S.logged&&S.modal&&(fa||S.modal==='conta'||S.modal==='senha')?modalHtml(fa):'';M.style.display=mh?'grid':'none';M.innerHTML=mh;
   $('#main').className=S.view==='caixa'?'fixo':'';
-  $('#main').innerHTML=S.pronto?(emTeste()?bannerTeste():'')+RENDER[S.view]():'<section class="panel"><h2>Carregando dados…</h2></section>';
+  // Guarda onde cada parte estava rolada para a tela não pular ao redesenhar.
+  const MN=$('#main'),rolMain=MN.scrollTop,rol=[].slice.call(MN.querySelectorAll('.col,.lista,.tw')).map(e=>e.scrollTop);
+  MN.innerHTML=S.pronto?(emTeste()?bannerTeste():'')+RENDER[S.view]():'<section class="panel"><h2>Carregando dados…</h2></section>';
+  MN.scrollTop=rolMain;
+  const novos=[].slice.call(MN.querySelectorAll('.col,.lista,.tw'));
+  rol.forEach((v,i)=>{if(novos[i]&&v)novos[i].scrollTop=v});
   const L=$('#login'),ah=authHtml();L.style.display=ah?'grid':'none';
   if(ah!==L._h){const k={};['#au-nome','#au-email'].forEach(i=>{const e=L.querySelector?L.querySelector(i):null;if(e)k[i]=e.value});L.innerHTML=ah;L._h=ah;Object.keys(k).forEach(i=>{const e=L.querySelector(i);if(e)e.value=k[i]})}
   if(S.crop)cropDesenhar();
@@ -1060,6 +1092,7 @@ const A={
     q(sb.rpc('fechar_caixa',{p_fluxo:f.id,p_contado_centavos:parseMoney(v)})).then(async r=>{if(r){S.modal=null;toast(`Fluxo ${f.n} fechado. A pesagem fica desabilitada até reabrir o caixa ou trocar de operador.`)}await carregarDia();render()});return true},
   reabrir:e=>{const id=e.dataset.id;if(fxAberto(id))return;
     q(sb.rpc('abrir_caixa',{p_operador:id})).then(async r=>{if(r&&r.numero)toast(`Caixa ${r.numero>1?'reaberto':'aberto'}: Fluxo ${r.numero}.`);await carregarDia();render()});return true},
+  focar:e=>{if(fxAberto(S.user.id))S.foco=e.dataset.id},
   tara:e=>{bal(e.dataset.id).tara=+e.dataset.g},
   simular:e=>{if(!fxAberto(S.user.id))return;const s=bal(e.dataset.id);s.bruto=s.tara+(s.grupo==='acai'?200+Math.floor(Math.random()*400):250+Math.floor(Math.random()*550))},
   addPeso:e=>{S.abaConf=false;const s=bal(e.dataset.id),g=Math.max(0,s.bruto-s.tara);if(!g||!fxAberto(S.user.id))return;S.bump=true;S.pags=null;S.cart.push({src:s.id,tara:s.tara,desc:s.nome,grupo:s.grupo,g,precoKg:s.precoKg,valor:Math.round(g*s.precoKg/1000)});s.bruto=0},
@@ -1168,6 +1201,21 @@ document.addEventListener('input',ev=>{const t=ev.target;
   else if(t.dataset.i==='mx'){S.mx[t.dataset.f]=t.value;const m=mistoInfo();$('#mx-status').innerHTML=statusBox(m);$('#mx-ok').disabled=!m.ok;$('#mx-troco').textContent=m.troco?'Troco '+brl(m.troco):''}
   else if(t.dataset.i==='dv'){S.dv[+t.dataset.k].valor=t.value;const m=dvInfo();$('#dv-status').innerHTML=statusBox(m,!m.falta&&!m.ok);$('#dv-ok').disabled=!m.ok}
 });
+document.addEventListener('keydown',ev=>{
+  // Digitação do peso: só no Caixa, com o caixa aberto e fora de qualquer campo de texto.
+  if(!S.logged||!S.pronto||S.view!=='caixa'||S.modal||S.crop)return;
+  if(ev.ctrlKey||ev.altKey||ev.metaKey)return;
+  const al=ev.target;
+  if(al&&(al.tagName==='INPUT'||al.tagName==='SELECT'||al.tagName==='TEXTAREA'||al.isContentEditable))return;
+  if(!fxAberto(S.user.id)||!S.balancas.length)return;
+  focoValido();const s=balFoco();if(!s)return;
+  if(ev.key==='Tab'){ev.preventDefault();S.foco=focoProx();return render()}
+  if(ev.key>='0'&&ev.key<='9'){ev.preventDefault();S.foco=s.id;s.bruto=Math.min(99999,(s.bruto||0)*10+(+ev.key));return render()}
+  if(ev.key==='Backspace'){ev.preventDefault();s.bruto=Math.floor((s.bruto||0)/10);return render()}
+  if(ev.key==='Escape'&&s.bruto){ev.preventDefault();s.bruto=0;return render()}
+  if(ev.key==='Enter'){if(Math.max(0,s.bruto-s.tara)<=0)return;ev.preventDefault();
+    A.addPeso({dataset:{id:s.id}});S.foco=focoProx();return render()}
+},true);
 document.addEventListener('keydown',ev=>{if(ev.key!=='Enter')return;if(ev.target.id==='ap-senha'){ev.preventDefault();const o=document.getElementById('ap-ok');if(o)o.click();return}const cx=ev.target.closest&&ev.target.closest('#login');const b=cx&&cx.querySelector('[data-enter]');if(b){ev.preventDefault();b.click()}});
 function rota(){const h=(location.hash||'').slice(1);if(RENDER[h])S.view=h;render()}
 window.addEventListener('hashchange',rota);
