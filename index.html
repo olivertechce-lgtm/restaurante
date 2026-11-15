@@ -267,6 +267,38 @@ tbody tr:hover td{background:#faf9fd}
 .perfil-topo span span,.perfil-topo div span{font-size:13px;opacity:.85;overflow-wrap:anywhere}
 .cor{width:44px;height:44px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1px var(--line)}
 .cor.on{box-shadow:0 0 0 3px var(--ink)}
+
+/* ---------- cor do operador em todo o sistema ---------- */
+.top{background:var(--op,var(--ink));border-top:0;border-bottom:0;color:#fff}
+.top .tinfo span{color:rgba(255,255,255,.8)}
+.top .ib{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.35);color:#fff}
+.top .ib:hover{background:rgba(255,255,255,.28)}
+.top .inds{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.3)}
+.top .ind{border-left-color:rgba(255,255,255,.25)}
+.top .ind small{color:rgba(255,255,255,.78)}
+.top .dot,.top .dot.warn,.top .dot.bad{box-shadow:0 0 0 2px #fff}
+.top .parcial{border-color:transparent;color:var(--ink)}
+.top .parcial.tem{color:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.75)}
+.top .btn.sm.line{background:#fff;color:var(--ink);border-color:transparent}
+.top .btn.sm:not(.line):not(.go):not(.white):not(.ghost){background:#fff;color:var(--op,var(--ink))}
+.user,.user:hover{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.42);filter:none}
+.user:hover{background:rgba(255,255,255,.28)}
+.nav.on{color:var(--op,var(--ink))}
+.brand i{background:var(--op,var(--ink));box-shadow:inset 0 0 0 2px rgba(255,255,255,.4)}
+.btn:not(.line):not(.go):not(.white):not(.ghost){background:var(--op,var(--ink))}
+.chip.on{background:var(--op,var(--ink));border-color:var(--op,var(--ink))}
+.scale .chip.on{background:#fff;border-color:#fff}
+.qt{border-color:var(--op,var(--ink));color:var(--op,var(--ink))}
+.qt.z{border-color:var(--line);color:var(--muted)}
+input:focus,select:focus{border-color:var(--op,var(--ink));box-shadow:0 0 0 3px color-mix(in srgb,var(--op,#1c1a27) 22%,transparent)}
+.bar.today .track i{background:var(--op,var(--ink))}
+.cor{position:relative}
+.cor.padrao{background:linear-gradient(135deg,#1c1a27 50%,#3b3e46 50%)}
+.cor:disabled{opacity:.28;cursor:not-allowed}
+.cor:disabled::after{content:"";position:absolute;left:4px;right:4px;top:50%;height:3px;background:#fff;transform:rotate(-45deg)}
+#crop-cv{width:min(300px,100%);aspect-ratio:1;align-self:center;border-radius:18px;touch-action:none;cursor:grab;background:var(--soft)}
+#crop-cv:active{cursor:grabbing}
+input[type=range]{width:100%;accent-color:var(--op,var(--ink));min-height:32px}
 </style>
 </head>
 <body>
@@ -359,10 +391,15 @@ function dvInfo(){const t=totais().total,s=S.dv.reduce((a,d)=>a+parseMoney(d.val
 function statusBox(m,semForma){return m.falta>0?`<div class="troco falta"><span>Falta distribuir</span><strong>${brl(m.falta)}</strong></div>`:m.falta<0?`<div class="troco falta"><span>Passou do total em</span><strong>${brl(-m.falta)}</strong></div>`:semForma?`<div class="troco falta"><span>Escolha a forma de cada pessoa</span><strong>${brl(m.t)}</strong></div>`:`<div class="troco"><span>Valores conferem</span><strong>${brl(m.t)}</strong></div>`}
 function dvIgual(){const t=totais().total,n=S.dv.length,b=Math.floor(t/n);S.dv.forEach((d,k)=>d.valor=num(k===n-1?t-b*(n-1):b))}
 function modalHtml(fa){
-  if(S.modal==='conta'){const c=S.conta||{};return `<div class="panel" style="width:min(480px,100%)"><h1>Meu perfil</h1>
+  if(S.modal==='conta'&&S.crop)return `<div class="panel" style="width:min(480px,100%)"><h1>Ajustar a foto</h1><p style="margin:0">Arraste a imagem para posicionar. Use o controle para aproximar. O que ficar dentro do círculo vira a foto.</p>
+    <canvas id="crop-cv" width="560" height="560" aria-label="Área de recorte da foto"></canvas>
+    <div><label for="crop-z">Aproximar</label><input type="range" id="crop-z" min="1" max="4" step="0.01" value="${S.crop.z}"></div>
+    <div class="row"><button class="btn line" data-a="cropCancelar">Cancelar</button><button class="btn" data-a="cropUsar">Usar esta foto</button></div></div>`;
+  if(S.modal==='conta'){const c=S.conta||{},usadas=S.coresUsadas||[],atual=c.cor?c.cor.toLowerCase():null;return `<div class="panel" style="width:min(480px,100%)"><h1>Meu perfil</h1>
     <div class="perfil-topo" style="background:${corOp(c)}"><span class="av grande">${avHtml(c)}</span><div><b>${esc(c.nome||'')}</b><span>${esc(S.perfil?S.perfil.login:'')} · ${S.user.perfil}</span></div></div>
-    <div class="row"><label class="btn line sm" for="cs-foto" style="display:inline-flex;align-items:center;cursor:pointer;flex:1;justify-content:center">Trocar foto</label><input type="file" id="cs-foto" accept="image/*" data-c="avatarArq" hidden>${c.avatar?`<button class="btn line sm" data-a="avatarTirar">Remover foto</button>`:''}</div>
-    <div><span class="lbl">Cor de fundo do operador</span><div class="row" style="margin-top:8px">${CORES.map(x=>`<button class="cor ${corOp(c)===x?'on':''}" data-a="contaCor" data-cor="${x}" style="background:${x}" aria-label="Cor ${x}"></button>`).join('')}</div></div>
+    <div class="row"><label class="btn line sm" for="cs-foto" style="display:inline-flex;align-items:center;cursor:pointer;flex:1;justify-content:center">${c.avatar?'Trocar foto':'Escolher foto'}</label><input type="file" id="cs-foto" accept="image/*" data-c="avatarArq" hidden>${c.avatar?`<button class="btn line sm" data-a="avatarTirar">Remover foto</button>`:''}</div>
+    <div><span class="lbl">Cor do operador</span><div class="row" style="margin-top:8px"><button class="cor padrao ${atual?'':'on'}" data-a="contaCor" data-cor="" aria-label="Cor padrão" title="Padrão"></button>${CORES.map(x=>{const u=usadas.includes(x);return `<button class="cor ${atual===x?'on':''}" data-a="contaCor" data-cor="${x}" style="background:${x}" ${u?'disabled':''} aria-label="Cor ${x}${u?', em uso por outro operador':''}" title="${u?'Em uso por outro operador':''}"></button>`}).join('')}</div>
+      <p style="margin:8px 0 0;font-size:13px;color:var(--muted)">Cada cor pertence a um operador só. As riscadas já estão em uso.</p></div>
     <div><label for="cs-nome">Nome que aparece no sistema</label><input type="text" id="cs-nome" value="${esc(c.nome||'')}" maxlength="60"></div>
     <button class="btn" data-a="salvarPerfil">Salvar perfil</button>
     <div><label for="cs-nova">Nova senha (mínimo 8 caracteres)</label><input type="password" id="cs-nova" autocomplete="new-password" value="${esc(c.senha||'')}"></div>
@@ -385,8 +422,8 @@ const nomeCli=id=>{const c=S.clientes.find(x=>x.id===id);return c?c.nome:''};
 const nomeOp=id=>(S.usuarios.find(u=>u.id===id)||{nome:''}).nome;
 const TIPOS={simples:'Comum',dividida:'Conta dividida',misto:'Pagamento misto'};
 const filtroAtivo=()=>Object.values(S.fil).some(Boolean);
-const CORES=['#1c1a27','#d44c14','#531f78','#0c9c8b','#2a66dd','#27924a','#d83f77','#b86a00'];
-const corOp=u=>u&&/^#[0-9a-f]{6}$/i.test(u.cor||'')?u.cor:CORES[0];
+const PADRAO='#1c1a27',CORES=['#d44c14','#b3261e','#d83f77','#531f78','#2a66dd','#0e7490','#0c9c8b','#27924a','#b86a00','#6d4c41'];
+const corOp=u=>u&&/^#[0-9a-f]{6}$/i.test(u.cor||'')?u.cor.toLowerCase():PADRAO;
 const iniciais=n=>String(n||'').trim().split(/\s+/).map(x=>x[0]||'').join('').slice(0,2).toUpperCase();
 const avHtml=u=>u&&u.avatar?`<img src="${esc(u.avatar)}" alt="">`:esc(iniciais(u&&u.nome));
 const itensTxt=v=>v.itens.map(i=>i.desc+(i.g?' '+kg(i.g):'')).join(', ');
@@ -550,7 +587,7 @@ function vRelatorios(){
   const b=F.buckets,a=F.total,max=Math.max(...b.map(x=>x.a.fat),1);
   const abbr=c=>{const v=c/100;return v>=1000?(v/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mil':String(Math.round(v))};
   return cab+`<div class="kpis">
-    <div class="kpi" style="background-color:var(--ink)"><span class="lbl">Faturamento</span><strong>${brl(a.fat)}</strong></div>
+    <div class="kpi" style="background-color:var(--op,var(--ink))"><span class="lbl">Faturamento</span><strong>${brl(a.fat)}</strong></div>
     <div class="kpi" style="background-color:var(--comida)"><span class="lbl">Comida vendida</span><strong>${kg1(a.gCom)}</strong></div>
     <div class="kpi" style="background-color:var(--acai)"><span class="lbl">Açaí vendido</span><strong>${kg1(a.gAcai)}</strong></div>
     <div class="kpi" style="background-color:var(--bebida)"><span class="lbl">Vendas</span><strong>${a.n.toLocaleString('pt-BR')}</strong></div>
@@ -681,6 +718,18 @@ function mudarRef(s){const r=refData(),P=S.periodo;
   const h=new Date();if(r>h){r.setTime(h.getTime())}
   if(s<0&&(P==='mensal'||P==='semestral')){r.setMonth(r.getMonth()+1,0)}
   S.refData=ymd(r);S.finLimite=200;carregarFin()}
+async function carregarCores(){const r=await q(sb.rpc('cores_em_uso'),'Cores');S.coresUsadas=Array.isArray(r)?r.map(x=>String(x.cor).toLowerCase()):[];if(S.modal==='conta')render()}
+function cropLim(){const c=S.crop,V=560,s=Math.max(V/c.w,V/c.h)*c.z,dw=c.w*s,dh=c.h*s;c.ox=Math.max(-(dw-V)/2,Math.min((dw-V)/2,c.ox));c.oy=Math.max(-(dh-V)/2,Math.min((dh-V)/2,c.oy));return{V,dw,dh}}
+function cropDesenhar(){const cv=document.getElementById('crop-cv');if(!cv||!S.crop)return;const g=cv.getContext('2d'),c=S.crop,L=cropLim(),r=L.V/2-4;
+  g.clearRect(0,0,L.V,L.V);g.drawImage(c.im,(L.V-L.dw)/2+c.ox,(L.V-L.dh)/2+c.oy,L.dw,L.dh);
+  g.fillStyle='rgba(28,26,39,.6)';g.beginPath();g.rect(0,0,L.V,L.V);g.arc(L.V/2,L.V/2,r,0,Math.PI*2,true);g.fill('evenodd');
+  g.strokeStyle='#fff';g.lineWidth=4;g.beginPath();g.arc(L.V/2,L.V/2,r,0,Math.PI*2);g.stroke()}
+let arrasto=null;
+document.addEventListener('pointerdown',ev=>{if(ev.target.id!=='crop-cv'||!S.crop)return;arrasto={x:ev.clientX,y:ev.clientY,ox:S.crop.ox,oy:S.crop.oy,k:560/ev.target.getBoundingClientRect().width};try{ev.target.setPointerCapture(ev.pointerId)}catch(_){}ev.preventDefault()});
+document.addEventListener('pointermove',ev=>{if(!arrasto||!S.crop)return;S.crop.ox=arrasto.ox+(ev.clientX-arrasto.x)*arrasto.k;S.crop.oy=arrasto.oy+(ev.clientY-arrasto.y)*arrasto.k;cropDesenhar()});
+document.addEventListener('pointerup',()=>{arrasto=null});
+document.addEventListener('pointercancel',()=>{arrasto=null});
+document.addEventListener('wheel',ev=>{if(ev.target.id!=='crop-cv'||!S.crop)return;ev.preventDefault();S.crop.z=Math.max(1,Math.min(4,S.crop.z*(ev.deltaY<0?1.08:.93)));const z=document.getElementById('crop-z');if(z)z.value=S.crop.z;cropDesenhar()},{passive:false});
 const salvar=(p,ok)=>q(p).then(async r=>{if(r&&ok)toast(ok);await carregarBase();render()});
 async function mudarPerfil(id,campos,ok){
   const r=await sb.from('perfis').update(campos).eq('id',id);
@@ -747,12 +796,13 @@ function render(){
     <div class="tright">${fa?`<button class="btn line sm" data-a="abrirFechar">Fechar caixa</button>`:`<button class="btn sm" data-a="reabrir" data-id="${S.user.id}">${nf?'Reabrir':'Abrir'} caixa</button>`}
       <button class="user" data-a="conta" aria-label="Meu perfil: ${esc(S.user.nome)}"><span class="av">${avHtml(S.user)}</span><span class="who"><b>${esc(S.user.nome)}</b><span>${S.user.perfil} · perfil</span></span></button></div>`;
   S.bump=false;
-  if($('#top').style&&$('#top').style.setProperty)$('#top').style.setProperty('--op',corOp(S.user));
+  if(document.documentElement&&document.documentElement.style)document.documentElement.style.setProperty('--op',S.logged?corOp(S.user):PADRAO);
   const M=$('#modal'),mh=S.logged&&S.modal&&(fa||S.modal==='conta')?modalHtml(fa):'';M.style.display=mh?'grid':'none';M.innerHTML=mh;
   $('#main').className=S.view==='caixa'?'fixo':'';
   $('#main').innerHTML=S.pronto?RENDER[S.view]():'<section class="panel"><h2>Carregando dados…</h2></section>';
   const L=$('#login'),ah=authHtml();L.style.display=ah?'grid':'none';
   if(ah!==L._h){const k={};['#au-nome','#au-email'].forEach(i=>{const e=L.querySelector?L.querySelector(i):null;if(e)k[i]=e.value});L.innerHTML=ah;L._h=ah;Object.keys(k).forEach(i=>{const e=L.querySelector(i);if(e)e.value=k[i]})}
+  if(S.crop)cropDesenhar();
 }
 function toast(m){const t=$('#toast');t.textContent=m;t.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(()=>t.style.display='none',4500)}
 const bal=id=>S.balancas.find(b=>b.id===id);
@@ -761,11 +811,14 @@ const bal=id=>S.balancas.find(b=>b.id===id);
 const A={
   ir:e=>{S.view=e.dataset.v;if(S.view==='usuarios')carregarPerfis();if(S.view==='financeiro')carregarFin();if(typeof window!=='undefined'&&window.innerWidth<=980)S.menu=false;try{location.hash=S.view}catch(_){}},
   sair:()=>{S.modal=null;S.recuperando=false;if(sb)sb.auth.signOut().then(()=>{},()=>{});else aoSessao(null);return true},
-  conta:()=>{S.conta={nome:S.user.nome,avatar:S.user.avatar||null,cor:corOp(S.user),senha:''};S.modal='conta'},
-  contaCor:e=>{S.conta.cor=e.dataset.cor},
+  conta:()=>{S.conta={nome:S.user.nome,avatar:S.user.avatar||null,cor:S.user.cor||null,senha:''};S.crop=null;S.modal='conta';carregarCores()},
+  contaCor:e=>{S.conta.cor=e.dataset.cor||null},
   avatarTirar:()=>{S.conta.avatar=null},
+  cropCancelar:()=>{S.crop=null},
+  cropUsar:()=>{const c=S.crop,L=cropLim(),k=160/L.V,cv=document.createElement('canvas');cv.width=cv.height=160;const g=cv.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,160,160);
+    g.drawImage(c.im,((L.V-L.dw)/2+c.ox)*k,((L.V-L.dh)/2+c.oy)*k,L.dw*k,L.dh*k);S.conta.avatar=cv.toDataURL('image/jpeg',.85);S.crop=null},
   salvarPerfil:()=>{const nome=(S.conta.nome||'').trim();if(!nome){toast('Digite o nome que aparece no sistema.');return true}
-    q(sb.rpc('atualizar_meu_perfil',{p_nome:nome,p_avatar:S.conta.avatar,p_cor:S.conta.cor}),'Perfil').then(r=>{
+    q(sb.rpc('atualizar_meu_perfil',{p_nome:nome,p_avatar:S.conta.avatar,p_cor:S.conta.cor||null}),'Perfil').then(r=>{if(!r)carregarCores();
       if(r&&r.id){S.perfil=r;Object.assign(S.user,{nome:r.nome,avatar:r.avatar||null,cor:r.cor||null});if(S.perfis){const i=S.perfis.findIndex(x=>x.id===r.id);if(i>=0)S.perfis[i]=r}S.conta.nome=r.nome;toast('Perfil salvo.')}
       render()});return true},
   authTab:e=>{S.authTab=e.dataset.t;S.authMsg=''},
@@ -804,7 +857,7 @@ const A={
     },e=>toast(authErr(e)));return true},
   menu:()=>{S.menu=!S.menu},
   abrirFechar:()=>{S.modal='fechar'},
-  cancelar:()=>{S.modal=null},
+  cancelar:()=>{S.modal=null;S.crop=null},
   confirmarFechar:()=>{const v=$('#md-contado').value.trim();if(!v){toast('Informe o dinheiro contado na gaveta.');return true}
     const f=fxAberto(S.user.id);
     q(sb.rpc('fechar_caixa',{p_fluxo:f.id,p_contado_centavos:parseMoney(v)})).then(async r=>{if(r){S.modal=null;toast(`Fluxo ${f.n} fechado. A pesagem fica desabilitada até reabrir o caixa ou trocar de operador.`)}await carregarDia();render()});return true},
@@ -893,7 +946,7 @@ const C={
     salvar(sb.from('produtos').update(c).eq('id',x.id),'Produto atualizado.')},
   avatarArq:e=>{const f=e.files&&e.files[0];if(!f)return;if(!/^image\//.test(f.type))return toast('Escolha um arquivo de imagem.');
     const rd=new FileReader();rd.onload=()=>{const im=new Image();
-      im.onload=()=>{const n=160,cv=document.createElement('canvas');cv.width=cv.height=n;const s=Math.min(im.width,im.height);cv.getContext('2d').drawImage(im,(im.width-s)/2,(im.height-s)/2,s,s,0,0,n,n);S.conta.avatar=cv.toDataURL('image/jpeg',.82);render()};
+      im.onload=()=>{if(!im.width||!im.height)return toast('Não foi possível ler essa imagem.');S.crop={im,w:im.width,h:im.height,z:1,ox:0,oy:0};render()};
       im.onerror=()=>toast('Não foi possível ler essa imagem.');im.src=rd.result};rd.readAsDataURL(f)},
   fil:e=>{S.fil[e.dataset.k]=e.value;S.finLimite=200;carregarFin()},
   finData:e=>{if(e.value){S.refData=e.value;S.finLimite=200;carregarFin()}},
@@ -904,6 +957,7 @@ const C={
 document.addEventListener('click',ev=>{if(S.menu&&window.innerWidth<=980&&!ev.target.closest('nav')&&!ev.target.closest('[data-a="menu"]')){S.menu=false;render();return}const e=ev.target.closest('[data-a]');if(!e||e.disabled)return;const keep=A[e.dataset.a](e);if(!keep)render()});
 document.addEventListener('change',ev=>{const e=ev.target.closest('[data-c]');if(!e)return;C[e.dataset.c](e);render()});
 document.addEventListener('input',ev=>{const t=ev.target;
+  if(S.crop&&t.id==='crop-z'){S.crop.z=+t.value;cropDesenhar();return}
   if(S.conta&&t.id==='cs-nome')S.conta.nome=t.value;
   if(S.conta&&t.id==='cs-nova')S.conta.senha=t.value;
   if(t.dataset&&t.dataset.m!==undefined){const d=t.value.replace(/\D/g,'');t.value=d?num(parseInt(d,10)):''}
