@@ -299,6 +299,13 @@ input:focus,select:focus{border-color:var(--op,var(--ink));box-shadow:0 0 0 3px 
 #crop-cv{width:min(300px,100%);aspect-ratio:1;align-self:center;border-radius:18px;touch-action:none;cursor:grab;background:var(--soft)}
 #crop-cv:active{cursor:grabbing}
 input[type=range]{width:100%;accent-color:var(--op,var(--ink));min-height:32px}
+
+/* ---------- modo teste e exclusão pelo dono ---------- */
+.app.teste .top{background:linear-gradient(90deg,#d44c14,#d83f77,#531f78,#2a66dd,#0c9c8b,#27924a)}
+.banner.teste{background:#fff;border:2px dashed var(--ink);color:var(--ink)}
+.banner.teste .row>.btn{flex:none}
+.btn.perigo,.btn.line.perigo{color:var(--bad);border-color:var(--bad);background:#fff}
+.btn.perigo.cheio:not(.line):not(.go):not(.white):not(.ghost){background:var(--bad);color:#fff}
 </style>
 </head>
 <body>
@@ -391,6 +398,11 @@ function dvInfo(){const t=totais().total,s=S.dv.reduce((a,d)=>a+parseMoney(d.val
 function statusBox(m,semForma){return m.falta>0?`<div class="troco falta"><span>Falta distribuir</span><strong>${brl(m.falta)}</strong></div>`:m.falta<0?`<div class="troco falta"><span>Passou do total em</span><strong>${brl(-m.falta)}</strong></div>`:semForma?`<div class="troco falta"><span>Escolha a forma de cada pessoa</span><strong>${brl(m.t)}</strong></div>`:`<div class="troco"><span>Valores conferem</span><strong>${brl(m.t)}</strong></div>`}
 function dvIgual(){const t=totais().total,n=S.dv.length,b=Math.floor(t/n);S.dv.forEach((d,k)=>d.valor=num(k===n-1?t-b*(n-1):b))}
 function modalHtml(fa){
+  if(S.modal==='senha'&&S.apagar)return `<div class="panel" style="width:min(460px,100%)"><h1>Apagar ${S.apagar.tipo==='fluxo'?'fluxo de caixa':'registro'}</h1>
+    <p style="margin:0">O senhor está prestes a apagar <b>${esc(S.apagar.txt)}</b>. Não tem como desfazer.</p>
+    ${S.apagar.extra?`<div class="note" style="color:var(--ink)">${esc(S.apagar.extra)}</div>`:''}
+    <div><label for="ap-senha">Digite a sua senha para confirmar</label><input type="password" id="ap-senha" autocomplete="current-password"></div>
+    <div class="row"><button class="btn line" data-a="cancelar">Cancelar</button><button class="btn perigo cheio" id="ap-ok" data-a="confirmarApagar">Apagar</button></div></div>`;
   if(S.modal==='conta'&&S.crop)return `<div class="panel" style="width:min(480px,100%)"><h1>Ajustar a foto</h1><p style="margin:0">Arraste a imagem para posicionar. Use o controle para aproximar. O que ficar dentro do círculo vira a foto.</p>
     <canvas id="crop-cv" width="560" height="560" aria-label="Área de recorte da foto"></canvas>
     <div><label for="crop-z">Aproximar</label><input type="range" id="crop-z" min="1" max="4" step="0.01" value="${S.crop.z}"></div>
@@ -404,6 +416,7 @@ function modalHtml(fa){
     <button class="btn" data-a="salvarPerfil">Salvar perfil</button>
     <div><label for="cs-nova">Nova senha (mínimo 8 caracteres)</label><input type="password" id="cs-nova" autocomplete="new-password" value="${esc(c.senha||'')}"></div>
     <div class="row"><button class="btn line" data-a="salvarSenha">Trocar senha</button><button class="btn line" data-a="cancelar">Fechar</button></div>
+    ${ehDono()?`<div class="note" style="color:var(--ink);display:flex;flex-direction:column;gap:8px"><b>Modo teste ${emTeste()?'(ligado)':'(desligado)'}</b><span>Um ambiente separado para testar vendas, clientes, produtos e cardápio sem mexer no financeiro real. Só a sua conta tem este botão.</span><button class="btn sm" data-a="testeModo" data-on="${emTeste()?0:1}">${emTeste()?'Sair do modo teste':'Ligar modo teste'}</button></div>`:''}
     <button class="btn line sm" data-a="sair">Sair do sistema</button></div>`}
   if(S.modal==='fechar'){const a=aggVendas(S.vendas.filter(v=>v.fx===fa.id));return `<div class="panel"><h1>Fechar caixa</h1><p style="margin:0">${esc(S.user.nome)} · Fluxo ${fa.n}, aberto às ${hhmm(fa.abertura)} · ${a.n} vendas · ${brl(a.fat)}</p><div><label for="md-contado">Dinheiro contado na gaveta</label><input type="text" id="md-contado" inputmode="numeric" data-m placeholder="0,00"></div><div class="note">Depois de fechar, a pesagem fica desabilitada para este operador até o caixa ser reaberto.</div><div class="row"><button class="btn line" data-a="cancelar">Cancelar</button><button class="btn" data-a="confirmarFechar">Fechar caixa</button></div></div>`}
   if(S.modal==='misto'){const m=mistoInfo();return `<div class="panel" style="width:min(560px,100%)"><h1>Pagamento misto</h1><p style="margin:0">Total da venda: <b>${brl(m.t)}</b>. Digite quanto vai em cada forma.</p>
@@ -426,6 +439,11 @@ const PADRAO='#1c1a27',CORES=['#d44c14','#b3261e','#d83f77','#531f78','#2a66dd',
 const corOp=u=>u&&/^#[0-9a-f]{6}$/i.test(u.cor||'')?u.cor.toLowerCase():PADRAO;
 const iniciais=n=>String(n||'').trim().split(/\s+/).map(x=>x[0]||'').join('').slice(0,2).toUpperCase();
 const avHtml=u=>u&&u.avatar?`<img src="${esc(u.avatar)}" alt="">`:esc(iniciais(u&&u.nome));
+const ehDono=()=>!!(S.perfil&&S.perfil.dono),emTeste=()=>!!(S.perfil&&S.perfil.modo_teste);
+const GRUPO_PAG={caixa:['financeiro','vendas e fluxos'],financeiro:['financeiro','vendas e fluxos'],clientes:['clientes','clientes'],produtos:['produtos','produtos e balanças'],balancas:['produtos','produtos e balanças'],cardapio:['cardapio','cardápio']};
+function bannerTeste(){const g=GRUPO_PAG[S.view],bt=(gr,rot)=>`<button class="btn line sm ${S.zerarConf===gr?'perigo':''}" data-a="testeZerar" data-g="${gr}">${S.zerarConf===gr?'Toque de novo para confirmar':rot}</button>`;
+  return `<div class="banner teste" role="status"><div><b>Modo teste ligado</b><span>Nada do que for feito aqui entra no financeiro real. Os dados de teste ficam separados.</span></div>
+    <div class="row">${g?bt(g[0],'Zerar '+g[1]+' de teste'):''}${bt('tudo','Zerar tudo do teste')}<button class="btn sm" data-a="testeModo" data-on="0">Sair do modo teste</button></div></div>`}
 const itensTxt=v=>v.itens.map(i=>i.desc+(i.g?' '+kg(i.g):'')).join(', ');
 const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 S.refData=ymd(new Date());
@@ -462,7 +480,7 @@ async function carregarFin(){
   S.fin={I,buckets:bs,total:rs.buckets.reduce((a,x)=>soma(a,N(x)),Z()),produtos:rs.produtos||[],
     vendas:{qtd:Number(vs.qtd),soma:Number(vs.soma),linhas:(vs.linhas||[]).map(mapVenda)},
     fluxos:Array.isArray(fx)?fx:[],
-    log:Array.isArray(at)?at.map(a=>({ts:new Date(a.criado_em),quem:nomeOp(a.usuario_id)||'Sistema',txt:a.texto})):[]};
+    log:Array.isArray(at)?at.map(a=>({id:a.id,ts:new Date(a.criado_em),quem:nomeOp(a.usuario_id)||'Sistema',txt:a.texto})):[]};
   render();
 }
 const dataHora=d=>S.periodo==='diario'?hhmm(d):d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+hhmm(d);
@@ -483,7 +501,7 @@ function fluxosFin(){
       <td class="n">${f.n}</td><td class="n">${brl(f.pix)}</td><td class="n">${brl(f.credito)}</td><td class="n">${brl(f.debito)}</td><td class="n">${brl(f.dinheiro)}</td><td class="n"><b>${brl(f.total)}</b></td><td class="n">${brl(esp)}</td>
       <td>${aberto?`<input type="text" id="ct-${f.id}" aria-label="Dinheiro contado de ${esc(f.operador||'')}, fluxo ${f.numero}" data-c="contado" data-id="${f.id}" inputmode="numeric" data-m value="${esc(ct||'')}" placeholder="0,00" style="min-width:110px">`:brl(f.contado)}</td>
       <td class="n">${dif===null?'':`<span class="pill ${dif===0?'ok':dif>0?'warn':'bad'}">${dif>0?'+':dif<0?'−':''}${brl(Math.abs(dif))}</span>`}</td>
-      <td>${aberto?`<button class="btn sm" data-a="fechar" data-id="${f.id}" data-n="${f.numero}" ${ct?'':'disabled'}>Fechar caixa</button>`:'<span class="pill">Fechado</span>'}</td></tr>`}).join('')||'<tr><td colspan="15">Nenhum caixa aberto neste período.</td></tr>'}
+      <td>${aberto?`<button class="btn sm" data-a="fechar" data-id="${f.id}" data-n="${f.numero}" ${ct?'':'disabled'}>Fechar caixa</button>`:'<span class="pill">Fechado</span>'}${ehDono()?` <button class="btn line sm perigo" data-a="apagarFluxo" data-id="${f.id}">Apagar</button>`:''}</td></tr>`}).join('')||'<tr><td colspan="15">Nenhum caixa aberto neste período.</td></tr>'}
   </tbody></table></div><div class="note">Cada fluxo é uma abertura de caixa do operador: ao reabrir, começa o fluxo seguinte. Gaveta esperada = fundo de troco + vendas em dinheiro do fluxo.</div></section>`;
 }
 async function exportPdf(){
@@ -601,8 +619,8 @@ function vRelatorios(){
   </div>
   ${vendasFin()}
   ${fluxosFin()}
-  <section class="panel"><h2>Registro de atividades</h2><div class="tw"><table><thead><tr><th>${S.periodo==='diario'?'Hora':'Data e hora'}</th><th>Quem fez</th><th>O que aconteceu</th></tr></thead><tbody>
-    ${F.log.map(l=>`<tr><td>${dataHora(l.ts)}</td><td><b>${esc(l.quem)}</b></td><td style="white-space:normal">${esc(l.txt)}</td></tr>`).join('')||'<tr><td colspan="3">Nada registrado neste período.</td></tr>'}
+  <section class="panel"><h2>Registro de atividades</h2><div class="tw"><table><thead><tr><th>${S.periodo==='diario'?'Hora':'Data e hora'}</th><th>Quem fez</th><th>O que aconteceu</th>${ehDono()?'<th></th>':''}</tr></thead><tbody>
+    ${F.log.map(l=>`<tr><td>${dataHora(l.ts)}</td><td><b>${esc(l.quem)}</b></td><td style="white-space:normal">${esc(l.txt)}</td>${ehDono()?`<td><button class="btn line sm perigo" data-a="apagarAtiv" data-id="${l.id}">Apagar</button></td>`:''}</tr>`).join('')||'<tr><td colspan="4">Nada registrado neste período.</td></tr>'}
   </tbody></table></div><div class="note">Aberturas, fechamentos, reaberturas, mudanças de preço e liberações de acesso ficam registradas com hora e usuário.</div></section>`;
 }
 function vProdutos(){
@@ -661,7 +679,7 @@ async function aoSessao(sess){
   S.auth='ok';S.logged=true;S.authMsg='';
   S.pronto=false;render();carregarTudo();
 }
-const ERROS=[['clientes_telefone_key','Já existe um cliente com esse WhatsApp.'],['row-level security','Seu perfil não tem permissão para essa alteração.'],['Failed to fetch','Sem conexão com o banco de dados. Verifique a internet.']];
+const ERROS=[['clientes_telefone_key','Já existe um cliente com esse WhatsApp.'],['clientes_telefone_ambiente','Já existe um cliente com esse WhatsApp.'],['row-level security','Seu perfil não tem permissão para essa alteração.'],['Failed to fetch','Sem conexão com o banco de dados. Verifique a internet.']];
 async function q(p,rot){
   try{const r=await p;if(r.error){const m=r.error.message||'';const t=ERROS.find(x=>m.includes(x[0]));toast(t?t[1]:(rot?rot+': ':'')+m);return null}return r.data===null||r.data===undefined?true:r.data}
   catch(e){const m=(e&&e.message)||String(e),t=ERROS.find(x=>m.includes(x[0]));toast(t?t[1]:(rot?rot+': ':'')+m);return null}
@@ -706,7 +724,7 @@ async function carregarDia(){
   if(Array.isArray(vs))S.vendas=vs.map(v=>{const ps=(v.venda_pagamentos||[]).slice().sort((a,b)=>a.ordem-b.ordem);return{id:v.id,n:v.numero,ts:new Date(v.criado_em),op:v.operador_id,fx:v.fluxo_id,cli:v.cliente_id||'',tipo:v.tipo,total:v.total_centavos,desc:v.desconto_centavos,forma:ps.length>1?'misto':(ps[0]||{}).forma,
     itens:(v.venda_itens||[]).map(i=>({desc:i.descricao,grupo:i.grupo,cat:i.categoria,g:i.gramas||0,precoKg:i.preco_kg_centavos,valor:i.valor_centavos})),
     pags:ps.map(x=>({rot:x.rotulo,forma:x.forma,valor:x.valor_centavos}))}});
-  if(Array.isArray(at))S.log=at.map(a=>({ts:new Date(a.criado_em),quem:nomeOp(a.usuario_id)||'Sistema',txt:a.texto}));
+  if(Array.isArray(at))S.log=at.map(a=>({id:a.id,ts:new Date(a.criado_em),quem:nomeOp(a.usuario_id)||'Sistema',txt:a.texto}));
 }
 async function carregarTudo(){
   await carregarPerfis();
@@ -786,20 +804,20 @@ function vWhats(){
 const RENDER={caixa:vCaixa,cardapio:vCardapio,produtos:vProdutos,financeiro:vRelatorios,clientes:vClientes,usuarios:vUsuarios,balancas:vBalancas,whatsapp:vWhats};
 function render(){
   if(!isAdmin()&&SO_ADMIN.includes(S.view))S.view='caixa';
-  $('.app').className='app'+(S.menu?'':' min');
-  $('#nav').innerHTML=`<div class="brand"><i>R</i><span>Restaurante<small>Dados reais · balança simulada</small></span></div>`+VIEWS.filter(v=>isAdmin()||!SO_ADMIN.includes(v[0])).map(v=>`<button class="nav ${S.view===v[0]?'on':''}" data-a="ir" data-v="${v[0]}">${ico(v[0])}<span>${v[1]}</span></button>`).join('');
+  $('.app').className='app'+(S.menu?'':' min')+(S.logged&&emTeste()?' teste':'');
+  $('#nav').innerHTML=`<div class="brand"><i>R</i><span>Restaurante<small>${emTeste()?'MODO TESTE · dados separados':'Dados reais · balança simulada'}</small></span></div>`+VIEWS.filter(v=>isAdmin()||!SO_ADMIN.includes(v[0])).map(v=>`<button class="nav ${S.view===v[0]?'on':''}" data-a="ir" data-v="${v[0]}">${ico(v[0])}<span>${v[1]}</span></button>`).join('');
   const fa=fxAberto(S.user.id),nf=fxDe(S.user.id).length,ini=S.user.nome.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
   $('#top').innerHTML=`<button class="ib" data-a="menu" aria-label="Mostrar ou esconder o menu lateral">${ico('menu')}</button>
     <div class="tinfo"><b>${hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit'})}</b><span id="clock">${hhmm(new Date())}</span></div>
-    <div class="inds">${S.balancas.map(b=>`<span class="ind" title="Balança ${esc(b.nome)}: ${b.conectada?'conectada':'desconectada'}"><i class="dot ${b.conectada?'':'warn'}"></i><span><small>Balança</small><b>${esc(b.nome)}</b></span></span>`).join('')}<span class="ind"><i class="dot ${fa?'':'bad'}"></i><span><small>Caixa</small><b>${fa?`Aberto · Fluxo ${fa.n} · ${hhmm(fa.abertura)}`:'Fechado'}</b></span></span></div>
+    <div class="inds">${S.balancas.map(b=>`<span class="ind" title="Balança ${esc(b.nome)}: ${b.conectada?'conectada':'desconectada'}"><i class="dot ${b.conectada?'':'warn'}"></i><span><small>Balança</small><b>${esc(b.nome)}</b></span></span>`).join('')}${emTeste()?'<span class="ind"><i class="dot warn"></i><span><small>Ambiente</small><b>Teste</b></span></span>':''}<span class="ind"><i class="dot ${fa?'':'bad'}"></i><span><small>Caixa</small><b>${fa?`Aberto · Fluxo ${fa.n} · ${hhmm(fa.abertura)}`:'Fechado'}</b></span></span></div>
     <div class="parcial ${S.cart.length?'tem':''} ${S.bump?'bump':''}" role="status"><span>Venda atual<br>${S.cart.length} ${S.cart.length===1?'item':'itens'}</span><strong>${brl(totais().total)}</strong></div>
     <div class="tright">${fa?`<button class="btn line sm" data-a="abrirFechar">Fechar caixa</button>`:`<button class="btn sm" data-a="reabrir" data-id="${S.user.id}">${nf?'Reabrir':'Abrir'} caixa</button>`}
       <button class="user" data-a="conta" aria-label="Meu perfil: ${esc(S.user.nome)}"><span class="av">${avHtml(S.user)}</span><span class="who"><b>${esc(S.user.nome)}</b><span>${S.user.perfil} · perfil</span></span></button></div>`;
   S.bump=false;
   if(document.documentElement&&document.documentElement.style)document.documentElement.style.setProperty('--op',S.logged?corOp(S.user):PADRAO);
-  const M=$('#modal'),mh=S.logged&&S.modal&&(fa||S.modal==='conta')?modalHtml(fa):'';M.style.display=mh?'grid':'none';M.innerHTML=mh;
+  const M=$('#modal'),mh=S.logged&&S.modal&&(fa||S.modal==='conta'||S.modal==='senha')?modalHtml(fa):'';M.style.display=mh?'grid':'none';M.innerHTML=mh;
   $('#main').className=S.view==='caixa'?'fixo':'';
-  $('#main').innerHTML=S.pronto?RENDER[S.view]():'<section class="panel"><h2>Carregando dados…</h2></section>';
+  $('#main').innerHTML=S.pronto?(emTeste()?bannerTeste():'')+RENDER[S.view]():'<section class="panel"><h2>Carregando dados…</h2></section>';
   const L=$('#login'),ah=authHtml();L.style.display=ah?'grid':'none';
   if(ah!==L._h){const k={};['#au-nome','#au-email'].forEach(i=>{const e=L.querySelector?L.querySelector(i):null;if(e)k[i]=e.value});L.innerHTML=ah;L._h=ah;Object.keys(k).forEach(i=>{const e=L.querySelector(i);if(e)e.value=k[i]})}
   if(S.crop)cropDesenhar();
@@ -809,8 +827,28 @@ const bal=id=>S.balancas.find(b=>b.id===id);
 
 /* ---------- ações ---------- */
 const A={
-  ir:e=>{S.view=e.dataset.v;if(S.view==='usuarios')carregarPerfis();if(S.view==='financeiro')carregarFin();if(typeof window!=='undefined'&&window.innerWidth<=980)S.menu=false;try{location.hash=S.view}catch(_){}},
+  ir:e=>{S.view=e.dataset.v;S.zerarConf=null;if(S.view==='usuarios')carregarPerfis();if(S.view==='financeiro')carregarFin();if(typeof window!=='undefined'&&window.innerWidth<=980)S.menu=false;try{location.hash=S.view}catch(_){}},
   sair:()=>{S.modal=null;S.recuperando=false;if(sb)sb.auth.signOut().then(()=>{},()=>{});else aoSessao(null);return true},
+  apagarFluxo:e=>{const f=S.fin.fluxos.find(x=>x.id===e.dataset.id);if(!f)return;
+    S.apagar={tipo:'fluxo',id:f.id,txt:`o Fluxo ${f.numero} de ${f.operador||''}, de ${new Date(f.aberto_em).toLocaleDateString('pt-BR')}`,extra:f.n?`${f.n===1?'A venda':'As '+f.n+' vendas'} deste fluxo (${brl(f.total)}) ${f.n===1?'será apagada':'serão apagadas'} junto, e os pontos que ${f.n===1?'ela deu':'elas deram'} aos clientes serão desfeitos.`:'Este fluxo não tem vendas.'};S.modal='senha'},
+  apagarAtiv:e=>{const l=S.fin.log.find(x=>String(x.id)===e.dataset.id);if(!l)return;S.apagar={tipo:'ativ',id:l.id,txt:'este registro de atividade',extra:l.quem+': '+l.txt};S.modal='senha'},
+  confirmarApagar:()=>{const senha=$('#ap-senha').value;if(!senha){toast('Digite a sua senha.');return true}
+    const a=S.apagar,tmp=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:false,autoRefreshToken:false,detectSessionInUrl:false,storageKey:'sb-confere-senha'}});
+    toast('Conferindo a senha…');
+    tmp.auth.signInWithPassword({email:S.perfil.login,password:senha}).then(async r=>{
+      if(r.error)return toast(r.error.message==='Invalid login credentials'?'Senha incorreta. Nada foi apagado.':authErr(r.error));
+      const ok=await q(a.tipo==='fluxo'?sb.rpc('dono_apagar_fluxo',{p_fluxo:a.id}):sb.rpc('dono_apagar_atividade',{p_id:a.id}),'Apagar');
+      if(ok){S.modal=null;S.apagar=null;toast(a.tipo==='fluxo'?'Fluxo de caixa apagado.':'Registro apagado.')}
+      await Promise.all([carregarDia(),carregarBase()]);carregarFin()},e=>toast(authErr(e)));return true},
+  testeModo:e=>{const on=e.dataset.on==='1';
+    q(sb.rpc('definir_modo_teste',{p_ligado:on}),'Modo teste').then(async r=>{
+      if(r&&r.id){S.perfil=r;S.modal=null;S.zerarConf=null;S.cart=[];S.pags=null;S.forma='';S.recebido='';S.clienteId='';S.fin=null;S.pronto=false;render();
+        toast(on?'Modo teste ligado. Nada daqui entra no financeiro real.':'Modo teste desligado. O sistema voltou aos dados reais.');await carregarTudo()}
+      else render()});return true},
+  testeZerar:e=>{const g=e.dataset.g;if(S.zerarConf!==g){S.zerarConf=g;return}
+    S.zerarConf=null;
+    q(sb.rpc('teste_zerar',{p_grupo:g}),'Zerar teste').then(async r=>{if(r){S.cart=[];S.pags=null;S.clienteId='';toast('Dados de teste zerados.')}
+      await Promise.all([carregarBase(),carregarDia()]);render();if(S.view==='financeiro')carregarFin()});return true},
   conta:()=>{S.conta={nome:S.user.nome,avatar:S.user.avatar||null,cor:S.user.cor||null,senha:''};S.crop=null;S.modal='conta';carregarCores()},
   contaCor:e=>{S.conta.cor=e.dataset.cor||null},
   avatarTirar:()=>{S.conta.avatar=null},
@@ -857,7 +895,7 @@ const A={
     },e=>toast(authErr(e)));return true},
   menu:()=>{S.menu=!S.menu},
   abrirFechar:()=>{S.modal='fechar'},
-  cancelar:()=>{S.modal=null;S.crop=null},
+  cancelar:()=>{S.modal=null;S.crop=null;S.apagar=null},
   confirmarFechar:()=>{const v=$('#md-contado').value.trim();if(!v){toast('Informe o dinheiro contado na gaveta.');return true}
     const f=fxAberto(S.user.id);
     q(sb.rpc('fechar_caixa',{p_fluxo:f.id,p_contado_centavos:parseMoney(v)})).then(async r=>{if(r){S.modal=null;toast(`Fluxo ${f.n} fechado. A pesagem fica desabilitada até reabrir o caixa ou trocar de operador.`)}await carregarDia();render()});return true},
@@ -965,7 +1003,7 @@ document.addEventListener('input',ev=>{const t=ev.target;
   else if(t.dataset.i==='mx'){S.mx[t.dataset.f]=t.value;const m=mistoInfo();$('#mx-status').innerHTML=statusBox(m);$('#mx-ok').disabled=!m.ok;$('#mx-troco').textContent=m.troco?'Troco '+brl(m.troco):''}
   else if(t.dataset.i==='dv'){S.dv[+t.dataset.k].valor=t.value;const m=dvInfo();$('#dv-status').innerHTML=statusBox(m,!m.falta&&!m.ok);$('#dv-ok').disabled=!m.ok}
 });
-document.addEventListener('keydown',ev=>{if(ev.key!=='Enter')return;const cx=ev.target.closest&&ev.target.closest('#login');const b=cx&&cx.querySelector('[data-enter]');if(b){ev.preventDefault();b.click()}});
+document.addEventListener('keydown',ev=>{if(ev.key!=='Enter')return;if(ev.target.id==='ap-senha'){ev.preventDefault();const o=document.getElementById('ap-ok');if(o)o.click();return}const cx=ev.target.closest&&ev.target.closest('#login');const b=cx&&cx.querySelector('[data-enter]');if(b){ev.preventDefault();b.click()}});
 function rota(){const h=(location.hash||'').slice(1);if(RENDER[h])S.view=h;render()}
 window.addEventListener('hashchange',rota);
 rota();
