@@ -907,7 +907,7 @@ ${esc(JSON.stringify({p_token:tk||'COLE_AQUI_A_CHAVE_DE_ACESSO',p_telefone:'={{ 
     <div class="form"><div><label for="pg-fone">Perguntar como</label><select id="pg-fone">${(N.admins||[]).filter(a=>a.ativo).map(a=>`<option value="${esc(a.telefone)}">${esc(a.nome)} · ${esc(a.telefone)}</option>`).join('')||'<option value="">Cadastre um número acima</option>'}</select></div>
       <div><label for="pg-txt">Pergunta</label><input type="text" id="pg-txt" value="${esc(N.pergunta||'Joana, quanto foi faturado hoje?')}" autocomplete="off"></div>
       <button class="btn" data-a="n8nPerguntar" ${tk&&(N.admins||[]).some(a=>a.ativo)?'':'disabled'}>Testar a pergunta</button></div>
-    <div class="note">Comece por "Joana," e peça: faturamento de hoje, de ontem, do dia 12/11, de novembro, do mês, da semana · últimas 5 vendas · quem está no caixa · quem operou hoje · resumo · detalhamento · cardápio.</div>
+    <div class="note">Comece por "Joana," e peça: faturamento de hoje, de ontem, do dia 12/11, de novembro, do mês, da semana · lista de vendas de hoje (venda por venda, com filtro por operador ou por forma de pagamento: "vendas de hoje do João", "vendas de cartão") · últimas 5 vendas · quem está no caixa · quem operou hoje · resumo · cardápio.</div>
   </section>
   <section class="panel"><h2>4. Outras consultas para o n8n</h2>
     <p style="margin:0">Em cada nó "HTTP Request": método <b>POST</b>, o endereço da consulta, os dois cabeçalhos abaixo e o corpo em JSON.</p>
