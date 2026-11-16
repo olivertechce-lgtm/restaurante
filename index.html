@@ -466,7 +466,7 @@ const S={
   clientes:[],
   regras:{base:'valor',pontosResgate:100,valorResgate:1000,minGrupo:50},
   cardapio:[],
-  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',maq:false,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
+  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',rec:null,maq:false,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
   periodo:'diario',refData:'',fin:null,saidas:[],saidaCats:[],saidaMes:'',rank:'qtd',logAberto:false,finSeq:0,finLimite:200,finCarregando:false,contado:{},fluxos:[],log:[],modal:null,menu:(typeof window!=='undefined'&&window.innerWidth>980),fundo:10000,
   wa:{url:'',eventos:{resumo:true,cardapio:true,pontos:true,grupo:false}},
   vendas:[]
@@ -564,6 +564,15 @@ function dvInfo(){const t=totais().total,s=S.dv.reduce((a,d)=>a+parseMoney(d.val
 function statusBox(m,semForma){return m.falta>0?`<div class="troco falta"><span>Falta distribuir</span><strong>${brl(m.falta)}</strong></div>`:m.falta<0?`<div class="troco falta"><span>Passou do total em</span><strong>${brl(-m.falta)}</strong></div>`:semForma?`<div class="troco falta"><span>Escolha a forma de cada pessoa</span><strong>${brl(m.t)}</strong></div>`:`<div class="troco"><span>Valores conferem</span><strong>${brl(m.t)}</strong></div>`}
 function dvIgual(){const t=totais().total,n=S.dv.length,b=Math.floor(t/n);S.dv.forEach((d,k)=>d.valor=num(k===n-1?t-b*(n-1):b))}
 function modalHtml(fa){
+  if(S.modal==='recibo'&&S.rec){const r=S.rec,ops=r.lista||[],at=ops.find(x=>x.id===r.venda);
+    return `<div class="panel" style="width:min(480px,100%)"><h1>Enviar comprovante</h1>
+    ${r.fixa?`<div class="conf-total"><span>Venda nº ${r.fixa.n}</span><strong>${brl(r.fixa.total)}</strong></div>`
+      :ops.length?`<div><label for="rc-venda">Qual venda?</label><select id="rc-venda" data-c="recVenda">${ops.map(x=>`<option value="${x.id}" ${x.id===r.venda?'selected':''}>Nº ${x.n} · ${hhmm(x.ts)} · ${brl(x.total)} · ${esc(x.como)}${x.cliNome?' · '+esc(x.cliNome):''}</option>`).join('')}</select></div>`
+      :`<div class="note">Você ainda não registrou vendas hoje. Para vendas de outros dias, use o botão "Comprovante" na lista do Financeiro.</div>`}
+    ${r.fixa||ops.length?`<div><label for="rc-fone">WhatsApp de quem vai receber</label><input type="text" id="rc-fone" inputmode="tel" placeholder="(85) 9..." value="${esc(r.fone||'')}"></div>
+    <div><label for="rc-nome">Nome (opcional)</label><input type="text" id="rc-nome" maxlength="60" value="${esc(r.nome||'')}"></div>
+    <div class="note">O comprovante chega em cerca de um minuto. O número fica guardado no cadastro de clientes.${emTeste()?' <b>No modo teste nada é enviado de verdade.</b>':''}</div>`:''}
+    <div class="row"><button class="btn line" data-a="recFechar">Fechar</button>${r.fixa||ops.length?`<button class="btn" data-a="recEnviar" ${r.enviando?'disabled':''}>Enviar comprovante</button>`:''}</div></div>`}
   if(S.modal==='maquineta'&&S.cob){const c=S.cob,fim=COB_FIM.includes(c.status),
     tit=({na_maquineta:'Aguardando o pagamento na maquineta',cancelada:'Cobrança cancelada',falhou:'A cobrança não foi feita',expirada:'O tempo acabou',estornada:'Pagamento estornado'})[c.status]||'Enviando para a maquineta…';
     return `<div class="panel" id="maqbox" style="width:min(480px,100%)"><h1>${tit}</h1>
@@ -690,8 +699,8 @@ function vendasFin(){
   const sel=(k,rot,ops)=>`<div><label for="fl-${k}">${rot}</label><select id="fl-${k}" data-c="fil" data-k="${k}"><option value="">Todos</option>${ops.map(([v,t])=>`<option value="${v}" ${F[k]===v?'selected':''}>${esc(t)}</option>`).join('')}</select></div>`;
   return `<section class="panel"><div class="head"><h2>Vendas do período</h2><span class="pill">${V.qtd.toLocaleString('pt-BR')} ${V.qtd===1?'venda':'vendas'}${ativo?' com esses filtros':''} · ${brl(V.soma)}</span></div>
   <div class="form">${sel('forma','Forma de pagamento',Object.entries(FORMAS))}${sel('tipo','Tipo de pagamento',Object.entries(TIPOS))}${sel('op','Operador',S.usuarios.map(u=>[u.id,u.nome]))}${sel('cli','Cliente',[['_sem','Sem cliente identificado']].concat(S.clientes.map(c=>[c.id,c.nome])))}<button class="btn line" data-a="limparFil" ${ativo?'':'disabled'}>Limpar filtros</button></div>
-  <div class="tw"><table><thead><tr><th>Venda</th><th>${S.periodo==='diario'?'Hora':'Data e hora'}</th><th>Operador</th><th>Cliente</th><th>Itens</th><th>Parte</th><th>Forma</th><th class="n">Valor pago</th><th class="n">Total da venda</th>${ehDono()?'<th></th>':''}</tr></thead><tbody>
-    ${V.linhas.map(({v,n})=>v.pags.map((p,k)=>{const rs=`rowspan="${v.pags.length}"`;return `<tr ${k?'class="cont"':''}>${k?'':`<td ${rs}><b>#${n}</b>${v.tipo==='simples'?'':` <span class="pill warn">${TIPOS[v.tipo]}</span>`}</td><td ${rs}>${dataHora(v.ts)}</td><td ${rs}>${esc(v.opNome)}</td><td ${rs}>${esc(v.cliNome)}</td><td ${rs} style="white-space:normal;min-width:180px">${esc(itensTxt(v))}</td>`}<td>${esc(p.rot)||'Única'}</td><td><span class="pill" style="background:var(--${p.forma});color:#fff">${FORMAS[p.forma]}</span></td><td class="n">${brl(p.valor)}</td>${k?'':`<td class="n" ${rs}><b>${brl(v.total)}</b></td>${ehDono()?`<td ${rs}><button class="btn line sm perigo" data-a="apagarVenda" data-id="${v.id}">Apagar</button></td>`:''}`}</tr>`}).join('')).join('')||`<tr><td colspan="${ehDono()?10:9}">Nenhuma venda neste período${ativo?' com esses filtros':''}.</td></tr>`}
+  <div class="tw"><table><thead><tr><th>Venda</th><th>${S.periodo==='diario'?'Hora':'Data e hora'}</th><th>Operador</th><th>Cliente</th><th>Itens</th><th>Parte</th><th>Forma</th><th class="n">Valor pago</th><th class="n">Total da venda</th><th></th></tr></thead><tbody>
+    ${V.linhas.map(({v,n})=>v.pags.map((p,k)=>{const rs=`rowspan="${v.pags.length}"`;return `<tr ${k?'class="cont"':''}>${k?'':`<td ${rs}><b>#${n}</b>${v.tipo==='simples'?'':` <span class="pill warn">${TIPOS[v.tipo]}</span>`}</td><td ${rs}>${dataHora(v.ts)}</td><td ${rs}>${esc(v.opNome)}</td><td ${rs}>${esc(v.cliNome)}</td><td ${rs} style="white-space:normal;min-width:180px">${esc(itensTxt(v))}</td>`}<td>${esc(p.rot)||'Única'}</td><td><span class="pill" style="background:var(--${p.forma});color:#fff">${FORMAS[p.forma]}</span></td><td class="n">${brl(p.valor)}</td>${k?'':`<td class="n" ${rs}><b>${brl(v.total)}</b></td><td ${rs}><div class="row" style="flex-wrap:nowrap;gap:6px"><button class="btn line sm" data-a="recAbrir" data-id="${v.id}" data-n="${n}" data-t="${v.total}" data-cli="${v.cli||''}">Comprovante</button>${ehDono()?`<button class="btn line sm perigo" data-a="apagarVenda" data-id="${v.id}">Apagar</button>`:''}</div></td>`}</tr>`}).join('')).join('')||`<tr><td colspan="10">Nenhuma venda neste período${ativo?' com esses filtros':''}.</td></tr>`}
   </tbody></table></div>${V.linhas.length<V.qtd?`<button class="btn line" data-a="finMais">Mostrar mais (${V.linhas.length.toLocaleString('pt-BR')} de ${V.qtd.toLocaleString('pt-BR')})</button>`:''}</section>`;
 }
 function fluxosFin(){
@@ -802,7 +811,8 @@ function vendaPanel(){
     <div class="formas">${Object.keys(FORMAS).map(f=>`<button class="forma f-${f} ${S.forma===f?'on':(S.forma||S.pags)?'':'none'}" data-a="forma" data-f="${f}">${FORMAS[f]}</button>`).join('')}</div>
     <div class="row"><button class="btn line sm" data-a="abrirDividir" ${S.cart.length?'':'disabled'}>Dividir conta</button><button class="btn line sm" data-a="abrirMisto" ${S.cart.length?'':'disabled'}>Pagamento misto</button></div>
     ${S.pags?pagsBox():pg}
-    <div class="fim"><button class="btn go" id="finalizar" data-a="finalizar" ${podeFinalizar()?'':'disabled'}>Finalizar venda</button></div>
+    <div class="fim"><button class="btn go" id="finalizar" data-a="finalizar" ${podeFinalizar()?'':'disabled'}>Finalizar venda</button>
+      <button class="btn line sm" data-a="recAbrir" style="margin-top:8px;width:100%">Enviar comprovante de uma venda já feita</button></div>
   </section>`;
 }
 function vCaixa(){
@@ -1238,7 +1248,7 @@ function render(){
       <button class="user" data-a="conta" aria-label="Meu perfil: ${esc(S.user.nome)}"><span class="av">${avHtml(S.user)}</span><span class="who"><b>${esc(S.user.nome)}</b><span>${S.user.perfil} · perfil</span></span></button></div>`;
   S.bump=false;S.abaPisca=false;
   if(document.documentElement&&document.documentElement.style)document.documentElement.style.setProperty('--op',S.logged?corOp(S.user):PADRAO);
-  const M=$('#modal'),mh=S.logged&&S.modal&&(fa||S.modal==='conta'||S.modal==='senha')?modalHtml(fa):'';M.style.display=mh?'grid':'none';M.innerHTML=mh;
+  const M=$('#modal'),mh=S.logged&&S.modal&&(fa||S.modal==='conta'||S.modal==='senha'||S.modal==='recibo')?modalHtml(fa):'';M.style.display=mh?'grid':'none';M.innerHTML=mh;
   $('#main').className=S.view==='caixa'?'fixo':'';
   // Guarda onde cada parte estava rolada para a tela não pular ao redesenhar.
   const MN=$('#main'),rolMain=MN.scrollTop,rol=[].slice.call(MN.querySelectorAll('.col,.lista,.tw')).map(e=>e.scrollTop);
@@ -1412,6 +1422,18 @@ const A={
   exato:()=>{S.recebido=num(totais().total)},
   limparRec:()=>{S.recebido=''},
   finalizar:()=>{if(!podeFinalizar()||S.enviando)return true;if(usaMaq()){if(maqPaga())return A.finalizarSim();cobrarMaq();return}S.modal='confirmar'},
+  recAbrir:e=>{const foneDe=id=>{const c=id&&S.clientes.find(x=>x.id===id);return c?{fone:c.fone||'',nome:/^Cliente \d{4}$/.test(c.nome)?'':c.nome}:{fone:'',nome:''}};
+    if(e.dataset.id){S.rec=Object.assign({venda:e.dataset.id,fixa:{n:e.dataset.n,total:+e.dataset.t}},foneDe(e.dataset.cli))}
+    else{const lista=S.vendas.filter(v=>v.op===S.user.id).sort((a,b)=>b.ts-a.ts).slice(0,12).map(v=>({id:v.id,n:v.n,ts:v.ts,total:v.total,cli:v.cli,cliNome:(S.clientes.find(c=>c.id===v.cli)||{}).nome||'',como:FORMAS[v.forma]||(v.tipo==='dividida'?'Conta dividida':'Misto')}));
+      S.rec=Object.assign({venda:lista[0]?lista[0].id:'',lista},foneDe(lista[0]&&lista[0].cli))}
+    S.modal='recibo'},
+  recFechar:()=>{S.rec=null;S.modal=null},
+  recEnviar:()=>{const r=S.rec;if(!r||r.enviando||!r.venda)return true;const f=$('#rc-fone').value.trim(),n=$('#rc-nome').value.trim();
+    if(!f){toast('Digite o WhatsApp de quem vai receber, com DDD.');return true}
+    r.fone=f;r.nome=n;r.enviando=true;render();
+    q(sb.rpc('enviar_recibo_venda',{p_venda:r.venda,p_telefone:f,p_nome:n||null}),'Comprovante').then(async x=>{r.enviando=false;
+      if(x&&x.telefone){S.rec=null;S.modal=null;toast(x.repetido?`Esse comprovante já está a caminho de ${x.telefone}.`:`Comprovante da venda nº ${x.numero} a caminho do WhatsApp ${x.telefone}.`);if(x.cliente_novo)await carregarBase()}
+      render()});return true},
   maqDeNovo:()=>{cobFim();S.cob=null;S.modal=null;if(podeFinalizar()&&usaMaq())cobrarMaq()},
   maqManual:()=>{cobFim();S.cob=null;S.modal='confirmar'},
   maqFechar:()=>{cobFim();S.cob=null;S.modal=null},
@@ -1513,6 +1535,8 @@ const C={
       im.onload=()=>{if(!im.width||!im.height)return toast('Não foi possível ler essa imagem.');S.crop={im,w:im.width,h:im.height,z:1,ox:0,oy:0};render()};
       im.onerror=()=>toast('Não foi possível ler essa imagem.');im.src=rd.result};rd.readAsDataURL(f)},
   fil:e=>{S.fil[e.dataset.k]=e.value;S.finLimite=200;carregarFin()},
+  recVenda:e=>{const r=S.rec;if(!r)return;r.venda=e.value;const v=(r.lista||[]).find(x=>x.id===e.value),c=v&&v.cli&&S.clientes.find(x=>x.id===v.cli);
+    r.fone=c?c.fone||'':'';r.nome=c&&!/^Cliente \d{4}$/.test(c.nome)?c.nome:''},
   nomeRest:e=>{const n=e.value.trim();if(!n)return;salvar(sb.from('config').update({nome_restaurante:n}).eq('id',1),'Nome do recibo atualizado.')},
   finData:e=>{if(e.value){S.refData=e.value;S.finLimite=200;carregarFin()}},
   saidaMes:e=>{if(e.value){S.saidaMes=e.value;carregarSaidas()}},
