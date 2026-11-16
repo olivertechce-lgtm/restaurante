@@ -462,7 +462,7 @@ const S={
   clientes:[],
   regras:{base:'valor',pontosResgate:100,valorResgate:1000,minGrupo:50},
   cardapio:[],
-  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,
+  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',
   periodo:'diario',refData:'',fin:null,saidas:[],saidaCats:[],saidaMes:'',rank:'qtd',logAberto:false,finSeq:0,finLimite:200,finCarregando:false,contado:{},fluxos:[],log:[],modal:null,menu:(typeof window!=='undefined'&&window.innerWidth>980),fundo:10000,
   wa:{url:'',eventos:{resumo:true,cardapio:true,pontos:true,grupo:false}},
   vendas:[]
@@ -491,8 +491,8 @@ function totaisDe(v){const sub=v.cart.reduce((a,i)=>a+i.valor,0),c=S.clientes.fi
 const totais=()=>totaisDe(S);
 /* ---------- vendas em abas (até 4 em aberto) ----------
    A venda da aba ativa vive em S.cart, S.forma etc., como sempre. As outras ficam guardadas em S.abas. */
-const MAX_ABAS=4,CAMPOS=['cart','pags','mx','dv','clienteId','resgate','forma','recebido','novoCli'];
-const vendaVazia=()=>({cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,pesos:null});
+const MAX_ABAS=4,CAMPOS=['cart','pags','mx','dv','clienteId','resgate','forma','recebido','novoCli','recibo'];
+const vendaVazia=()=>({cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,pesos:null});
 function abaGuardar(){const a=S.abas[S.aba];if(a){CAMPOS.forEach(k=>a[k]=S[k]);a.pesos=S.balancas.map(b=>({id:b.id,bruto:b.bruto,tara:b.tara}))}}
 function abaCarregar(k){S.aba=k;const a=S.abas[k];CAMPOS.forEach(c=>S[c]=a[c]);
   // Cada venda tem a sua pesagem em andamento: trocar de aba troca o que está na tela.
@@ -757,8 +757,9 @@ function vendaPanel(){
     <div><label for="cliente">Cliente (programa de pontos)</label>
       <div class="row"><select id="cliente" data-c="cliente" style="flex:1"><option value="">Sem identificação</option>${S.clientes.map(c=>`<option value="${c.id}" ${c.id===S.clienteId?'selected':''}>${esc(c.nome)} · ${esc(c.fone)}</option>`).join('')}</select><button class="btn line sm" data-a="novoCli">Novo</button></div>
     </div>
-    ${S.novoCli?`<div class="form"><div><label for="nc-nome">Nome</label><input type="text" id="nc-nome"></div><div><label for="nc-fone">WhatsApp</label><input type="text" id="nc-fone" inputmode="tel" placeholder="(85) 9..."></div><button class="btn sm" data-a="salvarCli">Cadastrar</button></div>`:''}
+    ${S.novoCli?`<div class="form"><div><label for="nc-fone">WhatsApp do cliente</label><input type="text" id="nc-fone" inputmode="tel" placeholder="(85) 9..."></div><div><label for="nc-nome">Nome (opcional)</label><input type="text" id="nc-nome"></div><button class="btn sm" data-a="salvarCli">Usar este número</button></div>`:''}
     ${t.c?`<div class="sw"><span>${esc(t.c.nome.split(' ')[0])} tem ${t.c.pontos} pontos${t.pode?'':' (resgate a partir de '+S.regras.pontosResgate+')'}</span>${t.pode?`<button class="chip ${S.resgate?'on':''}" data-a="resgate">${S.resgate?'Desconto aplicado':'Usar '+brl(S.regras.valorResgate)}</button>`:''}</div>`:''}
+    ${t.c?`<label class="sw" for="rec-zap"><span>Enviar recibo no WhatsApp${t.c.foneNorm?'':' (número inválido)'}</span><input type="checkbox" id="rec-zap" data-c="recibo" ${S.recibo&&t.c.foneNorm?'checked':''} ${t.c.foneNorm?'':'disabled'}></label>`:''}
     <div>${t.desc?`<div class="tot"><span>Subtotal</span><span>${brl(t.sub)}</span></div><div class="tot"><span>Desconto por pontos</span><span>− ${brl(t.desc)}</span></div>`:''}
       <div class="tot g"><span>Total</span><strong>${brl(t.total)}</strong></div></div>
     <div class="formas">${Object.keys(FORMAS).map(f=>`<button class="forma f-${f} ${S.forma===f?'on':(S.forma||S.pags)?'':'none'}" data-a="forma" data-f="${f}">${FORMAS[f]}</button>`).join('')}</div>
@@ -932,8 +933,8 @@ function vClientes(){
     <div><label for="r-vr">Vale em alimentação (R$)</label><input type="text" id="r-vr" inputmode="numeric" data-m data-c="regra" ${isAdmin()?'':'disabled'} data-k="valorResgate" value="${num(R.valorResgate)}"></div>
     <div><label for="r-mg">Mínimo em 30 dias para ficar no grupo</label><input type="text" id="r-mg" inputmode="numeric" data-c="regra" ${isAdmin()?'':'disabled'} data-k="minGrupo" value="${R.minGrupo}"></div>
   </div></section>
-  <section class="panel"><h2>Clientes</h2><div class="tw"><table><thead><tr><th>Cliente</th><th>WhatsApp</th><th class="n">Pontos</th><th class="n">Consumido</th><th class="n">Gasto</th><th class="n">Pontos em 30 dias</th><th>Grupo do WhatsApp</th></tr></thead><tbody>
-    ${S.clientes.slice().sort((x,y)=>y.pontos-x.pontos).map(c=>`<tr><td><b>${esc(c.nome)}</b></td><td>${esc(c.fone)}</td><td class="n">${c.pontos}${c.pontos>=R.pontosResgate?' <span class="pill ok">pode resgatar</span>':''}</td><td class="n">${kg1(c.g)}</td><td class="n">${brl(c.gasto)}</td><td class="n">${c.p30}</td><td>${c.p30>=R.minGrupo?'<span class="pill ok">Permanece</span>':'<span class="pill warn">Abaixo do mínimo</span>'}</td></tr>`).join('')}
+  <section class="panel"><h2>Clientes</h2><div class="tw"><table><thead><tr><th>Cliente</th><th>WhatsApp</th><th>Número para envio</th><th class="n">Pontos</th><th class="n">Consumido</th><th class="n">Gasto</th><th class="n">Pontos em 30 dias</th><th>Grupo do WhatsApp</th></tr></thead><tbody>
+    ${S.clientes.slice().sort((x,y)=>y.pontos-x.pontos).map(c=>`<tr><td><b>${esc(c.nome)}</b></td><td>${esc(c.fone)}</td><td>${c.foneNorm?esc(c.foneNorm):'<span class="pill warn">inválido</span>'}</td><td class="n">${c.pontos}${c.pontos>=R.pontosResgate?' <span class="pill ok">pode resgatar</span>':''}</td><td class="n">${kg1(c.g)}</td><td class="n">${brl(c.gasto)}</td><td class="n">${c.p30}</td><td>${c.p30>=R.minGrupo?'<span class="pill ok">Permanece</span>':'<span class="pill warn">Abaixo do mínimo</span>'}</td></tr>`).join('')}
   </tbody></table></div>
   <div class="note">Quem fica abaixo do mínimo é enviado ao n8n no evento "grupo", para o senhor decidir a regra de aviso ou remoção.</div></section>`;
 }
@@ -1005,8 +1006,8 @@ async function carregarBase(){
     S.balancas=b.map(x=>{const ts=[{n:'Sem tara',g:0}].concat((x.taras||[]).slice().sort((m,n)=>m.gramas-n.gramas).map(t=>({n:t.nome,g:t.gramas}))),a=ant[x.id];
       return{id:x.id,nome:x.nome,grupo:x.grupo,marca:x.marca,conexao:x.conexao,baud:String(x.baud),precoKg:x.preco_kg_centavos,bruto:a?a.bruto:0,tara:0,conectada:a?a.conectada:true,taras:ts}})}
   if(Array.isArray(pr))S.produtos=pr.map(x=>({id:x.id,nome:x.nome,preco:x.preco_centavos,cat:x.categoria,destaque:x.destaque,imagem:x.imagem||''}));
-  if(cf&&cf!==true){S.regras={base:cf.base_pontos,pontosResgate:cf.pontos_resgate,valorResgate:cf.valor_resgate_centavos,minGrupo:cf.min_pontos_grupo};S.fundo=cf.fundo_troco_centavos}
-  if(Array.isArray(cl)){const m={};(Array.isArray(p30)?p30:[]).forEach(x=>m[x.cliente_id]=Number(x.pontos));S.clientes=cl.map(x=>({id:x.id,nome:x.nome,fone:x.telefone,pontos:x.pontos,g:Number(x.gramas_total),gasto:Number(x.gasto_centavos),p30:m[x.id]||0}))}
+  if(cf&&cf!==true){S.regras={base:cf.base_pontos,pontosResgate:cf.pontos_resgate,valorResgate:cf.valor_resgate_centavos,minGrupo:cf.min_pontos_grupo};S.fundo=cf.fundo_troco_centavos;S.nomeRest=cf.nome_restaurante||'Restaurante'}
+  if(Array.isArray(cl)){const m={};(Array.isArray(p30)?p30:[]).forEach(x=>m[x.cliente_id]=Number(x.pontos));S.clientes=cl.map(x=>({id:x.id,nome:x.nome,fone:x.telefone,foneNorm:x.telefone_norm||'',pontos:x.pontos,g:Number(x.gramas_total),gasto:Number(x.gasto_centavos),p30:m[x.id]||0}))}
   if(Array.isArray(cd))S.cardapio=cd.map(x=>({id:x.id,cat:x.categoria,nome:x.nome,on:x.disponivel}));
   // Se algum preço mudou, a venda em andamento acompanha o banco.
   if(S.logged&&S.abasDe!==S.user.id)abasRestaurar();
@@ -1111,6 +1112,8 @@ async function carregarN8n(){
   const [r,a]=await Promise.all([
     q(sb.from('integracoes').select('token,token_criado_em').eq('id',1).maybeSingle(),'Integração'),
     q(sb.from('whats_admins').select('*').order('nome'),'Administradores do WhatsApp')]);
+  const rc=await q(sb.from('recibos').select('id,telefone,status,criado_em,enviado_em').order('criado_em',{ascending:false}).limit(12),'Recibos');
+  S.recibos=Array.isArray(rc)?rc:[];
   S.n8n=Object.assign(S.n8n||{},{carregado:true,token:r&&r!==true?r.token:null,quando:r&&r!==true&&r.token_criado_em?new Date(r.token_criado_em):null,
     admins:Array.isArray(a)?a:(S.n8n&&S.n8n.admins)||[]});
   if(S.view==='whatsapp')render();
@@ -1161,6 +1164,13 @@ ${esc(corpo(x))}</pre><div class="row">${cp(url(f),'Copiar endereço')}${cp(corp
   </section>
   <section class="panel"><h2>5. Resultado do teste</h2>
     ${N.teste?`<p style="margin:0"><b>${esc(N.teste.nome)}</b></p>${N.teste.erro?`<div class="note" role="alert" style="color:var(--bad)">${esc(N.teste.erro)}</div>`:`${N.teste.aviso?`<div class="note" style="color:var(--warn)">${esc(N.teste.aviso)}</div>`:''}${N.teste.texto?`<div class="bubble bot">${esc(N.teste.texto)}</div>`:''}<pre class="cod">${esc(N.teste.json)}</pre>`}`:'<div class="empty">Toque em "Testar agora" em uma consulta para ver aqui exatamente o que o n8n vai receber. O campo "texto" já vem pronto para enviar no WhatsApp.</div>'}
+  </section>
+  <section class="panel"><h2>6. Recibo para o cliente</h2>
+    <p style="margin:0">Ao finalizar uma venda com cliente identificado, o recibo entra numa fila. O fluxo "recibos" do n8n busca essa fila a cada minuto e envia pelo WhatsApp. Vendas do modo teste nunca são enviadas.</p>
+    <div class="form compacta"><div><label for="cf-nome">Nome que aparece no recibo</label><input type="text" id="cf-nome" maxlength="40" data-c="nomeRest" value="${esc(S.nomeRest||'')}"></div></div>
+    <div class="tw"><table><thead><tr><th>Criado</th><th>Número</th><th>Situação</th></tr></thead><tbody>
+      ${(S.recibos||[]).map(x=>`<tr><td>${new Date(x.criado_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</td><td>${esc(x.telefone)}</td><td>${x.status==='enviado'?'<span class="pill ok">Entregue ao n8n</span>':'<span class="pill warn">Na fila</span>'}</td></tr>`).join('')||'<tr><td colspan="3">Nenhum recibo ainda.</td></tr>'}
+    </tbody></table></div>
   </section>`;
 }
 const RENDER={caixa:vCaixa,cardapio:vCardapio,produtos:vProdutos,financeiro:vRelatorios,saidas:vSaidas,clientes:vClientes,usuarios:vUsuarios,balancas:vBalancas,whatsapp:vWhats};
@@ -1329,8 +1339,11 @@ const A={
   addProd:e=>{S.abaConf=false;if(!fxAberto(S.user.id))return;const p=S.produtos.find(x=>x.id===e.dataset.id);S.bump=true;S.pags=null;S.foco=p.id;S.cart.push({src:p.id,desc:p.nome,grupo:'produto',cat:p.cat,valor:p.preco})},
   rmItem:e=>{S.cart.splice(+e.dataset.k,1);S.pags=null},
   novoCli:()=>{S.novoCli=!S.novoCli},
-  salvarCli:()=>{const n=$('#nc-nome').value.trim(),f=$('#nc-fone').value.trim();if(!n||!f){toast('Preencha nome e WhatsApp do cliente.');return true}
-    q(sb.from('clientes').insert({nome:n,telefone:f}).select().single(),'Cliente').then(async r=>{if(r&&r.id){await carregarBase();S.clienteId=r.id;S.novoCli=false;toast(n+' cadastrado no programa de pontos.')}render()});return true},
+  salvarCli:()=>{const n=$('#nc-nome').value.trim(),f=$('#nc-fone').value.trim();if(!f){toast('Digite o WhatsApp do cliente, com DDD.');return true}
+    q(sb.rpc('cliente_por_telefone',{p_telefone:f,p_nome:n||null}),'Cliente').then(async r=>{
+      if(r&&r.id){await carregarBase();S.clienteId=r.id;S.resgate=false;S.pags=null;S.novoCli=false;S.recibo=true;
+        toast(r.novo?r.nome+' cadastrado. O recibo vai para o WhatsApp dele.':'Cliente já cadastrado: '+r.nome+'.')}
+      render()});return true},
   resgate:()=>{S.resgate=!S.resgate;S.pags=null},
   forma:e=>{S.forma=e.dataset.f;S.pags=null},
   limparPags:()=>{S.pags=null},
@@ -1362,10 +1375,12 @@ const A={
       itens:S.cart.map(i=>i.grupo==='produto'?{produto_id:i.src}:{balanca_id:i.src,gramas:i.g,tara_gramas:i.tara||0}),pagamentos:pags};
     const troco=S.pags?(S.pags.troco||0):S.forma==='dinheiro'?rec-t.total:0,nomeC=t.c?t.c.nome.split(' ')[0]:'';
     const como=S.pags?'('+S.pags.linhas.map(l=>FORMAS[l.forma]+' '+brl(l.valor)).join(' + ')+')':'no '+FORMAS[S.forma].toLowerCase();
+    const querRecibo=!!(t.c&&t.c.foneNorm&&S.recibo);
     S.enviando=true;render();toast('Registrando a venda…');
     q(sb.rpc('registrar_venda',{p})).then(async r=>{S.enviando=false;
       if(!r||!r.numero){await carregarBase();return render()}
-      toast(`Venda nº ${r.numero} de ${brl(r.total_centavos)} registrada ${como}`+(troco?` · Troco ${brl(troco)}`:'')+(r.pontos_ganhos?` · ${nomeC} ganhou ${r.pontos_ganhos} pontos`:''));
+      toast(`Venda nº ${r.numero} de ${brl(r.total_centavos)} registrada ${como}`+(troco?` · Troco ${brl(troco)}`:'')+(r.pontos_ganhos?` · ${nomeC} ganhou ${r.pontos_ganhos} pontos`:'')+(querRecibo?' · recibo no WhatsApp':''));
+      if(querRecibo&&r.venda_id)q(sb.rpc('enfileirar_recibo',{p_venda:r.venda_id}),'Recibo');
       {const k=S.aba,n=S.abas[k].n;S.abas[k]=Object.assign({n},vendaVazia());abaCarregar(k);
         if(S.abas.some((a,j)=>j!==k&&abaLivre(a))){S.abas.splice(k,1);abaCarregar(S.abas.findIndex(abaLivre))}
         const esp=S.abas.filter(a=>a.cart.length).length;if(esp)setTimeout(()=>toast(esp===1?'Lembrete: há 1 venda em espera nas abas.':'Lembrete: há '+esp+' vendas em espera nas abas.'),3500)}
@@ -1410,6 +1425,7 @@ const A={
 const C={
   pratoCat:e=>{const x=S.cardapio[+e.dataset.k];if(!x||e.value===x.cat)return;
     salvar(sb.from('cardapio_itens').update({categoria:e.value}).eq('id',x.id),x.nome+' foi para '+e.value+'.')},
+  recibo:e=>{S.recibo=e.checked},
   taraManual:e=>{bal(e.dataset.id).tara=Math.max(0,parseInt(e.value,10)||0)},
   cliente:e=>{S.clienteId=e.value;S.resgate=false;S.pags=null},
   regra:e=>{const k=e.dataset.k,M={base:'base_pontos',pontosResgate:'pontos_resgate',valorResgate:'valor_resgate_centavos',minGrupo:'min_pontos_grupo'},v=k==='base'?e.value:k==='valorResgate'?parseMoney(e.value):Math.max(0,parseInt(e.value,10)||0);
@@ -1441,6 +1457,7 @@ const C={
       im.onload=()=>{if(!im.width||!im.height)return toast('Não foi possível ler essa imagem.');S.crop={im,w:im.width,h:im.height,z:1,ox:0,oy:0};render()};
       im.onerror=()=>toast('Não foi possível ler essa imagem.');im.src=rd.result};rd.readAsDataURL(f)},
   fil:e=>{S.fil[e.dataset.k]=e.value;S.finLimite=200;carregarFin()},
+  nomeRest:e=>{const n=e.value.trim();if(!n)return;salvar(sb.from('config').update({nome_restaurante:n}).eq('id',1),'Nome do recibo atualizado.')},
   finData:e=>{if(e.value){S.refData=e.value;S.finLimite=200;carregarFin()}},
   saidaMes:e=>{if(e.value){S.saidaMes=e.value;carregarSaidas()}},
   userPerfil:e=>{const u=S.perfis.find(x=>x.id===e.dataset.id);mudarPerfil(u.id,{perfil:e.value},'Perfil de '+u.nome+' alterado.')},
