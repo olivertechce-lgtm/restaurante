@@ -172,6 +172,37 @@ th{font-size:13px;color:var(--muted)} td.n,th.n{text-align:right}
 .pcard .plin select{flex:1 1 130px;min-width:120px}
 .pcard .ppreco{width:88px;flex:none;text-align:right}
 .form.compacta{max-width:720px}
+.navdata{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.navdata .field{width:auto;min-height:44px}
+.panel.larga{grid-column:1/-1}
+.kpi strong{white-space:nowrap}
+@media (max-width:1500px){.kpi strong{font-size:23px}}
+.seta{width:44px;height:44px;flex:none;border-radius:12px;border:1px solid var(--line);background:#fff;font:700 22px/1 var(--display);color:var(--ink)}
+.seta:hover:not(:disabled){background:var(--soft)}
+.seta:disabled{opacity:.35;cursor:not-allowed}
+.hojebox{display:flex;flex-direction:column;justify-content:center;padding:6px 16px;border-radius:14px;border:1px solid var(--line);background:#fff;min-height:48px}
+.hojebox b{font-size:15px;text-transform:capitalize}
+.hojebox .lbl{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.hojebox.on{background:var(--op,var(--ink));border-color:transparent;color:#fff;box-shadow:0 8px 20px -10px rgba(28,26,39,.6)}
+.hojebox.on .lbl{color:rgba(255,255,255,.85)}
+table.plan td,table.plan th{padding:12px 10px}
+table.plan tbody tr:nth-child(odd) td{background:#fbfaff}
+table.plan tr.hoje td{background:#eef7f0;font-weight:700}
+table.plan .ent{color:#13693a}table.plan .sai{color:var(--bad)}
+table.plan .pos{color:#13693a}table.plan .neg{color:var(--bad)}
+table.plan tfoot td{background:var(--soft);border-top:2px solid var(--line);font-size:15px}
+.linha{width:100%;height:auto;display:block}
+.linha .grade line{stroke:var(--line);stroke-width:1}
+.linha .gy,.linha .gx{fill:var(--muted);font:600 11px var(--body)}
+.linha .gy{text-anchor:end}.linha .gx{text-anchor:middle}
+.linha .area{fill:var(--op,var(--ink));opacity:.10}
+.linha .traco{fill:none;stroke:var(--op,var(--ink));stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.linha circle{fill:var(--op,var(--ink))}
+.linha circle.hoje{fill:#fff;stroke:var(--op,var(--ink));stroke-width:3}
+.catbox{border:1px dashed var(--line);border-radius:14px;padding:10px 14px}
+.catbox summary{cursor:pointer;font-weight:600}
+.chip .x.sm{margin-left:4px;width:22px;height:22px;font-size:14px;background:transparent}
+.kpi .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dish.off span{text-decoration:line-through;color:var(--muted)}
 .form{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end}
 .form>div{display:flex;flex-direction:column;gap:6px}
@@ -420,8 +451,8 @@ const SUGESTOES=[
   ['Sobremesas',['Pudim de leite','Doce de leite','Goiabada com queijo','Mousse de maracujá','Salada de frutas','Gelatina','Brigadeiro','Bolo de chocolate','Pavê']],
   ['Bebidas',['Refrigerante lata','Refrigerante 600 ml','Suco natural','Suco de polpa','Água mineral','Água com gás','Chá gelado']],
   ['Açaí e acompanhamentos',['Granola','Leite condensado','Leite em pó','Banana','Morango','Paçoca','Amendoim','Mel','Tapioca']]];
-const VIEWS=[['caixa','Caixa'],['cardapio','Cardápio do dia'],['produtos','Produtos'],['financeiro','Financeiro'],['clientes','Clientes e pontos'],['usuarios','Usuários'],['balancas','Balanças'],['whatsapp','WhatsApp e n8n']];
-const SO_ADMIN=['produtos','financeiro','usuarios','balancas','whatsapp'];
+const VIEWS=[['caixa','Caixa'],['cardapio','Cardápio do dia'],['produtos','Produtos'],['financeiro','Financeiro'],['saidas','Saídas'],['clientes','Clientes e pontos'],['usuarios','Usuários'],['balancas','Balanças'],['whatsapp','WhatsApp e n8n']];
+const SO_ADMIN=['produtos','financeiro','saidas','usuarios','balancas','whatsapp'];
 
 const S={
   view:'caixa',logged:false,auth:'carregando',authTab:'entrar',authMsg:'',perfil:null,perfis:null,recuperando:false,
@@ -432,7 +463,7 @@ const S={
   regras:{base:'valor',pontosResgate:100,valorResgate:1000,minGrupo:50},
   cardapio:[],
   abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,
-  periodo:'diario',refData:'',fin:null,finSeq:0,finLimite:200,finCarregando:false,contado:{},fluxos:[],log:[],modal:null,menu:(typeof window!=='undefined'&&window.innerWidth>980),fundo:10000,
+  periodo:'diario',refData:'',fin:null,saidas:[],saidaCats:[],saidaMes:'',rank:'qtd',logAberto:false,finSeq:0,finLimite:200,finCarregando:false,contado:{},fluxos:[],log:[],modal:null,menu:(typeof window!=='undefined'&&window.innerWidth>980),fundo:10000,
   wa:{url:'',eventos:{resumo:true,cardapio:true,pontos:true,grupo:false}},
   vendas:[]
 };
@@ -600,11 +631,12 @@ async function carregarFin(){
   if(!sb||!isAdmin())return;
   const I=intervalo(),seq=++S.finSeq,args={p_inicio:I.ini.toISOString(),p_fim:I.fim.toISOString()};
   S.finCarregando=true;render();
-  const [rs,vs,fx,at]=await Promise.all([
+  const [rs,vs,fx,at,sd]=await Promise.all([
     q(sb.rpc('financeiro_resumo',Object.assign({p_gran:I.gran},args)),'Resumo'),
     q(sb.rpc('financeiro_vendas',Object.assign({p_limite:S.finLimite,p_pulo:0},args,filtrosRpc())),'Vendas'),
     q(sb.rpc('financeiro_fluxos',args),'Fluxos de caixa'),
-    q(sb.from('atividades').select('*').gte('criado_em',args.p_inicio).lt('criado_em',args.p_fim).order('id',{ascending:false}).limit(300),'Registro de atividades')]);
+    q(sb.from('atividades').select('*').gte('criado_em',args.p_inicio).lt('criado_em',args.p_fim).order('id',{ascending:false}).limit(300),'Registro de atividades'),
+    q(sb.rpc('financeiro_saidas',{p_inicio:ymd(I.ini),p_fim:ymd(I.fim)}),'Saídas')]);
   if(seq!==S.finSeq)return;
   S.finCarregando=false;
   if(!rs||rs===true||!vs||vs===true)return render();
@@ -612,13 +644,33 @@ async function carregarFin(){
   const mp={};rs.buckets.forEach(x=>mp[x.k]=N(x));
   const hj=new Date(),kk=(d,hh)=>ymd(d)+'T'+String(hh).padStart(2,'0');let bs=[];
   if(I.gran==='hour'){const hs=rs.buckets.map(x=>+x.k.slice(11));if(hs.length)for(let x=Math.min(...hs);x<=Math.max(...hs);x++)bs.push({l:x+'h',a:mp[kk(I.ini,x)]||Z()})}
-  else if(I.gran==='day')for(let d=new Date(I.ini);d<I.fim;d.setDate(d.getDate()+1))bs.push({l:S.periodo==='semanal'?DIA[d.getDay()]+' '+d.getDate():String(d.getDate()),a:mp[kk(d,0)]||Z(),hoje:ymd(d)===ymd(hj)});
+  else if(I.gran==='day')for(let d=new Date(I.ini);d<I.fim;d.setDate(d.getDate()+1))bs.push({l:S.periodo==='semanal'?DIA[d.getDay()]+' '+d.getDate():String(d.getDate()),a:mp[kk(d,0)]||Z(),hoje:ymd(d)===ymd(hj),chave:ymd(d)});
   else for(let d=new Date(I.ini);d<I.fim;d.setMonth(d.getMonth()+1))bs.push({l:MES[d.getMonth()]+(S.periodo==='semestral'?'/'+String(d.getFullYear()).slice(2):''),a:mp[kk(d,0)]||Z(),hoje:d.getMonth()===hj.getMonth()&&d.getFullYear()===hj.getFullYear()});
+  const mapSai=(sd&&sd!==true&&sd.dias)?Object.fromEntries(sd.dias.map(d=>[d.dia,Number(d.valor)])):{};
+  bs.forEach(x=>{if(x.chave)x.saida=mapSai[x.chave]||0});
   S.fin={I,buckets:bs,total:rs.buckets.reduce((a,x)=>soma(a,N(x)),Z()),produtos:rs.produtos||[],
     vendas:{qtd:Number(vs.qtd),soma:Number(vs.soma),linhas:(vs.linhas||[]).map(mapVenda)},
     fluxos:Array.isArray(fx)?fx:[],
-    log:Array.isArray(at)?at.map(a=>({id:a.id,ts:new Date(a.criado_em),quem:nomeOp(a.usuario_id)||'Sistema',txt:a.texto})):[]};
+    log:Array.isArray(at)?at.map(a=>({id:a.id,ts:new Date(a.criado_em),quem:nomeOp(a.usuario_id)||'Sistema',txt:a.texto})):[],
+    saidas:(sd&&sd!==true)?{total:Number(sd.total),categorias:(sd.categorias||[]).map(c=>({cat:c.categoria,valor:Number(c.valor),qtd:Number(c.qtd)})),
+      dias:Object.fromEntries((sd.dias||[]).map(d=>[d.dia,Number(d.valor)]))}:{total:0,categorias:[],dias:{}}};
   render();
+}
+// Gráfico de linha simples, desenhado em SVG: dias (ou meses) no pé, faturamento na linha.
+function linhaSvg(bs,rotulo){
+  const W=720,H=240,ml=58,mb=26,mt=14,mr=10,n=bs.length;
+  if(!n)return '<div class="empty">Nenhuma venda neste período.</div>';
+  const max=Math.max(...bs.map(x=>x.a.fat),1),px=(W-ml-mr)/Math.max(1,n-1),ph=H-mt-mb;
+  const X=i=>ml+(n===1?(W-ml-mr)/2:i*px),Y=v=>mt+ph-(v/max)*ph;
+  const pts=bs.map((x,i)=>X(i).toFixed(1)+','+Y(x.a.fat).toFixed(1));
+  const area='M'+X(0).toFixed(1)+','+(mt+ph)+' L'+pts.join(' L')+' L'+X(n-1).toFixed(1)+','+(mt+ph)+' Z';
+  const grade=[0,.25,.5,.75,1].map(f=>`<line x1="${ml}" x2="${W-mr}" y1="${(mt+ph-f*ph).toFixed(1)}" y2="${(mt+ph-f*ph).toFixed(1)}"/>`).join('')
+    +[0,.5,1].map(f=>`<text class="gy" x="${ml-8}" y="${(mt+ph-f*ph+4).toFixed(1)}">${brl(Math.round(max*f))}</text>`).join('');
+  const passo=Math.ceil(n/12);
+  const rot=bs.map((x,i)=>(i%passo===0||i===n-1)?`<text class="gx" x="${X(i).toFixed(1)}" y="${H-6}">${esc(x.l)}</text>`:'').join('');
+  const bolas=bs.map((x,i)=>`<circle class="${x.hoje?'hoje':''}" cx="${X(i).toFixed(1)}" cy="${Y(x.a.fat).toFixed(1)}" r="${x.hoje?5:3}"><title>${esc(x.l)}: ${brl(x.a.fat)}</title></circle>`).join('');
+  return `<svg class="linha" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(rotulo)}"><g class="grade">${grade}</g>
+    <path class="area" d="${area}"/><polyline class="traco" points="${pts.join(' ')}"/>${bolas}${rot}</svg>`;
 }
 const dataHora=d=>S.periodo==='diario'?hhmm(d):d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+hhmm(d);
 function vendasFin(){
@@ -672,7 +724,7 @@ async function exportPdf(){
   const blob=doc.output('blob'),nome='relatorio-'+S.periodo+'-'+S.refData+'.pdf';
   try{const u=URL.createObjectURL(blob),l=document.createElement('a');l.href=u;l.download=nome;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),8000);toast('PDF gerado: '+nome)}catch(_){toast('Não foi possível baixar o PDF neste navegador.')}
 }
-const ICO={menu:'M4 7h16M4 12h16M4 17h16',caixa:'M4 8h16v11H4zM8 8V5h8v3M8 13h8M8 16h4',cardapio:'M6 4h12v16H6zM9 8h6M9 12h6M9 16h3',produtos:'M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8',financeiro:'M5 20V11M11 20V5M17 20v-6M3 20h18',clientes:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 20c0-3.5 3.6-6 8-6s8 2.5 8 6',usuarios:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',balancas:'M12 4v16M7 20h10M5 8h14M5 8l-2.5 6a2.5 2.5 0 005 0zM19 8l-2.5 6a2.5 2.5 0 005 0z',whatsapp:'M4 20l1.4-4.2A8 8 0 1112 20a8 8 0 01-3.6-.9z'};
+const ICO={menu:'M4 7h16M4 12h16M4 17h16',caixa:'M4 8h16v11H4zM8 8V5h8v3M8 13h8M8 16h4',cardapio:'M6 4h12v16H6zM9 8h6M9 12h6M9 16h3',produtos:'M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8',financeiro:'M5 20V11M11 20V5M17 20v-6M3 20h18',clientes:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 20c0-3.5 3.6-6 8-6s8 2.5 8 6',usuarios:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',balancas:'M12 4v16M7 20h10M5 8h14M5 8l-2.5 6a2.5 2.5 0 005 0zM19 8l-2.5 6a2.5 2.5 0 005 0z',whatsapp:'M4 20l1.4-4.2A8 8 0 1112 20a8 8 0 01-3.6-.9z',saidas:'M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2'};
 const ico=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICO[k]}"/></svg>`;
 const isAdmin=()=>S.user.perfil==='Administrador';
 
@@ -757,30 +809,101 @@ function vCardapio(){
 }
 function vRelatorios(){
   const P={diario:'Diário',semanal:'Semanal',mensal:'Mensal',semestral:'Semestral',anual:'Anual'},I=intervalo(),F=S.fin,hojeS=ymd(new Date());
+  const ehHoje=S.refData===hojeS;
   const cab=`<div class="head"><div><h1>Financeiro</h1><p>${I.t}</p></div>
     <div class="tabs">${Object.keys(P).map(k=>`<button class="chip ${S.periodo===k?'on':''}" data-a="periodo" data-p="${k}">${P[k]}</button>`).join('')}<button class="btn sm" data-a="exportPdf">Exportar PDF</button></div></div>
-  <div class="row" style="align-items:center"><button class="chip" data-a="finAnt">‹ Anterior</button><input type="date" class="field" id="fin-data" data-c="finData" value="${S.refData}" max="${hojeS}" aria-label="Data de referência" style="width:auto;min-height:44px"><button class="chip" data-a="finProx" ${S.refData>=hojeS?'disabled':''}>Próximo ›</button><button class="chip" data-a="finHoje" ${S.refData===hojeS?'disabled':''}>Hoje</button><button class="chip" data-a="finAtualizar">Atualizar</button>${S.finCarregando?'<span class="pill">Carregando…</span>':''}</div>`;
+  <div class="navdata">
+    <button class="seta" data-a="finAnt" aria-label="Período anterior" title="Anterior">‹</button>
+    <button class="seta" data-a="finProx" aria-label="Próximo período" title="Próximo" ${ehHoje?'disabled':''}>›</button>
+    <div class="hojebox ${ehHoje?'on':''}">
+      <span class="lbl">${ehHoje?'Mostrando hoje':'Mostrando outro período'}</span>
+      <b>${refData().toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})}</b>
+    </div>
+    <input type="date" class="field" id="fin-data" data-c="finData" value="${S.refData}" max="${hojeS}" aria-label="Data de referência">
+    <button class="btn sm ${ehHoje?'line':''}" data-a="finHoje" ${ehHoje?'disabled':''}>Voltar para hoje</button>
+    <button class="chip" data-a="finAtualizar" title="Atualizar">Atualizar</button>
+    ${S.finCarregando?'<span class="pill">Carregando…</span>':''}</div>`;
   if(!F)return cab+'<section class="panel"><h2>Carregando o financeiro…</h2></section>';
-  const b=F.buckets,a=F.total,max=Math.max(...b.map(x=>x.a.fat),1);
+  const b=F.buckets,a=F.total,max=Math.max(...b.map(x=>x.a.fat),1),sai=F.saidas||{total:0,categorias:[],dias:{}};
+  const res=a.fat-sai.total;
   const abbr=c=>{const v=c/100;return v>=1000?(v/1000).toLocaleString('pt-BR',{maximumFractionDigits:1})+' mil':String(Math.round(v))};
+  const linha=['mensal','semestral','anual'].includes(S.periodo);
+  const grafico=linha?linhaSvg(b,'Faturamento por '+I.por)
+    :(a.n?`<div class="chart">${b.map(x=>`<div class="bar ${x.hoje?'today':''}" title="${x.l}: ${brl(x.a.fat)}"><span>${b.length<=12&&x.a.fat?abbr(x.a.fat):''}</span><div class="track"><i style="height:${Math.max(1,x.a.fat/max*100)}%"></i></div><span>${x.l}</span></div>`).join('')}</div>`:'<div class="empty">Nenhuma venda neste período.</div>');
+  // planilha dia a dia (semanal)
+  const planilha=()=>{
+    const ds=b;if(!ds.length)return '<div class="empty">Nenhum dia neste período.</div>';
+    const tot=ds.reduce((o,x)=>({fat:o.fat+x.a.fat,n:o.n+x.a.n,gc:o.gc+x.a.gCom,ga:o.ga+x.a.gAcai,sai:o.sai+(x.saida||0)}),{fat:0,n:0,gc:0,ga:0,sai:0});
+    return `<div class="tw"><table class="plan"><thead><tr><th>Dia</th><th class="n">Vendas</th><th class="n">Comida</th><th class="n">Açaí</th><th class="n">Entradas</th><th class="n">Saídas</th><th class="n">Resultado</th></tr></thead><tbody>
+      ${ds.map(x=>{const sd=x.saida||0;return `<tr class="${x.hoje?'hoje':''}"><td><b>${x.l}</b></td><td class="n">${x.a.n}</td><td class="n">${kg1(x.a.gCom)}</td><td class="n">${kg1(x.a.gAcai)}</td>
+        <td class="n ent">${x.a.fat?brl(x.a.fat):'—'}</td><td class="n sai">${sd?'− '+brl(sd):'—'}</td><td class="n ${x.a.fat-sd<0?'neg':'pos'}"><b>${brl(x.a.fat-sd)}</b></td></tr>`}).join('')}
+    </tbody><tfoot><tr><td><b>Total</b></td><td class="n"><b>${tot.n}</b></td><td class="n"><b>${kg1(tot.gc)}</b></td><td class="n"><b>${kg1(tot.ga)}</b></td>
+      <td class="n ent"><b>${brl(tot.fat)}</b></td><td class="n sai"><b>${tot.sai?'− '+brl(tot.sai):'—'}</b></td><td class="n ${tot.fat-tot.sai<0?'neg':'pos'}"><b>${brl(tot.fat-tot.sai)}</b></td></tr></tfoot></table></div>`;
+  };
+  const RANK={qtd:'mais vendidos',valor:'maior valor',nome:'nome'};
+  const itens=F.produtos.slice().sort((x,y)=>S.rank==='nome'?x.nome.localeCompare(y.nome,'pt'):(S.rank==='valor'?Number(y.valor)-Number(x.valor):Number(y.qtd)-Number(x.qtd)));
+  const maxQtd=Math.max(1,...itens.map(x=>Number(x.qtd)));
   return cab+`<div class="kpis">
-    <div class="kpi" style="background-color:var(--op,var(--ink))"><span class="lbl">Faturamento</span><strong>${brl(a.fat)}</strong></div>
+    <div class="kpi" style="background-color:var(--op,var(--ink))"><span class="lbl">Entradas</span><strong>${brl(a.fat)}</strong></div>
+    <div class="kpi" style="background-color:var(--bad)"><span class="lbl">Saídas</span><strong>${sai.total?'− '+brl(sai.total):brl(0)}</strong></div>
+    <div class="kpi" style="background-color:${res<0?'#7a2020':'var(--ok)'}"><span class="lbl">Resultado</span><strong>${brl(res)}</strong></div>
     <div class="kpi" style="background-color:var(--comida)"><span class="lbl">Comida vendida</span><strong>${kg1(a.gCom)}</strong></div>
     <div class="kpi" style="background-color:var(--acai)"><span class="lbl">Açaí vendido</span><strong>${kg1(a.gAcai)}</strong></div>
     <div class="kpi" style="background-color:var(--bebida)"><span class="lbl">Vendas</span><strong>${a.n.toLocaleString('pt-BR')}</strong></div>
     <div class="kpi" style="background-color:var(--doce)"><span class="lbl">Ticket médio</span><strong>${brl(a.n?Math.round(a.fat/a.n):0)}</strong></div>
   </div>
+  ${S.periodo==='semanal'?`<section class="panel"><h2>Dia a dia</h2>${planilha()}</section>`:''}
   <div class="grid2">
-    <section class="panel"><h2>Faturamento por ${I.por} (R$)</h2>${a.n?`<div class="chart">${b.map(x=>`<div class="bar ${x.hoje?'today':''}" title="${x.l}: ${brl(x.a.fat)}"><span>${b.length<=12&&x.a.fat?abbr(x.a.fat):''}</span><div class="track"><i style="height:${Math.max(1,x.a.fat/max*100)}%"></i></div><span>${x.l}</span></div>`).join('')}</div>`:'<div class="empty">Nenhuma venda neste período.</div>'}</section>
+    <section class="panel ${linha?'larga':''}"><h2>Faturamento por ${I.por} (R$)</h2>${grafico}</section>
     <section class="panel"><h2>Por forma de pagamento</h2>${Object.keys(FORMAS).map(f=>`<div class="hb"><b>${FORMAS[f]}</b><div class="t"><i style="width:${a.fat?a[f]/a.fat*100:0}%;background:var(--${f})"></i></div><span>${brl(a[f])} · ${a.fat?Math.round(a[f]/a.fat*100):0}%</span></div>`).join('')}
       <div class="tot"><span>Outros itens vendidos</span><b>${a.itens.toLocaleString('pt-BR')} un.</b></div></section>
-    <section class="panel"><h2>Outros itens vendidos</h2><div class="tw"><table><thead><tr><th>Item</th><th class="n">Qtd.</th><th class="n">Valor</th></tr></thead><tbody>${F.produtos.map(x=>`<tr><td>${esc(x.nome)}</td><td class="n">${Number(x.qtd).toLocaleString('pt-BR')}</td><td class="n">${brl(Number(x.valor))}</td></tr>`).join('')||'<tr><td colspan="3">Nenhum item vendido.</td></tr>'}</tbody></table></div></section>
+    <section class="panel"><div class="head"><h2>Itens mais vendidos</h2><div class="tabs">${Object.keys(RANK).map(k=>`<button class="chip sm ${S.rank===k?'on':''}" data-a="rank" data-k="${k}">${RANK[k]}</button>`).join('')}</div></div>
+      <div class="tw"><table><thead><tr><th class="n">#</th><th>Item</th><th class="n">Qtd.</th><th></th><th class="n">Valor</th></tr></thead><tbody>${itens.map((x,i)=>`<tr><td class="n">${i+1}º</td><td>${esc(x.nome)}</td><td class="n"><b>${Number(x.qtd).toLocaleString('pt-BR')}</b></td><td style="width:34%"><div class="t"><i style="width:${Number(x.qtd)/maxQtd*100}%;background:var(--op,var(--ink))"></i></div></td><td class="n">${brl(Number(x.valor))}</td></tr>`).join('')||'<tr><td colspan="5">Nenhum item vendido.</td></tr>'}</tbody></table></div></section>
+    <section class="panel"><h2>Saídas do período</h2>
+      ${sai.categorias.length?`<div class="tw"><table><thead><tr><th>Categoria</th><th class="n">Lançamentos</th><th class="n">Valor</th></tr></thead><tbody>
+        ${sai.categorias.map(c=>`<tr><td>${esc(c.cat)}</td><td class="n">${c.qtd}</td><td class="n"><b>${brl(c.valor)}</b></td></tr>`).join('')}
+      </tbody><tfoot><tr><td><b>Total</b></td><td></td><td class="n"><b>${brl(sai.total)}</b></td></tr></tfoot></table></div>`
+      :'<div class="empty">Nenhuma saída lançada neste período.</div>'}
+      <button class="btn line sm" data-a="ir" data-v="saidas">Lançar uma saída</button></section>
   </div>
   ${vendasFin()}
   ${fluxosFin()}
-  <section class="panel"><h2>Registro de atividades</h2><div class="tw"><table><thead><tr><th>${S.periodo==='diario'?'Hora':'Data e hora'}</th><th>Quem fez</th><th>O que aconteceu</th>${ehDono()?'<th></th>':''}</tr></thead><tbody>
-    ${F.log.map(l=>`<tr><td>${dataHora(l.ts)}</td><td><b>${esc(l.quem)}</b></td><td style="white-space:normal">${esc(l.txt)}</td>${ehDono()?`<td><button class="btn line sm perigo" data-a="apagarAtiv" data-id="${l.id}">Apagar</button></td>`:''}</tr>`).join('')||'<tr><td colspan="4">Nada registrado neste período.</td></tr>'}
-  </tbody></table></div><div class="note">Aberturas, fechamentos, reaberturas, mudanças de preço e liberações de acesso ficam registradas com hora e usuário.</div></section>`;
+  <section class="panel"><div class="head"><h2>Registro de atividades</h2><button class="chip" data-a="verLog">${S.logAberto?'Esconder':'Mostrar'} (${F.log.length})</button></div>
+  ${S.logAberto?`<div class="tw"><table><thead><tr><th>${S.periodo==='diario'?'Hora':'Data e hora'}</th><th>Quem fez</th><th>O que aconteceu</th>${ehDono()?'<th></th>':''}</tr></thead><tbody>
+    ${F.log.map(l=>`<tr><td>${dataHora(l.ts)}</td><td><b>${esc(l.quem)}</b></td><td style="white-space:normal">${esc(l.txt)}</td>${ehDono()?`<td><button class="btn line sm perigo" data-a="apagarAtiv" data-id="${l.id}">Apagar</button></td>`:''}</tr>`).join('')||`<tr><td colspan="${ehDono()?4:3}">Nada registrado neste período.</td></tr>`}
+  </tbody></table></div><div class="note">Aberturas, fechamentos, reaberturas, mudanças de preço, saídas e liberações de acesso ficam registradas com hora e usuário.</div>`:'<p style="margin:0;color:var(--muted)">Fechado para não atrapalhar a leitura. Toque em Mostrar para ver tudo o que aconteceu no período.</p>'}</section>`;
+}
+function vSaidas(){
+  const mes=S.saidaMes||ymd(new Date()).slice(0,7),pm=mes.split('-').map(Number);
+  const total=S.saidas.reduce((t,x)=>t+x.valor,0);
+  const porCat={};S.saidas.forEach(x=>porCat[x.cat]=(porCat[x.cat]||0)+x.valor);
+  const cats=Object.keys(porCat).sort((a,b)=>porCat[b]-porCat[a]);
+  return `<div class="head"><div><h1>Saídas</h1><p>Tudo o que sai do caixa: compras, contas, pessoal e o mais. Entra no Financeiro ao lado das entradas.</p></div>
+    <input type="month" class="field" id="sd-mes" data-c="saidaMes" value="${mes}" max="${ymd(new Date()).slice(0,7)}" aria-label="Mês" style="width:auto;min-height:44px"></div>
+  <section class="panel"><h2>Lançar uma saída</h2>
+    <div class="form">
+      <div><label for="sd-dia">Dia</label><input type="date" class="field" id="sd-dia" value="${ymd(new Date())}" max="${ymd(new Date())}"></div>
+      <div><label for="sd-cat">Categoria</label><select id="sd-cat">${S.saidaCats.map(c=>`<option>${esc(c.nome)}</option>`).join('')}</select></div>
+      <div><label for="sd-valor">Valor (R$)</label><input type="text" id="sd-valor" inputmode="numeric" data-m placeholder="0,00"></div>
+      <div style="flex:2"><label for="sd-obs">Observação (opcional)</label><input type="text" id="sd-obs" maxlength="80" placeholder="ex.: feira da semana"></div>
+      <button class="btn" data-a="novaSaida">Lançar saída</button>
+    </div>
+    <details class="catbox"><summary>Categorias de saída (${S.saidaCats.length})</summary>
+      <div class="row" style="margin-top:10px">${S.saidaCats.map(c=>`<span class="chip">${esc(c.nome)}<button class="x sm" data-a="rmSaidaCat" data-id="${c.id}" aria-label="Remover ${esc(c.nome)}">×</button></span>`).join('')}</div>
+      <div class="form compacta" style="margin-top:10px"><div><label for="sd-nova">Nova categoria</label><input type="text" id="sd-nova" maxlength="40" placeholder="ex.: Gás"></div><button class="btn line" data-a="novaSaidaCat">Adicionar categoria</button></div>
+    </details>
+  </section>
+  <div class="kpis">
+    <div class="kpi" style="background-color:var(--bad)"><span class="lbl">Total do mês</span><strong>${brl(total)}</strong></div>
+    <div class="kpi" style="background-color:var(--ink)"><span class="lbl">Lançamentos</span><strong>${S.saidas.length}</strong></div>
+    ${cats.slice(0,3).map((c,i)=>`<div class="kpi" style="background-color:${['#8a4fd0','#b86a00','#0e7490'][i]}"><span class="lbl">${esc(c)}</span><strong>${brl(porCat[c])}</strong></div>`).join('')}
+  </div>
+  <section class="panel"><h2>${MESL[pm[1]-1]} de ${pm[0]}</h2>
+    <div class="tw"><table><thead><tr><th>Dia</th><th>Categoria</th><th>Observação</th><th>Quem lançou</th><th class="n">Valor</th><th></th></tr></thead><tbody>
+      ${S.saidas.map(x=>`<tr><td>${x.dia.slice(8,10)}/${x.dia.slice(5,7)}</td><td><span class="pill">${esc(x.cat)}</span></td><td style="white-space:normal">${esc(x.obs)||'—'}</td><td>${esc(nomeOp(x.quem)||'—')}</td><td class="n"><b>${brl(x.valor)}</b></td>
+        <td><button class="x" data-a="rmSaida" data-id="${x.id}" aria-label="Apagar lançamento">×</button></td></tr>`).join('')||'<tr><td colspan="6">Nenhuma saída lançada neste mês.</td></tr>'}
+    </tbody><tfoot><tr><td colspan="4"><b>Total</b></td><td class="n"><b>${brl(total)}</b></td><td></td></tr></tfoot></table></div>
+  </section>`;
 }
 function vProdutos(){
   const CP={prato:'Prato',doce:'Sobremesa',bebida:'Bebida'},ops=v=>Object.keys(CP).map(k=>`<option value="${k}" ${k===v?'selected':''}>${CP[k]}</option>`).join('');
@@ -859,6 +982,17 @@ async function carregarPerfis(){
   S.user=S.usuarios.find(u=>u.id===S.perfil.id)||S.user;
   if(S.view==='usuarios')render();
 }
+async function carregarSaidas(){
+  if(!sb||!isAdmin())return;
+  if(!S.saidaMes)S.saidaMes=ymd(new Date()).slice(0,7);
+  const ini=S.saidaMes+'-01',p=S.saidaMes.split('-').map(Number),fim=ymd(new Date(p[0],p[1],1));
+  const [cs,ls]=await Promise.all([
+    q(sb.from('saida_categorias').select('*').eq('ativo',true).order('ordem').order('nome'),'Categorias de saída'),
+    q(sb.from('saidas').select('*').gte('dia',ini).lt('dia',fim).order('dia',{ascending:false}).order('criado_em',{ascending:false}),'Saídas')]);
+  if(Array.isArray(cs))S.saidaCats=cs.map(x=>({id:x.id,nome:x.nome}));
+  if(Array.isArray(ls))S.saidas=ls.map(x=>({id:x.id,dia:x.dia,cat:x.categoria,valor:x.valor_centavos,obs:x.obs||'',quem:x.usuario_id}));
+  if(S.view==='saidas')render();
+}
 async function carregarBase(){
   const [b,pr,cf,cl,p30,cd]=await Promise.all([
     q(sb.from('balancas').select('*,taras(*)').eq('ativo',true).order('ordem').order('criado_em'),'Balanças'),
@@ -902,7 +1036,7 @@ async function carregarDia(){
 async function carregarTudo(){
   await carregarPerfis();
   await Promise.all([carregarBase(),carregarDia()]);
-  S.pronto=true;render();if(S.view==='financeiro')carregarFin();if(S.view==='whatsapp')carregarN8n();
+  S.pronto=true;render();if(S.view==='financeiro')carregarFin();if(S.view==='whatsapp')carregarN8n();if(S.view==='saidas')carregarSaidas();
 }
 function mudarRef(s){const r=refData(),P=S.periodo;
   if(P==='diario')r.setDate(r.getDate()+s);else if(P==='semanal')r.setDate(r.getDate()+7*s);else if(P==='anual')r.setFullYear(r.getFullYear()+s);else r.setMonth(r.getMonth()+s,1);
@@ -1029,7 +1163,7 @@ ${esc(corpo(x))}</pre><div class="row">${cp(url(f),'Copiar endereço')}${cp(corp
     ${N.teste?`<p style="margin:0"><b>${esc(N.teste.nome)}</b></p>${N.teste.erro?`<div class="note" role="alert" style="color:var(--bad)">${esc(N.teste.erro)}</div>`:`${N.teste.aviso?`<div class="note" style="color:var(--warn)">${esc(N.teste.aviso)}</div>`:''}${N.teste.texto?`<div class="bubble bot">${esc(N.teste.texto)}</div>`:''}<pre class="cod">${esc(N.teste.json)}</pre>`}`:'<div class="empty">Toque em "Testar agora" em uma consulta para ver aqui exatamente o que o n8n vai receber. O campo "texto" já vem pronto para enviar no WhatsApp.</div>'}
   </section>`;
 }
-const RENDER={caixa:vCaixa,cardapio:vCardapio,produtos:vProdutos,financeiro:vRelatorios,clientes:vClientes,usuarios:vUsuarios,balancas:vBalancas,whatsapp:vWhats};
+const RENDER={caixa:vCaixa,cardapio:vCardapio,produtos:vProdutos,financeiro:vRelatorios,saidas:vSaidas,clientes:vClientes,usuarios:vUsuarios,balancas:vBalancas,whatsapp:vWhats};
 function render(){
   if(!S.abas.length)abasReset();
   focoValido();
@@ -1066,7 +1200,7 @@ const bal=id=>S.balancas.find(b=>b.id===id);
 
 /* ---------- ações ---------- */
 const A={
-  ir:e=>{S.view=e.dataset.v;S.zerarConf=null;if(S.view==='whatsapp')carregarN8n();if(S.view==='usuarios')carregarPerfis();if(S.view==='financeiro')carregarFin();if(typeof window!=='undefined'&&window.innerWidth<=980)S.menu=false;try{location.hash=S.view}catch(_){}},
+  ir:e=>{S.view=e.dataset.v;S.zerarConf=null;if(S.view==='saidas')carregarSaidas();if(S.view==='whatsapp')carregarN8n();if(S.view==='usuarios')carregarPerfis();if(S.view==='financeiro')carregarFin();if(typeof window!=='undefined'&&window.innerWidth<=980)S.menu=false;try{location.hash=S.view}catch(_){}},
   sair:()=>{abasSalvar();S.modal=null;S.recuperando=false;if(sb)sb.auth.signOut().then(()=>{},()=>{});else aoSessao(null);return true},
   apagarFluxo:e=>{const f=S.fin.fluxos.find(x=>x.id===e.dataset.id);if(!f)return;
     S.apagar={tipo:'fluxo',id:f.id,txt:`o Fluxo ${f.numero} de ${f.operador||''}, de ${new Date(f.aberto_em).toLocaleDateString('pt-BR')}`,extra:f.n?`${f.n===1?'A venda':'As '+f.n+' vendas'} deste fluxo (${brl(f.total)}) ${f.n===1?'será apagada':'serão apagadas'} junto, e os pontos que ${f.n===1?'ela deu':'elas deram'} aos clientes serão desfeitos.`:'Este fluxo não tem vendas.'};S.modal='senha'},
@@ -1249,6 +1383,22 @@ const A={
   finProx:()=>{mudarRef(1);return true},
   finHoje:()=>{S.refData=ymd(new Date());S.finLimite=200;carregarFin();return true},
   finAtualizar:()=>{carregarFin();return true},
+  rank:e=>{S.rank=e.dataset.k},
+  verLog:()=>{S.logAberto=!S.logAberto},
+  novaSaida:()=>{const v=parseMoney($('#sd-valor').value),cat=$('#sd-cat').value,dia=$('#sd-dia').value,obs=$('#sd-obs').value.trim();
+    if(!cat)return toast('Cadastre uma categoria antes de lançar.')||true;
+    if(!v)return toast('Informe o valor da saída.')||true;
+    if(!dia)return toast('Informe o dia da saída.')||true;
+    q(sb.from('saidas').insert({dia,categoria:cat,valor_centavos:v,obs}),'Saída').then(async r=>{
+      if(r){toast('Saída de '+brl(v)+' em '+cat+' lançada.');$('#sd-valor').value='';$('#sd-obs').value=''}
+      await carregarSaidas();if(S.fin)carregarFin();render()});return true},
+  rmSaida:e=>{q(sb.from('saidas').delete().eq('id',e.dataset.id),'Saída').then(async r=>{
+      if(r)toast('Lançamento apagado.');await carregarSaidas();if(S.fin)carregarFin();render()});return true},
+  novaSaidaCat:()=>{const n=$('#sd-nova').value.trim();if(!n)return toast('Digite o nome da categoria.')||true;
+    q(sb.from('saida_categorias').insert({nome:n}),'Categoria').then(async r=>{
+      if(r)toast('Categoria '+n+' criada.');$('#sd-nova').value='';await carregarSaidas();render()});return true},
+  rmSaidaCat:e=>{q(sb.from('saida_categorias').update({ativo:false}).eq('id',e.dataset.id),'Categoria').then(async r=>{
+      if(r)toast('Categoria removida da lista.');await carregarSaidas();render()});return true},
   finMais:()=>{S.finLimite+=200;carregarFin();return true},
   fechar:e=>{const id=e.dataset.id;
     q(sb.rpc('fechar_caixa',{p_fluxo:id,p_contado_centavos:parseMoney(S.contado[id])})).then(async r=>{if(r){delete S.contado[id];toast(`Fluxo ${e.dataset.n} fechado.`)}await carregarDia();carregarFin()});return true},
@@ -1292,6 +1442,7 @@ const C={
       im.onerror=()=>toast('Não foi possível ler essa imagem.');im.src=rd.result};rd.readAsDataURL(f)},
   fil:e=>{S.fil[e.dataset.k]=e.value;S.finLimite=200;carregarFin()},
   finData:e=>{if(e.value){S.refData=e.value;S.finLimite=200;carregarFin()}},
+  saidaMes:e=>{if(e.value){S.saidaMes=e.value;carregarSaidas()}},
   userPerfil:e=>{const u=S.perfis.find(x=>x.id===e.dataset.id);mudarPerfil(u.id,{perfil:e.value},'Perfil de '+u.nome+' alterado.')},
   waUrl:e=>{S.wa.url=e.value.trim()},
   waEv:e=>{S.wa.eventos[e.dataset.k]=e.checked}
