@@ -455,8 +455,8 @@ const SUGESTOES=[
   ['Sobremesas',['Pudim de leite','Doce de leite','Goiabada com queijo','Mousse de maracujá','Salada de frutas','Gelatina','Brigadeiro','Bolo de chocolate','Pavê']],
   ['Bebidas',['Refrigerante lata','Refrigerante 600 ml','Suco natural','Suco de polpa','Água mineral','Água com gás','Chá gelado']],
   ['Açaí e acompanhamentos',['Granola','Leite condensado','Leite em pó','Banana','Morango','Paçoca','Amendoim','Mel','Tapioca']]];
-const VIEWS=[['caixa','Caixa'],['cardapio','Cardápio do dia'],['produtos','Produtos'],['financeiro','Financeiro'],['saidas','Saídas'],['clientes','Clientes e pontos'],['usuarios','Usuários'],['balancas','Balanças'],['whatsapp','WhatsApp e n8n']];
-const SO_ADMIN=['produtos','financeiro','saidas','usuarios','balancas','whatsapp'];
+const VIEWS=[['caixa','Caixa'],['cardapio','Cardápio do dia'],['produtos','Produtos'],['financeiro','Financeiro'],['saidas','Saídas'],['clientes','Clientes e pontos'],['usuarios','Usuários'],['balancas','Balanças'],['whatsapp','WhatsApp e n8n'],['negocio','Configurações do negócio']];
+const SO_ADMIN=['produtos','financeiro','saidas','usuarios','balancas','whatsapp','negocio'];
 
 const S={
   view:'caixa',logged:false,auth:'carregando',authTab:'entrar',authMsg:'',perfil:null,perfis:null,recuperando:false,
@@ -466,7 +466,7 @@ const S={
   clientes:[],
   regras:{base:'valor',pontosResgate:100,valorResgate:1000,minGrupo:50},
   cardapio:[],
-  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',rec:null,maq:false,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
+  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},rec:null,maq:false,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
   periodo:'diario',refData:'',fin:null,saidas:[],saidaCats:[],saidaMes:'',rank:'qtd',logAberto:false,finSeq:0,finLimite:200,finCarregando:false,contado:{},fluxos:[],log:[],modal:null,menu:(typeof window!=='undefined'&&window.innerWidth>980),fundo:10000,
   wa:{url:'',eventos:{resumo:true,cardapio:true,pontos:true,grupo:false}},
   vendas:[]
@@ -741,11 +741,11 @@ async function exportPdf(){
   if(Fn.fluxos.length)tab('Fluxo de caixa do período',['Operador','Dia','Fluxo','Abertura','Fechamento','Vendas','Dinheiro','Total','Gaveta esperada','Contado','Diferença'],
     Fn.fluxos.map(f=>{const esp=f.fundo+f.dinheiro,dif=f.fechado_em?f.contado-esp:null,ab=new Date(f.aberto_em);return [f.operador||'',ab.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}),'Fluxo '+f.numero,hhmm(ab),f.fechado_em?hhmm(new Date(f.fechado_em)):'Aberto',String(f.n),brl(f.dinheiro),brl(f.total),brl(esp),f.fechado_em?brl(f.contado):'',dif===null?'':(dif>0?'+':dif<0?'-':'')+brl(Math.abs(dif))]}));
   const np=doc.getNumberOfPages();
-  for(let i=1;i<=np;i++){doc.setPage(i);doc.setFontSize(9);doc.setTextColor(103,99,120);doc.text('Caixa do Restaurante',40,H-20);doc.text('Página '+i+' de '+np,W-40,H-20,{align:'right'})}
+  for(let i=1;i<=np;i++){doc.setPage(i);doc.setFontSize(9);doc.setTextColor(103,99,120);doc.text(nomeNeg()+(S.neg.foneBonito?' · '+S.neg.foneBonito:''),40,H-20);doc.text('Página '+i+' de '+np,W-40,H-20,{align:'right'})}
   const blob=doc.output('blob'),nome='relatorio-'+S.periodo+'-'+S.refData+'.pdf';
   try{const u=URL.createObjectURL(blob),l=document.createElement('a');l.href=u;l.download=nome;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),8000);toast('PDF gerado: '+nome)}catch(_){toast('Não foi possível baixar o PDF neste navegador.')}
 }
-const ICO={menu:'M4 7h16M4 12h16M4 17h16',caixa:'M4 8h16v11H4zM8 8V5h8v3M8 13h8M8 16h4',cardapio:'M6 4h12v16H6zM9 8h6M9 12h6M9 16h3',produtos:'M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8',financeiro:'M5 20V11M11 20V5M17 20v-6M3 20h18',clientes:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 20c0-3.5 3.6-6 8-6s8 2.5 8 6',usuarios:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',balancas:'M12 4v16M7 20h10M5 8h14M5 8l-2.5 6a2.5 2.5 0 005 0zM19 8l-2.5 6a2.5 2.5 0 005 0z',whatsapp:'M4 20l1.4-4.2A8 8 0 1112 20a8 8 0 01-3.6-.9z',saidas:'M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2'};
+const ICO={negocio:'M4 10l2-5h12l2 5M5 10v9h14v-9M4 10h16M10 19v-5h4v5',menu:'M4 7h16M4 12h16M4 17h16',caixa:'M4 8h16v11H4zM8 8V5h8v3M8 13h8M8 16h4',cardapio:'M6 4h12v16H6zM9 8h6M9 12h6M9 16h3',produtos:'M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8',financeiro:'M5 20V11M11 20V5M17 20v-6M3 20h18',clientes:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 20c0-3.5 3.6-6 8-6s8 2.5 8 6',usuarios:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',balancas:'M12 4v16M7 20h10M5 8h14M5 8l-2.5 6a2.5 2.5 0 005 0zM19 8l-2.5 6a2.5 2.5 0 005 0z',whatsapp:'M4 20l1.4-4.2A8 8 0 1112 20a8 8 0 01-3.6-.9z',saidas:'M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2'};
 const ico=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICO[k]}"/></svg>`;
 const isAdmin=()=>S.user.perfil==='Administrador';
 
@@ -786,6 +786,26 @@ function cobrarMaq(){const t=totais();cobFim();S.cob={id:null,valor:t.total,form
     if(!r||!r.id){S.cob=null;S.modal=null;return render()}
     c.id=r.id;cobStatus(r.status,'');
     if(S.cob===c&&!COB_FIM.includes(c.status))S.cobT=setInterval(cobOlhar,2000)})}
+/* ---------- Dados do negócio: um lugar só, usado no sistema inteiro ---------- */
+const foneBonito=n=>/^55\d{10,11}$/.test(n||'')?`(${n.slice(2,4)}) ${n.slice(4,n.length-4)}-${n.slice(-4)}`:(n||'');
+const nomeNeg=()=>(S.neg&&S.neg.nome)||'Restaurante';
+function negAplicar(d){S.neg={nome:d.nome||'Restaurante',fone:d.fone||'',foneBonito:foneBonito(d.fone),end:d.end||'',rodape:d.rodape||''};S.nomeRest=S.neg.nome;
+  try{localStorage.setItem('neg-nome',S.neg.nome)}catch(e){}
+  document.title='Caixa · '+S.neg.nome}
+function vNegocio(){const n=S.neg,contato=[n.end?'📍 '+n.end:'',n.foneBonito?'📞 '+n.foneBonito:''].filter(Boolean).join('\n');
+  const previa=`🧾 *Recibo · ${n.nome}*\nVenda nº 123 · ${new Date().toLocaleDateString('pt-BR')} 12:30\n\n• Comida 0,5 kg: R$ 34,95\n\n*Total: R$ 34,95*\nPagamento: Pix`+(n.rodape?'\n\n'+n.rodape:'')+(contato?'\n'+contato:'');
+  return `<div class="head"><div><h1>Configurações do negócio</h1><p>Mude aqui e muda em tudo: recibos e comprovantes, cardápio do WhatsApp, resumo e balanço da Joana, relatórios em PDF e o nome que aparece no sistema.</p></div></div>
+  <section class="panel"><h2>Dados do restaurante</h2>
+    <div class="form compacta">
+      <div><label for="ng-nome">Nome do restaurante</label><input type="text" id="ng-nome" maxlength="40" value="${esc(n.nome)}"></div>
+      <div><label for="ng-fone">WhatsApp ou telefone de contato</label><input type="text" id="ng-fone" inputmode="tel" placeholder="(85) 9..." value="${esc(n.foneBonito)}"></div>
+      <div><label for="ng-end">Endereço (opcional)</label><input type="text" id="ng-end" maxlength="120" placeholder="Rua, número, bairro" value="${esc(n.end)}"></div>
+      <div><label for="ng-rod">Frase final do recibo (opcional)</label><input type="text" id="ng-rod" maxlength="120" value="${esc(n.rodape)}"></div>
+      <div><button class="btn" data-a="negSalvar">Salvar</button></div>
+    </div>
+    <div class="note">O número é guardado no formato do WhatsApp (55 + DDD + número). Campos opcionais em branco simplesmente não aparecem nas mensagens. Recibos que já estão na fila ou já foram enviados não mudam; os próximos saem com os dados novos.</div>
+  </section>
+  <section class="panel"><h2>Como fica o recibo</h2><div class="bubble bot" id="ng-previa" style="white-space:pre-wrap">${esc(previa)}</div></section>`}
 function trocoBox(){const t=totais(),rec=parseMoney(S.recebido);return rec<t.total?{c:'troco falta',h:`<span>Faltam</span><strong>${brl(t.total-rec)}</strong>`}:{c:'troco',h:`<span>Troco</span><strong>${brl(rec-t.total)}</strong>`}}
 function vendaPanel(){
   const t=totais(),tb=trocoBox();
@@ -835,10 +855,10 @@ function cardapioTexto(){
   const blocos=CATS.map(c=>{const it=S.cardapio.filter(x=>x.cat===c&&x.on);
     return it.length?`${EMOJI[c]||'🍽️'} *${c}*\n`+it.map(x=>'• '+x.nome).join('\n'):''}).filter(Boolean).join('\n\n');
   const precos=S.balancas.map(b=>`${b.grupo==='acai'?'🍧':'⚖️'} ${b.nome}: *${brl(b.precoKg)}/kg*`).join('\n');
-  return `🍽️ *Cardápio de hoje*\n_${d}_`
+  return `🍽️ *Cardápio de hoje${nomeNeg()!=='Restaurante'?' · '+nomeNeg():''}*\n_${d}_`
     +(blocos?`\n\n${blocos}`:`\n\nO cardápio de hoje ainda não foi publicado.`)
     +(precos?`\n\n${precos}`:'')
-    +`\n\nVenha almoçar com a gente! 😊`;
+    +`\n\nVenha almoçar com a gente! 😊`+(S.neg.end?`\n📍 ${S.neg.end}`:'')+(S.neg.foneBonito?`\n📞 ${S.neg.foneBonito}`:'');
 }
 function vCardapio(){
   return `<div class="head"><div><h1>Cardápio do dia</h1><p>Marque o que está disponível hoje. É este cardápio que o assistente envia no WhatsApp.</p></div></div>
@@ -987,7 +1007,7 @@ function vClientes(){
 }
 function authHtml(){
   if(S.auth==='ok')return '';
-  const msg=S.authMsg?`<div class="note" role="alert" style="color:var(--ink)">${esc(S.authMsg)}</div>`:'',T='<h1>Caixa do Restaurante</h1>';
+  const msg=S.authMsg?`<div class="note" role="alert" style="color:var(--ink)">${esc(S.authMsg)}</div>`:'',T='<h1>'+esc((()=>{try{const n=localStorage.getItem('neg-nome');return n&&n!=='Restaurante'?'Caixa · '+n:'Caixa do Restaurante'}catch(e){return 'Caixa do Restaurante'}})())+'</h1>';
   if(S.auth==='carregando')return `<div class="panel">${T}<p style="margin:0">Carregando…</p></div>`;
   if(S.auth==='erro')return `<div class="panel">${T}${msg}<div class="row"><button class="btn line" data-a="sair">Sair</button><button class="btn" data-a="reverificar">Tentar de novo</button></div></div>`;
   if(S.auth==='pendente')return `<div class="panel"><h1>Aguardando liberação</h1><p style="margin:0">Olá, ${esc(S.perfil.nome)}. Sua conta foi criada, mas um administrador ainda precisa liberar o seu acesso.</p>${msg}<div class="row"><button class="btn line" data-a="sair">Sair</button><button class="btn" data-a="reverificar">Já fui liberado</button></div></div>`;
@@ -1053,7 +1073,7 @@ async function carregarBase(){
     S.balancas=b.map(x=>{const ts=[{n:'Sem tara',g:0}].concat((x.taras||[]).slice().sort((m,n)=>m.gramas-n.gramas).map(t=>({n:t.nome,g:t.gramas}))),a=ant[x.id];
       return{id:x.id,nome:x.nome,grupo:x.grupo,marca:x.marca,conexao:x.conexao,baud:String(x.baud),precoKg:x.preco_kg_centavos,bruto:a?a.bruto:0,tara:0,conectada:a?a.conectada:true,taras:ts}})}
   if(Array.isArray(pr))S.produtos=pr.map(x=>({id:x.id,nome:x.nome,preco:x.preco_centavos,cat:x.categoria,destaque:x.destaque,imagem:x.imagem||''}));
-  if(cf&&cf!==true){S.regras={base:cf.base_pontos,pontosResgate:cf.pontos_resgate,valorResgate:cf.valor_resgate_centavos,minGrupo:cf.min_pontos_grupo};S.fundo=cf.fundo_troco_centavos;S.nomeRest=cf.nome_restaurante||'Restaurante';S.maq=!!cf.maquineta_ativa}
+  if(cf&&cf!==true){S.regras={base:cf.base_pontos,pontosResgate:cf.pontos_resgate,valorResgate:cf.valor_resgate_centavos,minGrupo:cf.min_pontos_grupo};S.fundo=cf.fundo_troco_centavos;S.nomeRest=cf.nome_restaurante||'Restaurante';negAplicar({nome:S.nomeRest,fone:cf.telefone_restaurante||'',end:cf.endereco_restaurante||'',rodape:cf.rodape_recibo===undefined?'Obrigado pela preferência! 😊':cf.rodape_recibo||''});S.maq=!!cf.maquineta_ativa}
   if(Array.isArray(cl)){const m={};(Array.isArray(p30)?p30:[]).forEach(x=>m[x.cliente_id]=Number(x.pontos));S.clientes=cl.map(x=>({id:x.id,nome:x.nome,fone:x.telefone,foneNorm:x.telefone_norm||'',pontos:x.pontos,g:Number(x.gramas_total),gasto:Number(x.gasto_centavos),p30:m[x.id]||0}))}
   if(Array.isArray(cd))S.cardapio=cd.map(x=>({id:x.id,cat:x.categoria,nome:x.nome,on:x.disponivel}));
   // Se algum preço mudou, a venda em andamento acompanha o banco.
@@ -1216,7 +1236,7 @@ ${esc(corpo(x))}</pre><div class="row">${cp(url(f),'Copiar endereço')}${cp(corp
   </section>
   <section class="panel"><h2>6. Recibo para o cliente</h2>
     <p style="margin:0">Ao finalizar uma venda com cliente identificado, o recibo entra numa fila. O fluxo "recibos" do n8n busca essa fila a cada minuto e envia pelo WhatsApp. Vendas do modo teste nunca são enviadas.</p>
-    <div class="form compacta"><div><label for="cf-nome">Nome que aparece no recibo</label><input type="text" id="cf-nome" maxlength="40" data-c="nomeRest" value="${esc(S.nomeRest||'')}"></div></div>
+    <div class="note">O nome, o contato e a frase final do recibo ficam na aba <b>Configurações do negócio</b>. Hoje o recibo sai como <b>${esc(nomeNeg())}</b>.</div>
     <div class="tw"><table><thead><tr><th>Criado</th><th>Número</th><th>Situação</th></tr></thead><tbody>
       ${(S.recibos||[]).map(x=>`<tr><td>${new Date(x.criado_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</td><td>${esc(x.telefone)}</td><td>${x.status==='enviado'?'<span class="pill ok">Entregue ao n8n</span>':'<span class="pill warn">Na fila</span>'}</td></tr>`).join('')||'<tr><td colspan="3">Nenhum recibo ainda.</td></tr>'}
     </tbody></table></div>
@@ -1231,14 +1251,14 @@ ${esc(corpo(x))}</pre><div class="row">${cp(url(f),'Copiar endereço')}${cp(corp
     </tbody></table></div>
   </section>`;
 }
-const RENDER={caixa:vCaixa,cardapio:vCardapio,produtos:vProdutos,financeiro:vRelatorios,saidas:vSaidas,clientes:vClientes,usuarios:vUsuarios,balancas:vBalancas,whatsapp:vWhats};
+const RENDER={caixa:vCaixa,cardapio:vCardapio,produtos:vProdutos,financeiro:vRelatorios,saidas:vSaidas,clientes:vClientes,usuarios:vUsuarios,balancas:vBalancas,whatsapp:vWhats,negocio:vNegocio};
 function render(){
   if(!S.abas.length)abasReset();
   focoValido();
   abasSalvar();
   if(!isAdmin()&&SO_ADMIN.includes(S.view))S.view='caixa';
   $('.app').className='app'+(S.menu?'':' min')+(S.logged&&emTeste()?' teste':'');
-  $('#nav').innerHTML=`<div class="brand"><i>R</i><span>Restaurante<small>${emTeste()?'MODO TESTE · dados separados':'Dados reais · balança simulada'}</small></span></div>`+VIEWS.filter(v=>isAdmin()||!SO_ADMIN.includes(v[0])).map(v=>`<button class="nav ${S.view===v[0]?'on':''}" data-a="ir" data-v="${v[0]}">${ico(v[0])}<span>${v[1]}</span></button>`).join('');
+  $('#nav').innerHTML=`<div class="brand"><i>${esc(nomeNeg().trim().charAt(0).toUpperCase()||'R')}</i><span>${esc(nomeNeg())}<small>${emTeste()?'MODO TESTE · dados separados':'Dados reais · balança simulada'}</small></span></div>`+VIEWS.filter(v=>isAdmin()||!SO_ADMIN.includes(v[0])).map(v=>`<button class="nav ${S.view===v[0]?'on':''}" data-a="ir" data-v="${v[0]}">${ico(v[0])}<span>${v[1]}</span></button>`).join('');
   const fa=fxAberto(S.user.id),nf=fxDe(S.user.id).length,ini=S.user.nome.split(' ').map(x=>x[0]).join('').slice(0,2).toUpperCase();
   $('#top').innerHTML=`<button class="ib" data-a="menu" aria-label="Mostrar ou esconder o menu lateral">${ico('menu')}</button>
     <div class="tinfo"><b>${hoje.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'2-digit'})}</b><span id="clock">${hhmm(new Date())}</span></div>
@@ -1434,6 +1454,9 @@ const A={
     q(sb.rpc('enviar_recibo_venda',{p_venda:r.venda,p_telefone:f,p_nome:n||null}),'Comprovante').then(async x=>{r.enviando=false;
       if(x&&x.telefone){S.rec=null;S.modal=null;toast(x.repetido?`Esse comprovante já está a caminho de ${x.telefone}.`:`Comprovante da venda nº ${x.numero} a caminho do WhatsApp ${x.telefone}.`);if(x.cliente_novo)await carregarBase()}
       render()});return true},
+  negSalvar:()=>{const v=id=>$('#'+id).value.trim();
+    q(sb.rpc('negocio_salvar',{p_nome:v('ng-nome'),p_telefone:v('ng-fone'),p_endereco:v('ng-end'),p_rodape:v('ng-rod')}),'Negócio').then(async r=>{
+      if(r&&r.nome){negAplicar({nome:r.nome,fone:r.telefone,end:r.endereco,rodape:r.rodape});toast('Dados do negócio atualizados. Já valem para os próximos recibos e mensagens.');await carregarBase()}render()});return true},
   maqDeNovo:()=>{cobFim();S.cob=null;S.modal=null;if(podeFinalizar()&&usaMaq())cobrarMaq()},
   maqManual:()=>{cobFim();S.cob=null;S.modal='confirmar'},
   maqFechar:()=>{cobFim();S.cob=null;S.modal=null},
