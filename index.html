@@ -11,7 +11,7 @@
 :root{
   color-scheme:light;
   --bg:#eeeff3; --soft:#f5f4f9; --line:#e6e3ee; --ink:#1c1a27; --muted:#676378;
-  --comida:#d44c14; --acai:#531f78; --pix:#0c9c8b; --credito:#2a66dd; --debito:#8a4fd0; --dinheiro:#27924a;
+  --comida:#d44c14; --acai:#531f78; --pix:#0c9c8b; --credito:#2a66dd; --debito:#8a4fd0; --dinheiro:#27924a; --vale:#b7791f; --fiado:#5b6573;
   --doce:#d83f77; --bebida:#1f86c9;
   --ok:#1f8a44; --warn:#b86a00; --bad:#cf3434;
   --display:"Bricolage Grotesque","Trebuchet MS",sans-serif;
@@ -88,7 +88,7 @@ main{flex:1;min-height:0;overflow:auto;padding:24px;display:flex;flex-direction:
 .pf strong{font:800 38px/1 var(--display);margin-left:auto}
 .pf em{font-style:normal;font-weight:700;font-size:17px;background:#fff;color:var(--ink);border-radius:14px;padding:16px 22px}
 .pf:disabled{opacity:.5;cursor:not-allowed}
-.venda .formas{grid-template-columns:repeat(4,1fr);gap:8px}
+.venda .formas{grid-template-columns:repeat(3,1fr);gap:8px}
 .venda .forma{min-height:56px;font-size:15px}
 .fim{position:sticky;bottom:0;background:#fff;padding:8px 0 2px}
 .cart li.gh{background:transparent;padding:8px 4px 0;grid-template-columns:1fr auto;font-size:13px;color:var(--muted)}
@@ -129,7 +129,7 @@ tr.cont td{color:var(--muted)}
 .formas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .forma{min-height:64px;border-radius:16px;border:3px solid transparent;color:#fff;font-weight:700;font-size:18px;opacity:.55}
 .forma.on,.forma.none{opacity:1}.forma.on{border-color:var(--ink)}
-.f-pix{background:var(--pix)}.f-credito{background:var(--credito)}.f-debito{background:var(--debito)}.f-dinheiro{background:var(--dinheiro)}
+.f-pix{background:var(--pix)}.f-credito{background:var(--credito)}.f-debito{background:var(--debito)}.f-dinheiro{background:var(--dinheiro)}.f-vale{background:var(--vale)}.f-fiado{background:var(--fiado)}
 .cash{display:flex;flex-direction:column;gap:10px}
 label{font-weight:600;font-size:14px}
 input[type=text],input[type=password],input[type=url],select,.field{min-height:52px;border:2px solid var(--line);border-radius:14px;padding:0 14px;background:#fff;width:100%}
@@ -452,7 +452,7 @@ const hoje=new Date();
 const MES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 const MESL=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const DIA=['dom','seg','ter','qua','qui','sex','sáb'];
-const FORMAS={pix:'Pix',credito:'Crédito',debito:'Débito',dinheiro:'Dinheiro'};
+const FORMAS={pix:'Pix',credito:'Crédito',debito:'Débito',dinheiro:'Dinheiro',vale:'Vale-alimentação',fiado:'Fiado'};
 const CATS=['Entradas','Proteínas','Pratos quentes','Guarnições','Saladas','Sobremesas','Bebidas','Açaí e acompanhamentos'];
 const EMOJI={'Entradas':'🥣','Proteínas':'🍗','Pratos quentes':'🍲','Guarnições':'🍚','Saladas':'🥗','Sobremesas':'🍮','Bebidas':'🥤','Açaí e acompanhamentos':'🍧'};
 /* Pratos comuns de restaurante brasileiro, para montar o cardápio do dia com um toque. */
@@ -476,7 +476,7 @@ const S={
   clientes:[],
   regras:{base:'valor',pontosResgate:100,valorResgate:1000,minGrupo:50},
   cardapio:[],
-  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',pedit:{},kedit:{},salvandoProd:false,neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},rec:null,maq:false,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
+  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',pedit:{},kedit:{},salvandoProd:false,neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},rec:null,maq:false,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
   periodo:'diario',refData:'',fin:null,saidas:[],saidaCats:[],saidaMes:'',rank:'qtd',logAberto:false,finSeq:0,finLimite:200,finCarregando:false,contado:{},fluxos:[],log:[],modal:null,menu:(typeof window!=='undefined'&&window.innerWidth>980),fundo:10000,
   wa:{url:'',eventos:{resumo:true,cardapio:true,pontos:true,grupo:false}},
   vendas:[]
@@ -484,9 +484,9 @@ const S={
 S.user={id:'',nome:'',login:'',perfil:'Caixa'};
 
 /* ---------- cálculos ---------- */
-const Z=()=>({fat:0,gCom:0,gAcai:0,n:0,itens:0,pix:0,credito:0,debito:0,dinheiro:0});
+const Z=()=>({fat:0,gCom:0,gAcai:0,n:0,itens:0,pix:0,credito:0,debito:0,dinheiro:0,vale:0,nVale:0,fiado:0});
 const soma=(a,b)=>{for(const k in a)a[k]+=b[k];return a};
-function aggVendas(vs){const a=Z();vs.forEach(v=>{a.fat+=v.total;a.n++;v.pags.forEach(p=>a[p.forma]+=p.valor);v.itens.forEach(i=>{if(i.grupo==='produto')a.itens++;else if(i.grupo==='acai')a.gAcai+=i.g;else a.gCom+=i.g})});return a}
+function aggVendas(vs){const a=Z();vs.forEach(v=>{a.fat+=v.total;a.n++;v.pags.forEach(p=>a[p.forma]=(a[p.forma]||0)+p.valor);v.itens.forEach(i=>{if(i.grupo==='produto')a.itens++;else if(i.grupo==='acai')a.gAcai+=i.g;else a.gCom+=i.g})});return a}
 function genDay(seed){const r=rng(seed),a=Z();a.n=88+Math.floor(r()*50);a.fat=a.n*(2900+Math.floor(r()*700));a.gCom=a.n*(430+Math.floor(r()*90));a.gAcai=Math.floor(a.n*.3*(320+r()*90));a.itens=Math.floor(a.n*(.3+r()*.12));a.pix=Math.round(a.fat*(.38+r()*.08));a.debito=Math.round(a.fat*(.2+r()*.06));a.credito=Math.round(a.fat*(.17+r()*.06));a.dinheiro=a.fat-a.pix-a.debito-a.credito;return a}
 const dkey=d=>d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate();
 const aggDia=d=>dkey(d)===dkey(hoje)?aggVendas(S.vendas):genDay(dkey(d));
@@ -506,7 +506,7 @@ const totais=()=>totaisDe(S);
 /* ---------- vendas em abas (até 4 em aberto) ----------
    A venda da aba ativa vive em S.cart, S.forma etc., como sempre. As outras ficam guardadas em S.abas. */
 const MAX_ABAS=4,CAMPOS=['cart','pags','mx','dv','clienteId','resgate','forma','recebido','novoCli','recibo','pagoMaq'];
-const vendaVazia=()=>({cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,pagoMaq:null,pesos:null});
+const vendaVazia=()=>({cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',rec:''},dv:[],clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,pagoMaq:null,pesos:null});
 function abaGuardar(){const a=S.abas[S.aba];if(a){CAMPOS.forEach(k=>a[k]=S[k]);a.pesos=S.balancas.map(b=>({id:b.id,bruto:b.bruto,tara:b.tara}))}}
 function abaCarregar(k){S.aba=k;const a=S.abas[k];CAMPOS.forEach(c=>S[c]=a[c]);
   // Cada venda tem a sua pesagem em andamento: trocar de aba troca o que está na tela.
@@ -561,7 +561,8 @@ const badge=(id,soSe)=>{const n=qtd(id);return soSe&&!n?'':`<span class="qt ${n?
 const fxDe=uid=>S.fluxos.filter(f=>f.op===uid).sort((a,b)=>a.n-b.n);
 const fxAberto=uid=>S.fluxos.find(f=>f.op===uid&&!f.fechamento);
 const somaPags=()=>S.pags?S.pags.linhas.reduce((a,l)=>a+l.valor,0):0;
-const podeFinalizar=()=>{const t=totais();if(!fxAberto(S.user.id)||!S.cart.length)return false;return S.pags?somaPags()===t.total:!!S.forma&&(S.forma!=='dinheiro'||parseMoney(S.recebido)>=t.total)};
+const temFiado=()=>S.pags?S.pags.linhas.some(l=>l.forma==='fiado'):S.forma==='fiado';
+const podeFinalizar=()=>{const t=totais();if(!fxAberto(S.user.id)||!S.cart.length)return false;if(temFiado()&&!S.clienteId)return false;return S.pags?somaPags()===t.total:!!S.forma&&(S.forma!=='dinheiro'||parseMoney(S.recebido)>=t.total)};
 const GR=[['prato','Pratos'],['comida','Comida a quilo'],['acai','Açaí'],['doce','Sobremesas'],['bebida','Bebidas']];
 const gk=i=>i.grupo==='produto'?(i.cat||'doce'):i.grupo;
 function listaCart(){
@@ -663,16 +664,19 @@ async function carregarFin(){
   if(!sb||!isAdmin())return;
   const I=intervalo(),seq=++S.finSeq,args={p_inicio:I.ini.toISOString(),p_fim:I.fim.toISOString()};
   S.finCarregando=true;render();
-  const [rs,vs,fx,at,sd]=await Promise.all([
+  const [rs,vs,fx,at,sd,fi]=await Promise.all([
     q(sb.rpc('financeiro_resumo',Object.assign({p_gran:I.gran},args)),'Resumo'),
     q(sb.rpc('financeiro_vendas',Object.assign({p_limite:S.finLimite,p_pulo:0},args,filtrosRpc())),'Vendas'),
     q(sb.rpc('financeiro_fluxos',args),'Fluxos de caixa'),
     q(sb.from('atividades').select('*').gte('criado_em',args.p_inicio).lt('criado_em',args.p_fim).order('id',{ascending:false}).limit(300),'Registro de atividades'),
-    q(sb.rpc('financeiro_saidas',{p_inicio:ymd(I.ini),p_fim:ymd(I.fim)}),'Saídas')]);
+    q(sb.rpc('financeiro_saidas',{p_inicio:ymd(I.ini),p_fim:ymd(I.fim)}),'Saídas'),
+    q(sb.rpc('fiados_lista'),'Fiados')]);
   if(seq!==S.finSeq)return;
   S.finCarregando=false;
   if(!rs||rs===true||!vs||vs===true)return render();
-  const N=x=>({fat:Number(x.fat),gCom:Number(x.gCom),gAcai:Number(x.gAcai),n:Number(x.n),itens:Number(x.itens),pix:Number(x.pix),credito:Number(x.credito),debito:Number(x.debito),dinheiro:Number(x.dinheiro)});
+  const vNo=rs.vale_no_caixa!==false;
+  const N=x=>{const o={fat:Number(x.fat),gCom:Number(x.gCom),gAcai:Number(x.gAcai),n:Number(x.n),itens:Number(x.itens),pix:Number(x.pix),credito:Number(x.credito),debito:Number(x.debito),dinheiro:Number(x.dinheiro),vale:Number(x.vale||0),nVale:Number(x.nVale||0),fiado:Number(x.fiado||0)};
+    if(!vNo){o.fat-=o.vale;o.n-=o.nVale}return o};
   const mp={};rs.buckets.forEach(x=>mp[x.k]=N(x));
   const hj=new Date(),kk=(d,hh)=>ymd(d)+'T'+String(hh).padStart(2,'0');let bs=[];
   if(I.gran==='hour'){const hs=rs.buckets.map(x=>+x.k.slice(11));if(hs.length)for(let x=Math.min(...hs);x<=Math.max(...hs);x++)bs.push({l:x+'h',a:mp[kk(I.ini,x)]||Z()})}
@@ -680,7 +684,7 @@ async function carregarFin(){
   else for(let d=new Date(I.ini);d<I.fim;d.setMonth(d.getMonth()+1))bs.push({l:MES[d.getMonth()]+(S.periodo==='semestral'?'/'+String(d.getFullYear()).slice(2):''),a:mp[kk(d,0)]||Z(),hoje:d.getMonth()===hj.getMonth()&&d.getFullYear()===hj.getFullYear()});
   const mapSai=(sd&&sd!==true&&sd.dias)?Object.fromEntries(sd.dias.map(d=>[d.dia,Number(d.valor)])):{};
   bs.forEach(x=>{if(x.chave)x.saida=mapSai[x.chave]||0});
-  S.fin={I,buckets:bs,total:rs.buckets.reduce((a,x)=>soma(a,N(x)),Z()),produtos:rs.produtos||[],
+  S.fin={I,valeNoCaixa:vNo,fiados:Array.isArray(fi)?fi:[],buckets:bs,total:rs.buckets.reduce((a,x)=>soma(a,N(x)),Z()),produtos:rs.produtos||[],
     vendas:{qtd:Number(vs.qtd),soma:Number(vs.soma),linhas:(vs.linhas||[]).map(mapVenda)},
     fluxos:Array.isArray(fx)?fx:[],
     log:Array.isArray(at)?at.map(a=>({id:a.id,ts:new Date(a.criado_em),quem:nomeOp(a.usuario_id)||'Sistema',txt:a.texto})):[],
@@ -744,7 +748,7 @@ async function exportPdf(){
   const tab=(titulo,head,body)=>{doc.autoTable({startY:y,margin:{left:40,right:40,bottom:44},head:[[{content:X(titulo),colSpan:head.length,styles:{fillColor:[255,255,255],textColor:[28,26,39],fontSize:12,cellPadding:{top:2,bottom:6,left:0,right:0}}}],head.map(X)],body:body.map(r=>r.map(X)),styles:{font:'helvetica',fontSize:9,cellPadding:5,textColor:[28,26,39],lineColor:[230,227,238],lineWidth:.5},headStyles:{fillColor:[28,26,39],textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[247,246,251]}});y=doc.lastAutoTable.finalY+22};
   tab('Resumo',['Faturamento','Comida vendida','Açaí vendido','Vendas','Ticket médio','Outros itens'],[[brl(a.fat),kg1(a.gCom),kg1(a.gAcai),String(a.n),brl(a.n?Math.round(a.fat/a.n):0),a.itens+' un.']]);
   tab('Por forma de pagamento',['Forma','Valor','Participação'],Object.keys(FORMAS).map(f=>[FORMAS[f],brl(a[f]),pct(a[f])]));
-  if(b.length)tab('Por '+I.por,['Período','Vendas','Comida','Açaí','Pix','Crédito','Débito','Dinheiro','Faturamento'],b.map(x=>[x.l,String(x.a.n),kg1(x.a.gCom),kg1(x.a.gAcai),brl(x.a.pix),brl(x.a.credito),brl(x.a.debito),brl(x.a.dinheiro),brl(x.a.fat)]));
+  if(b.length)tab('Por '+I.por,['Período','Vendas','Comida','Açaí','Pix','Crédito','Débito','Dinheiro','Vale','Fiado','Faturamento'],b.map(x=>[x.l,String(x.a.n),kg1(x.a.gCom),kg1(x.a.gAcai),brl(x.a.pix),brl(x.a.credito),brl(x.a.debito),brl(x.a.dinheiro),brl(x.a.vale||0),brl(x.a.fiado||0),brl(x.a.fat)]));
   if(Fn.produtos.length)tab('Outros itens vendidos',['Item','Quantidade','Valor'],Fn.produtos.map(x=>[x.nome,String(x.qtd),brl(Number(x.valor))]));
   const F=S.fil,fs=[F.forma&&'forma '+FORMAS[F.forma],F.tipo&&'tipo '+TIPOS[F.tipo],F.op&&'operador '+nomeOp(F.op),F.cli&&'cliente '+(F.cli==='_sem'?'não identificado':nomeCli(F.cli))].filter(Boolean);
   tab('Vendas do período ('+Fn.vendas.qtd+' · '+brl(Fn.vendas.soma)+')'+(fs.length?' · filtros: '+fs.join(', '):'')+(linhas.length<Fn.vendas.qtd?' · mostrando as '+linhas.length+' mais recentes':''),['Venda','Data e hora','Operador','Cliente','Itens','Parte','Forma','Valor pago','Total'],
@@ -777,7 +781,7 @@ function scaleCard(s){
 /* ---------- Maquineta do Mercado Pago ----------
    O Caixa pede a cobrança ao banco, o n8n leva ao Mercado Pago e o Caixa acompanha o andamento. */
 const COB_FIM=['aprovada','cancelada','falhou','expirada','estornada'];
-const usaMaq=()=>!!S.maq&&!S.pags&&['credito','debito','pix'].includes(S.forma);
+const usaMaq=()=>!!S.maq&&!S.pags&&['credito','debito','pix','vale'].includes(S.forma);
 const maqPaga=()=>!!(S.pagoMaq&&S.pagoMaq.valor===totais().total&&S.pagoMaq.forma===S.forma);
 function cobFim(){clearInterval(S.cobT);S.cobT=null}
 function cobStatus(st,det){const c=S.cob;if(!c)return;const mudou=c.status!==st||c.detalhe!==(det||'');c.status=st;c.detalhe=det||'';
@@ -842,6 +846,19 @@ async function prodGravar(ids,kids){if(S.salvandoProd)return;S.salvandoProd=true
   S.salvandoProd=false;await carregarBase();render();
   if(falhou.length)toast('Não foi salvo: '+falhou.join(', ')+'. Confira se você é administrador e se o modo teste está como deveria.');
   else if(ok)toast(ok===1?'Salvo. O Caixa já usa o valor novo.':`${ok} alterações salvas. O Caixa já usa os valores novos.`)}
+/* ---------- Fiados ---------- */
+function fiadosPainel(F){const L=F.fiados||[],ab=L.filter(x=>!x.quitado_em),rc=L.filter(x=>x.quitado_em).slice(0,15);
+  const porCli={};ab.forEach(x=>{(porCli[x.cliente]=porCli[x.cliente]||{n:0,v:0,fone:x.telefone});porCli[x.cliente].n++;porCli[x.cliente].v+=Number(x.valor)});
+  const totAb=ab.reduce((s,x)=>s+Number(x.valor),0);
+  return `<section class="panel larga"><div class="head"><h2>Fiados</h2><span class="pill ${totAb?'warn':'ok'}">${totAb?brl(totAb)+' a receber':'Nada a receber'}</span></div>
+    ${Object.keys(porCli).length?`<div class="row">${Object.entries(porCli).map(([n,o])=>`<span class="pill">${esc(n)} · ${o.n} ${o.n>1?'vendas':'venda'} · <b>${brl(o.v)}</b></span>`).join('')}</div>`:''}
+    <div class="tw"><table><thead><tr><th>Cliente</th><th>Venda</th><th>Data</th><th class="n">Valor</th><th>Receber</th></tr></thead><tbody>
+      ${ab.map(x=>`<tr><td><b>${esc(x.cliente)}</b>${x.telefone?`<br><small>${esc(foneBonito(x.telefone))}</small>`:''}</td><td>#${x.numero}</td><td>${new Date(x.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} ${hhmm(new Date(x.criado_em))}</td><td class="n"><b>${brl(Number(x.valor))}</b></td>
+        <td><div class="row" style="gap:6px">${['pix','dinheiro','debito','credito','vale'].map(f=>`<button class="chip sm" data-a="fiadoQuitar" data-id="${x.id}" data-f="${f}">${FORMAS[f]}</button>`).join('')}</div></td></tr>`).join('')||'<tr><td colspan="5">Nenhum fiado em aberto.</td></tr>'}
+    </tbody></table></div>
+    ${rc.length?`<details><summary>Recebidos nos últimos 60 dias (${rc.length})</summary><div class="tw"><table><tbody>${rc.map(x=>`<tr><td>${esc(x.cliente)}</td><td>#${x.numero}</td><td class="n">${brl(Number(x.valor))}</td><td>Recebido em ${new Date(x.quitado_em).toLocaleDateString('pt-BR')} no ${esc((FORMAS[x.quitado_forma]||x.quitado_forma||'').toLowerCase())}${x.quitado_por?' por '+esc(x.quitado_por):''}</td></tr>`).join('')}</tbody></table></div></details>`:''}
+    <div class="note">Os fiados entram no faturamento do dia da venda. O recebimento fica registrado aqui e no registro de atividades, mas não entra de novo no caixa do dia em que o cliente pagou.</div>
+  </section>`}
 function trocoBox(){const t=totais(),rec=parseMoney(S.recebido);return rec<t.total?{c:'troco falta',h:`<span>Faltam</span><strong>${brl(t.total-rec)}</strong>`}:{c:'troco',h:`<span>Troco</span><strong>${brl(rec-t.total)}</strong>`}}
 function vendaPanel(){
   const t=totais(),tb=trocoBox();
@@ -849,6 +866,8 @@ function vendaPanel(){
   if(S.forma==='dinheiro')pg=`<div class="cash"><label for="recebido">Valor recebido em dinheiro</label><input type="text" id="recebido" data-i="recebido" inputmode="numeric" data-m value="${esc(S.recebido)}" placeholder="0,00">
     <div class="row">${[1000,2000,5000,10000].map(v=>`<button class="chip" data-a="quick" data-v="${v}">+ ${brl(v)}</button>`).join('')}<button class="chip" data-a="exato">Valor exato</button><button class="chip" data-a="limparRec">Limpar</button></div>
     <div class="${tb.c}" id="troco">${tb.h}</div></div>`;
+  else if(temFiado()&&!S.clienteId)pg=`<div class="note" role="alert" style="color:var(--bad)"><b>Para vender fiado, escolha o cliente.</b> Use o campo de cliente acima (ou "Novo" para cadastrar pelo WhatsApp). O fiado fica no nome dele até ser recebido.</div>`;
+  else if(S.forma==='fiado')pg=`<div class="note">${brl(t.total)} fica <b>fiado</b> no nome do cliente. Quando ele pagar, receba na lista de fiados do Financeiro.</div>`;
   else if(usaMaq())pg=maqPaga()?`<div class="note" style="color:var(--ok)"><b>Pagamento já aprovado na maquineta.</b> Toque em finalizar para registrar a venda. Não será cobrado de novo.</div>`
     :`<div class="note">Ao finalizar, ${brl(t.total)} vai direto para a maquineta no ${FORMAS[S.forma].toLowerCase()}. A venda é registrada sozinha quando o pagamento aprovar.</div>`;
   else if(S.forma==='pix')pg=`<div class="note">Receba o Pix de ${brl(t.total)} e finalize quando o pagamento cair.</div>`;
@@ -959,10 +978,14 @@ function vRelatorios(){
   ${S.periodo==='semanal'?`<section class="panel"><h2>Dia a dia</h2>${planilha()}</section>`:''}
   <div class="grid2">
     <section class="panel ${linha?'larga':''}"><h2>Faturamento por ${I.por} (R$)</h2>${grafico}</section>
-    <section class="panel"><h2>Por forma de pagamento</h2>${Object.keys(FORMAS).map(f=>`<div class="hb"><b>${FORMAS[f]}</b><div class="t"><i style="width:${a.fat?a[f]/a.fat*100:0}%;background:var(--${f})"></i></div><span>${brl(a[f])} · ${a.fat?Math.round(a[f]/a.fat*100):0}%</span></div>`).join('')}
+    <section class="panel"><h2>Por forma de pagamento</h2>
+      ${isAdmin()?`<label class="sw" for="vale-caixa">Somar o vale-alimentação no total do caixa <input type="checkbox" id="vale-caixa" data-c="valeCaixa" ${F.valeNoCaixa?'checked':''}></label>
+      ${F.valeNoCaixa?'':`<div class="note">O vale-alimentação (${brl(a.vale)}) está <b>fora</b> das entradas, do total e da quantidade de vendas.</div>`}`:''}
+      ${Object.keys(FORMAS).map(f=>`<div class="hb"><b>${FORMAS[f]}${f==='vale'&&!F.valeNoCaixa?' <small>(fora do total)</small>':''}</b><div class="t"><i style="width:${a.fat?a[f]/a.fat*100:0}%;background:var(--${f})"></i></div><span>${brl(a[f])} · ${a.fat?Math.round(a[f]/a.fat*100):0}%</span></div>`).join('')}
       <div class="tot"><span>Outros itens vendidos</span><b>${a.itens.toLocaleString('pt-BR')} un.</b></div></section>
     <section class="panel"><div class="head"><h2>Itens mais vendidos</h2><div class="tabs">${Object.keys(RANK).map(k=>`<button class="chip sm ${S.rank===k?'on':''}" data-a="rank" data-k="${k}">${RANK[k]}</button>`).join('')}</div></div>
       <div class="tw"><table><thead><tr><th class="n">#</th><th>Item</th><th class="n">Qtd.</th><th></th><th class="n">Valor</th></tr></thead><tbody>${itens.map((x,i)=>`<tr><td class="n">${i+1}º</td><td>${esc(x.nome)}</td><td class="n"><b>${Number(x.qtd).toLocaleString('pt-BR')}</b></td><td style="width:34%"><div class="t"><i style="width:${Number(x.qtd)/maxQtd*100}%;background:var(--op,var(--ink))"></i></div></td><td class="n">${brl(Number(x.valor))}</td></tr>`).join('')||'<tr><td colspan="5">Nenhum item vendido.</td></tr>'}</tbody></table></div></section>
+    ${fiadosPainel(F)}
     <section class="panel"><h2>Saídas do período</h2>
       ${sai.categorias.length?`<div class="tw"><table><thead><tr><th>Categoria</th><th class="n">Lançamentos</th><th class="n">Valor</th></tr></thead><tbody>
         ${sai.categorias.map(c=>`<tr><td>${esc(c.cat)}</td><td class="n">${c.qtd}</td><td class="n"><b>${brl(c.valor)}</b></td></tr>`).join('')}
@@ -1504,6 +1527,9 @@ const A={
   prodSalvar:e=>{prodGravar([e.dataset.id],[]);return true},
   kgSalvar:e=>{prodGravar([],[e.dataset.id]);return true},
   prodSalvarTudo:()=>{prodGravar(Object.keys(S.pedit),Object.keys(S.kedit));return true},
+  fiadoQuitar:e=>{const id=e.dataset.id,f=e.dataset.f,x=((S.fin&&S.fin.fiados)||[]).find(y=>y.id===id);if(!x)return true;
+    if(S.fiadoConf!==id+f){S.fiadoConf=id+f;toast(`Toque de novo em "${FORMAS[f]}" para confirmar: ${x.cliente} pagou ${brl(Number(x.valor))}.`);return true}
+    S.fiadoConf=null;q(sb.rpc('fiado_quitar',{p_pagamento:id,p_forma:f}),'Fiado').then(r=>{if(r&&r.ok){toast(`Fiado de ${r.cliente||'cliente'} recebido: ${brl(Number(r.valor))} no ${FORMAS[f].toLowerCase()}.`);carregarFin()}});return true},
   maqDeNovo:()=>{cobFim();S.cob=null;S.modal=null;if(podeFinalizar()&&usaMaq())cobrarMaq()},
   maqManual:()=>{cobFim();S.cob=null;S.modal='confirmar'},
   maqFechar:()=>{cobFim();S.cob=null;S.modal=null},
@@ -1606,6 +1632,7 @@ const C={
       im.onerror=()=>toast('Não foi possível ler essa imagem.');im.src=rd.result};rd.readAsDataURL(f)},
   fil:e=>{S.fil[e.dataset.k]=e.value;S.finLimite=200;carregarFin()},
   prodCat:e=>{prodMarcar(e.dataset.pe,'cat',e.value)},
+  valeCaixa:e=>{q(sb.rpc('vale_no_caixa_definir',{p_ligado:e.checked}),'Vale').then(r=>{if(r!==null){toast(e.checked?'O vale-alimentação voltou a somar no total do caixa.':'O vale-alimentação saiu do total do caixa.');carregarFin()}})},
   recVenda:e=>{const r=S.rec;if(!r)return;r.venda=e.value;const v=(r.lista||[]).find(x=>x.id===e.value),c=v&&v.cli&&S.clientes.find(x=>x.id===v.cli);
     r.fone=c?c.fone||'':'';r.nome=c&&!/^Cliente \d{4}$/.test(c.nome)?c.nome:''},
   nomeRest:e=>{const n=e.value.trim();if(!n)return;salvar(sb.from('config').update({nome_restaurante:n}).eq('id',1),'Nome do recibo atualizado.')},
