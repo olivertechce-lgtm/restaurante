@@ -392,6 +392,19 @@ input[type=range]{width:100%;accent-color:var(--op,var(--ink));min-height:32px}
 .pcard .psalvar,.kcard .psalvar{display:none;align-self:flex-start}
 .pcard.sujo,.kcard.sujo{box-shadow:0 0 0 3px var(--warn,#d97706)}
 .pcard.sujo .psalvar,.kcard.sujo .psalvar{display:inline-flex}
+.valechave{display:flex;flex-direction:column;gap:2px;border:1px dashed var(--line);border-radius:12px;padding:8px 12px;margin:2px 0}
+.valechave.on{border-style:solid;border-color:var(--vale)}.valechave small{color:var(--muted)}
+.valebar{display:flex;flex-direction:row;align-items:center;gap:16px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-left:6px solid var(--line);border-radius:16px;padding:12px 18px;margin:0 0 14px}.valebar b{font-size:16px}.valebar.on{border-left-color:var(--vale)}.valebar span{color:var(--muted);flex:1 1 260px}
+.aba.pend{background:#fff7e6;border-color:var(--vale);color:#7a4b00}.aba.pend.on{background:#fff;box-shadow:0 0 0 3px var(--vale)}
+.aba.pend b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+.venda.vpend{box-shadow:0 0 0 3px var(--vale)}
+.pendbar{display:flex;flex-direction:column;gap:6px;background:#fff7e6;border:1px solid var(--vale);border-radius:12px;padding:10px 12px;margin-bottom:6px}.pendbar span{color:var(--muted);font-size:13px}.pendbar .chip{align-self:flex-start}
+.fdop{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;min-height:72px}.fdop small{font-weight:400;opacity:.85;white-space:normal}
+.pendlista{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:#fff7e6;border-radius:12px;padding:10px 12px;margin-bottom:10px}.pendlista small{color:var(--muted)}
+.fcl{display:flex;flex-direction:column;gap:8px}.fcli{border:1px solid var(--line);border-radius:14px;overflow:hidden}.fcli.on{border-color:var(--fiado)}
+.fcab{all:unset;cursor:pointer;display:flex;gap:12px;align-items:center;width:100%;box-sizing:border-box;padding:12px 14px}.fcab span{color:var(--muted);flex:1}.fcab strong{font-size:17px}
+.fcab:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}.fcli .tw{padding:0 14px}
+.fcfecha{display:flex;flex-direction:column;gap:6px;padding:12px 14px;background:var(--soft)}.fcfecha span{color:var(--muted)}
 .quadro.pfdest .prods{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
 .quadro.pfdest .prod{min-height:112px;font-size:18px}
 .quadro.pfdest .prod b{font-size:19px}
@@ -476,7 +489,7 @@ const S={
   clientes:[],
   regras:{base:'valor',pontosResgate:100,valorResgate:1000,minGrupo:50},
   cardapio:[],
-  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',pedit:{},kedit:{},salvandoProd:false,neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},rec:null,maq:false,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
+  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pend:'',pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',pedit:{},kedit:{},salvandoProd:false,neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},rec:null,maq:false,valeMaq:true,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
   periodo:'diario',refData:'',fin:null,saidas:[],saidaCats:[],saidaMes:'',rank:'qtd',logAberto:false,finSeq:0,finLimite:200,finCarregando:false,contado:{},fluxos:[],log:[],modal:null,menu:(typeof window!=='undefined'&&window.innerWidth>980),fundo:10000,
   wa:{url:'',eventos:{resumo:true,cardapio:true,pontos:true,grupo:false}},
   vendas:[]
@@ -501,12 +514,19 @@ function buckets(p){
   return b;
 }
 const cli=()=>S.clientes.find(c=>c.id===S.clienteId);
-function totaisDe(v){const sub=v.cart.reduce((a,i)=>a+i.valor,0),c=S.clientes.find(x=>x.id===v.clienteId),pode=!!c&&c.pontos>=S.regras.pontosResgate&&sub>0,desc=v.resgate&&pode?Math.min(S.regras.valorResgate,sub):0;return{sub,desc,total:sub-desc,pode,c}}
+const DSOBRE={comida:'na comida',acai:'no açaí',peso:'na comida e no açaí',tudo:'em tudo'};
+const descAplica=(sobre,g)=>sobre==='tudo'||(sobre==='peso'&&(g==='comida'||g==='acai'))||sobre===g;
+const pctTxt=n=>String(Math.round(n*100)/100).replace('.',',')+'%';
+function totaisDe(v){const sub=v.cart.reduce((a,i)=>a+i.valor,0),c=S.clientes.find(x=>x.id===v.clienteId);
+  const base=c&&c.descPct>0?v.cart.filter(i=>descAplica(c.descSobre,i.grupo)).reduce((a,i)=>a+i.valor,0):0;
+  const dcli=base?Math.min(sub,Math.round(base*Math.round(c.descPct*100)/10000)):0;
+  const pode=!!c&&c.pontos>=S.regras.pontosResgate&&sub-dcli>0,desc=v.resgate&&pode?Math.min(S.regras.valorResgate,sub-dcli):0;
+  return{sub,dcli,desc,total:sub-dcli-desc,pode,c}}
 const totais=()=>totaisDe(S);
 /* ---------- vendas em abas (até 4 em aberto) ----------
    A venda da aba ativa vive em S.cart, S.forma etc., como sempre. As outras ficam guardadas em S.abas. */
-const MAX_ABAS=4,CAMPOS=['cart','pags','mx','dv','clienteId','resgate','forma','recebido','novoCli','recibo','pagoMaq'];
-const vendaVazia=()=>({cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',rec:''},dv:[],clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,pagoMaq:null,pesos:null});
+const MAX_ABAS=4,MAX_PEND=20,CAMPOS=['cart','pags','mx','dv','clienteId','resgate','forma','recebido','novoCli','recibo','pagoMaq','pend'];
+const vendaVazia=()=>({cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',rec:''},dv:[],clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,pagoMaq:null,pend:'',pesos:null});
 function abaGuardar(){const a=S.abas[S.aba];if(a){CAMPOS.forEach(k=>a[k]=S[k]);a.pesos=S.balancas.map(b=>({id:b.id,bruto:b.bruto,tara:b.tara}))}}
 function abaCarregar(k){S.aba=k;const a=S.abas[k];CAMPOS.forEach(c=>S[c]=a[c]);
   // Cada venda tem a sua pesagem em andamento: trocar de aba troca o que está na tela.
@@ -514,7 +534,9 @@ function abaCarregar(k){S.aba=k;const a=S.abas[k];CAMPOS.forEach(c=>S[c]=a[c]);
   S.balancas.forEach(b=>{const x=ps?ps.find(y=>y.id===b.id):null;b.bruto=x?(+x.bruto||0):0});
   S.abaConf=false}
 function abasReset(){S.abas=[Object.assign({n:1},vendaVazia())];abaCarregar(0)}
-const abaLivre=a=>!a.cart.length&&!a.clienteId;
+const abaLivre=a=>!a.pend&&!a.cart.length&&!a.clienteId;
+const abasNormais=()=>S.abas.filter(a=>!a.pend).length;
+const pendurados=()=>{abaGuardar();return S.abas.filter(a=>a.pend&&a.cart.length)};
 /* ---------- digitação das gramas pelo teclado ----------
    Sem balança ligada, o peso é digitado: o card selecionado recebe os números,
    Tab alterna entre comida e açaí, Enter adiciona à venda e já pula para o outro. */
@@ -534,25 +556,34 @@ function focoBal(){const c=balComida(),a=balAcai();if(!c||!a)return c?c.id:'';re
 function focoValido(){const L=focoLista();if(!L.length){S.foco='';return}if(L.indexOf(S.foco)<0)S.foco=L[0]}
 function tirarUm(id){for(let i=S.cart.length-1;i>=0;i--)if(S.cart[i].src===id){const n=S.cart[i].desc;S.cart.splice(i,1);S.pags=null;return n}return ''}
 const abasComItens=()=>{abaGuardar();return S.abas.filter(a=>a.cart.length).length};
-const abaNumLivre=()=>{for(let n=1;n<=MAX_ABAS;n++)if(!S.abas.some(a=>a.n===n))return n;return 0};
+const abaNumLivre=()=>{for(let n=1;n<=MAX_ABAS;n++)if(!S.abas.some(a=>!a.pend&&a.n===n))return n;return 0};
 function abaTirar(k){S.abas.splice(k,1);if(!S.abas.length)return abasReset();abaCarregar(Math.min(k,S.abas.length-1))}
 function abasChave(){return 'caixa-abas-'+S.user.id}
 function abasSalvar(){if(!S.logged||!S.pronto||!S.user.id||S.abasDe!==S.user.id)return;abaGuardar();
   try{localStorage.setItem(abasChave(),JSON.stringify({dia:new Date().toDateString(),teste:emTeste(),aba:S.aba,abas:S.abas}))}catch(_){}}
 function abasRestaurar(){S.abasDe=S.user.id;abasReset();
   let d=null;try{d=JSON.parse(localStorage.getItem(abasChave())||'null')}catch(_){}
-  if(!d||d.dia!==new Date().toDateString()||!!d.teste!==emTeste()||!Array.isArray(d.abas)||!d.abas.length)return;
-  const usados={},abas=d.abas.slice(0,MAX_ABAS).map(a=>{const v=Object.assign(vendaVazia(),a||{});
+  if(!d||!!d.teste!==emTeste()||!Array.isArray(d.abas)||!d.abas.length)return;
+  // Fiado do dia pendurado não se perde na virada do dia: só as vendas comuns são descartadas.
+  const outroDia=d.dia!==new Date().toDateString(),fonte=outroDia?d.abas.filter(a=>a&&a.pend&&Array.isArray(a.cart)&&a.cart.length):d.abas;
+  if(!fonte.length)return;
+  const usados={},abas=fonte.filter(a=>a&&!a.pend).slice(0,MAX_ABAS).concat(fonte.filter(a=>a&&a.pend).slice(0,MAX_PEND)).map(a=>{const v=Object.assign(vendaVazia(),a||{});
     v.cart=(Array.isArray(v.cart)?v.cart:[]).filter(i=>i&&(i.grupo==='produto'?S.produtos.some(x=>x.id===i.src):S.balancas.some(x=>x.id===i.src)));
     if(v.clienteId&&!S.clientes.some(c=>c.id===v.clienteId)){v.clienteId='';v.resgate=false;v.pags=null}
     if(!Array.isArray(v.dv))v.dv=[];v.novoCli=false;
+    if(v.pend){v.n=0;return v}
     v.n=(v.n>=1&&v.n<=MAX_ABAS&&!usados[v.n])?v.n:0;if(v.n)usados[v.n]=1;return v});
-  abas.forEach(v=>{if(!v.n){for(let n=1;n<=MAX_ABAS;n++)if(!usados[n]){v.n=n;usados[n]=1;break}}});
-  S.abas=abas;abaCarregar(Math.min(Math.max(0,d.aba|0),abas.length-1));
-  const n=S.abas.filter(a=>a.cart.length).length;if(n)toast(n===1?'A venda em aberto foi recuperada.':n+' vendas em aberto foram recuperadas.')}
+  abas.forEach(v=>{if(!v.pend&&!v.n){for(let n=1;n<=MAX_ABAS;n++)if(!usados[n]){v.n=n;usados[n]=1;break}}});
+  if(!abas.some(a=>!a.pend))abas.unshift(Object.assign({n:1},vendaVazia()));
+  S.abas=abas;abaCarregar(outroDia?0:Math.min(Math.max(0,d.aba|0),abas.length-1));
+  const pd=S.abas.filter(a=>a.pend),n=S.abas.filter(a=>!a.pend&&a.cart.length).length;
+  if(outroDia&&pd.length)toast('Atenção: fiado do dia anterior ainda pendurado: '+pd.map(a=>a.pend).join(', ')+'. Receba ou lance na conta do cliente.');
+  else if(n||pd.length)toast([n?(n===1?'1 venda em aberto':n+' vendas em aberto'):'',pd.length?(pd.length===1?'1 fiado do dia':pd.length+' fiados do dia'):''].filter(Boolean).join(' e ')+' recuperado(s).')}
 function abasHtml(){abaGuardar();
-  return `<div class="abas" role="tablist" aria-label="Vendas em aberto">${S.abas.map((a,k)=>{const t=totaisDe(a),on=k===S.aba,nome=t.c?t.c.nome.split(' ')[0]:'';
-    return `<button class="aba ${on?'on':a.cart.length?'espera':''}" role="tab" aria-selected="${on}" data-a="abaIr" data-k="${k}" title="Venda ${a.n}${nome?' · '+esc(nome):''} · ${a.cart.length} ${a.cart.length===1?'item':'itens'} · ${brl(t.total)}"><b>Venda ${a.n}</b><small>${nome?esc(nome):a.cart.length?brl(t.total):'vazia'}</small></button>`}).join('')}<button class="aba mais" data-a="abaNova" aria-label="Abrir outra venda" title="${S.abas.length>=MAX_ABAS&&!S.abas.some(abaLivre)?'Limite de '+MAX_ABAS+' vendas em aberto':'Abrir outra venda'}"><b>+ Nova</b><small>${S.abas.length} de ${MAX_ABAS}</small></button></div>`}
+  const ordem=S.abas.map((a,k)=>k).sort((x,y)=>(!!S.abas[x].pend-!!S.abas[y].pend)||x-y);
+  return `<div class="abas" role="tablist" aria-label="Vendas em aberto">${ordem.map(k=>{const a=S.abas[k],t=totaisDe(a),on=k===S.aba,nome=t.c?t.c.nome.split(' ')[0]:'';
+    if(a.pend)return `<button class="aba pend ${on?'on':''}" role="tab" aria-selected="${on}" data-a="abaIr" data-k="${k}" title="Fiado do dia · ${esc(a.pend)} · ${brl(t.total)}"><b>🕒 ${esc(a.pend)}</b><small>Fiado do dia · ${brl(t.total)}</small></button>`;
+    return `<button class="aba ${on?'on':a.cart.length?'espera':''}" role="tab" aria-selected="${on}" data-a="abaIr" data-k="${k}" title="Venda ${a.n}${nome?' · '+esc(nome):''} · ${a.cart.length} ${a.cart.length===1?'item':'itens'} · ${brl(t.total)}"><b>Venda ${a.n}</b><small>${nome?esc(nome):a.cart.length?brl(t.total):'vazia'}</small></button>`}).join('')}<button class="aba mais" data-a="abaNova" aria-label="Abrir outra venda" title="${abasNormais()>=MAX_ABAS&&!S.abas.some(abaLivre)?'Limite de '+MAX_ABAS+' vendas em aberto':'Abrir outra venda'}"><b>+ Nova</b><small>${abasNormais()} de ${MAX_ABAS}</small></button></div>`}
 const reg=()=>{};
 const deQuem=id=>id===S.user.id?'o próprio caixa':'o caixa de '+S.usuarios.find(u=>u.id===id).nome;
 function regFech(){}
@@ -576,6 +607,24 @@ function dvInfo(){const t=totais().total,s=S.dv.reduce((a,d)=>a+parseMoney(d.val
 function statusBox(m,semForma){return m.falta>0?`<div class="troco falta"><span>Falta distribuir</span><strong>${brl(m.falta)}</strong></div>`:m.falta<0?`<div class="troco falta"><span>Passou do total em</span><strong>${brl(-m.falta)}</strong></div>`:semForma?`<div class="troco falta"><span>Escolha a forma de cada pessoa</span><strong>${brl(m.t)}</strong></div>`:`<div class="troco"><span>Valores conferem</span><strong>${brl(m.t)}</strong></div>`}
 function dvIgual(){const t=totais().total,n=S.dv.length,b=Math.floor(t/n);S.dv.forEach((d,k)=>d.valor=num(k===n-1?t-b*(n-1):b))}
 function modalHtml(fa){
+  if(S.modal==='fiadoTipo'){const t=totais();return `<div class="panel" style="width:min(520px,100%)"><h1>Fiado de ${brl(t.total)}</h1><p style="margin:0">Quando o cliente vai pagar?</p>
+    <button class="btn fdop" data-a="fiadoDia"><b>Fiado do dia</b><small>Volta para pagar hoje. A venda fica pendurada numa aba com o nome dele.</small></button>
+    <button class="btn line fdop" data-a="fiadoMes"><b>Fiado do mês</b><small>Vai para a conta do cliente cadastrado e é paga depois, em "Fechar conta".</small></button>
+    <button class="btn line" data-a="cancelar">Voltar</button></div>`}
+  if(S.modal==='fiadoDia')return `<div class="panel" style="width:min(480px,100%)"><h1>Fiado do dia</h1>
+    <div><label for="fd-nome">Nome de quem vai pagar depois</label><input type="text" id="fd-nome" list="fd-lista" maxlength="40" autocomplete="off" placeholder="Escolha um cliente ou digite um nome" value="${esc(S.fdNome||'')}"><datalist id="fd-lista">${S.clientes.map(c=>`<option value="${esc(c.nome)}"></option>`).join('')}</datalist></div>
+    <div class="note">A venda sai da tela e fica numa aba com esse nome. Uma venda nova, em branco, abre para o próximo cliente.</div>
+    <div class="row"><button class="btn line" data-a="cancelar">Voltar</button><button class="btn" data-a="pendurar">Pendurar venda</button></div></div>`;
+  if(S.modal==='fiadoMes'){const t=totais();return `<div class="panel" style="width:min(480px,100%)"><h1>Fiado do mês</h1>
+    ${S.clientes.length?`<div><label for="fm-cli">Cliente da conta</label><select id="fm-cli"><option value="">Escolha o cliente</option>${S.clientes.slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt')).map(c=>`<option value="${c.id}" ${c.id===S.clienteId?'selected':''}>${esc(c.nome)} · ${esc(c.fone)}</option>`).join('')}</select></div>
+    <div class="note">${brl(t.total)} entra na conta do cliente. Quem não está na lista precisa ser cadastrado antes pelo botão "Novo" do Caixa.</div>
+    <div class="row"><button class="btn line" data-a="cancelar">Voltar</button><button class="btn" data-a="lancarConta">Lançar na conta</button></div>`
+    :`<div class="note">Ainda não há clientes cadastrados. Cadastre pelo botão "Novo" do Caixa e tente de novo.</div><button class="btn line" data-a="cancelar">Voltar</button>`}</div>`}
+  if(S.modal==='desc'&&S.descCli){const c=S.clientes.find(x=>x.id===S.descCli);if(!c)return '';return `<div class="panel" style="width:min(460px,100%)"><h1>Desconto de ${esc(c.nome)}</h1>
+    <div class="form compacta"><div><label for="ds-pct">Desconto (%)</label><input type="text" id="ds-pct" inputmode="decimal" placeholder="10" value="${c.descPct?String(c.descPct).replace('.',','):''}"></div>
+      <div><label for="ds-sobre">Vale sobre</label><select id="ds-sobre">${Object.keys(DSOBRE).map(k=>`<option value="${k}" ${c.descSobre===k?'selected':''}>${({comida:'Comida a quilo',acai:'Açaí',peso:'Comida e açaí (peso)',tudo:'Tudo o que comprar'})[k]}</option>`).join('')}</select></div></div>
+    <div class="note">O desconto entra sozinho em toda venda com esse cliente. Deixe 0 para tirar.</div>
+    <div class="row"><button class="btn line" data-a="cancelar">Cancelar</button><button class="btn" data-a="descSalvar">Salvar</button></div></div>`}
   if(S.modal==='recibo'&&S.rec){const r=S.rec,ops=r.lista||[],at=ops.find(x=>x.id===r.venda);
     return `<div class="panel" style="width:min(480px,100%)"><h1>Enviar comprovante</h1>
     ${r.fixa?`<div class="conf-total"><span>Venda nº ${r.fixa.n}</span><strong>${brl(r.fixa.total)}</strong></div>`
@@ -781,7 +830,8 @@ function scaleCard(s){
 /* ---------- Maquineta do Mercado Pago ----------
    O Caixa pede a cobrança ao banco, o n8n leva ao Mercado Pago e o Caixa acompanha o andamento. */
 const COB_FIM=['aprovada','cancelada','falhou','expirada','estornada'];
-const usaMaq=()=>!!S.maq&&!S.pags&&['credito','debito','pix','vale'].includes(S.forma);
+const usaMaq=()=>!!S.maq&&!S.pags&&(['credito','debito','pix'].includes(S.forma)||(S.forma==='vale'&&S.valeMaq));
+const EXT='Maquininha externa';
 const maqPaga=()=>!!(S.pagoMaq&&S.pagoMaq.valor===totais().total&&S.pagoMaq.forma===S.forma);
 function cobFim(){clearInterval(S.cobT);S.cobT=null}
 function cobStatus(st,det){const c=S.cob;if(!c)return;const mudou=c.status!==st||c.detalhe!==(det||'');c.status=st;c.detalhe=det||'';
@@ -859,6 +909,24 @@ function fiadosPainel(F){const L=F.fiados||[],ab=L.filter(x=>!x.quitado_em),rc=L
     ${rc.length?`<details><summary>Recebidos nos últimos 60 dias (${rc.length})</summary><div class="tw"><table><tbody>${rc.map(x=>`<tr><td>${esc(x.cliente)}</td><td>#${x.numero}</td><td class="n">${brl(Number(x.valor))}</td><td>Recebido em ${new Date(x.quitado_em).toLocaleDateString('pt-BR')} no ${esc((FORMAS[x.quitado_forma]||x.quitado_forma||'').toLowerCase())}${x.quitado_por?' por '+esc(x.quitado_por):''}</td></tr>`).join('')}</tbody></table></div></details>`:''}
     <div class="note">Os fiados entram no faturamento do dia da venda. O recebimento fica registrado aqui e no registro de atividades, mas não entra de novo no caixa do dia em que o cliente pagou.</div>
   </section>`}
+/* ---------- Vale: maquineta ou maquininha externa ---------- */
+function valeChave(onde){const on=S.maq&&S.valeMaq;
+  if(!S.maq)return onde==='caixa'?'':`<div class="valebar"><b>Vale-alimentação</b><span>A maquineta do Mercado Pago está desligada: todo vale é registrado como <b>maquininha externa</b>.</span></div>`;
+  const sw=`<label class="sw" for="vm-${onde}">Vale pela maquineta Mercado Pago <input type="checkbox" id="vm-${onde}" data-c="valeMaq" ${on?'checked':''}></label>`;
+  if(onde==='caixa')return `<div class="valechave ${on?'on':''}">${sw}<small>${on?'Ligado: o vale vai para a Point.':'Desligado: confirme o vale aqui; passe o cartão na outra maquininha.'}</small></div>`;
+  return `<div class="valebar ${on?'on':''}"><b>Vale-alimentação</b>${sw}<span>${on?'O Caixa manda o vale para a maquineta do Mercado Pago.':'O Caixa confirma o vale sem chamar a maquineta. A venda soma normalmente e fica marcada como <b>maquininha externa</b>.'}</span></div>`}
+/* ---------- Fiados na aba Clientes ---------- */
+async function carregarFiados(){if(!sb)return;const r=await q(sb.rpc('fiados_lista'),'Fiados');S.fiadosCli=Array.isArray(r)?r:[];render()}
+function fiadosClientes(){const pd=pendurados(),L=(S.fiadosCli||[]).filter(x=>!x.quitado_em),g={};
+  L.forEach(x=>{const k=x.cliente_id||x.cliente;(g[k]=g[k]||{id:x.cliente_id,nome:x.cliente,fone:x.telefone,v:0,itens:[]});g[k].v+=Number(x.valor);g[k].itens.push(x)});
+  const grupos=Object.values(g).sort((a,b)=>b.v-a.v),tot=grupos.reduce((s,x)=>s+x.v,0);
+  return `<section class="panel"><div class="head"><h2>Fiados</h2><span class="pill ${tot?'warn':'ok'}">${tot?brl(tot)+' em conta':'Nenhuma conta em aberto'}</span></div>
+    ${pd.length?`<div class="pendlista"><b>🕒 Fiado do dia, pendurado neste caixa:</b> ${pd.map(a=>`<span class="pill warn">${esc(a.pend)} · ${brl(totaisDe(a).total)}</span>`).join(' ')}<small>Chame pela aba com o nome no Caixa.</small></div>`:''}
+    ${S.fiadosCli===undefined?'<p>Carregando…</p>':grupos.length?`<div class="fcl">${grupos.map(x=>{const ab=S.fcAberto===(x.id||x.nome);return `<div class="fcli ${ab?'on':''}">
+      <button class="fcab" data-a="fcAbrir" data-id="${esc(x.id||x.nome)}" aria-expanded="${ab}"><b>${esc(x.nome)}</b><span>${x.itens.length} ${x.itens.length>1?'compras':'compra'}</span><strong>${brl(x.v)}</strong></button>
+      ${ab?`<div class="tw"><table><thead><tr><th>Dia</th><th>Venda</th><th>Itens</th><th class="n">Valor</th></tr></thead><tbody>${x.itens.slice().sort((a,b)=>new Date(a.criado_em)-new Date(b.criado_em)).map(i=>`<tr><td>${new Date(i.criado_em).toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'})} ${hhmm(new Date(i.criado_em))}</td><td>#${i.numero}</td><td>${esc(i.itens||'')}</td><td class="n">${brl(Number(i.valor))}</td></tr>`).join('')}</tbody></table></div>
+        <div class="fcfecha"><b>Fechar conta de ${brl(x.v)}</b><span>Como ${esc(x.nome.split(' ')[0])} pagou?</span><div class="row">${['pix','dinheiro','debito','credito','vale'].map(f=>`<button class="chip ${S.fcConf===(x.id+f)?'perigo':''}" data-a="fcFechar" data-id="${x.id}" data-f="${f}">${S.fcConf===(x.id+f)?'Confirmar: '+FORMAS[f]:FORMAS[f]}</button>`).join('')}</div></div>`:''}</div>`}).join('')}</div>`:'<p style="margin:0">Nenhum cliente com fiado em conta.</p>'}
+  </section>`}
 function trocoBox(){const t=totais(),rec=parseMoney(S.recebido);return rec<t.total?{c:'troco falta',h:`<span>Faltam</span><strong>${brl(t.total-rec)}</strong>`}:{c:'troco',h:`<span>Troco</span><strong>${brl(rec-t.total)}</strong>`}}
 function vendaPanel(){
   const t=totais(),tb=trocoBox();
@@ -868,12 +936,13 @@ function vendaPanel(){
     <div class="${tb.c}" id="troco">${tb.h}</div></div>`;
   else if(temFiado()&&!S.clienteId)pg=`<div class="note" role="alert" style="color:var(--bad)"><b>Para vender fiado, escolha o cliente.</b> Use o campo de cliente acima (ou "Novo" para cadastrar pelo WhatsApp). O fiado fica no nome dele até ser recebido.</div>`;
   else if(S.forma==='fiado')pg=`<div class="note">${brl(t.total)} fica <b>fiado</b> no nome do cliente. Quando ele pagar, receba na lista de fiados do Financeiro.</div>`;
+  else if(S.forma==='vale'&&!usaMaq())pg=`<div class="note"><b>Vale em maquininha externa.</b> Passe ${brl(t.total)} no cartão de vale na outra maquininha e finalize quando aprovar. A venda fica marcada como voucher de maquininha externa.</div>`;
   else if(usaMaq())pg=maqPaga()?`<div class="note" style="color:var(--ok)"><b>Pagamento já aprovado na maquineta.</b> Toque em finalizar para registrar a venda. Não será cobrado de novo.</div>`
     :`<div class="note">Ao finalizar, ${brl(t.total)} vai direto para a maquineta no ${FORMAS[S.forma].toLowerCase()}. A venda é registrada sozinha quando o pagamento aprovar.</div>`;
   else if(S.forma==='pix')pg=`<div class="note">Receba o Pix de ${brl(t.total)} e finalize quando o pagamento cair.</div>`;
   else if(S.forma)pg=`<div class="note">Passe ${brl(t.total)} na maquininha no ${FORMAS[S.forma].toLowerCase()} e finalize quando aprovar.</div>`;
   const atual=S.abas[S.aba]||{n:1},temOutra=S.abas.length>1;
-  return `<section class="panel venda"><div class="vhead"><h2>Venda ${atual.n}</h2>${(S.cart.length||temOutra)?`<button class="chip sm ${S.abaConf?'perigo':''}" data-a="abaDescartar">${S.abaConf?'Confirmar: descartar':(S.cart.length?'Descartar venda':'Fechar aba')}</button>`:''}</div>
+  return `<section class="panel venda ${S.pend?'vpend':''}">${S.pend?`<div class="pendbar"><b>🕒 Fiado do dia · ${esc(S.pend)}</b><span>Quando ${esc(S.pend.split(' ')[0])} voltar, escolha como pagou e finalize. Se não voltar hoje, use Fiado → do mês.</span><button class="chip sm" data-a="despendurar">Tirar da espera</button></div>`:''}<div class="vhead"><h2>${S.pend?esc(S.pend):'Venda '+atual.n}</h2>${(S.cart.length||temOutra)?`<button class="chip sm ${S.abaConf?'perigo':''}" data-a="abaDescartar">${S.abaConf?'Confirmar: descartar':(S.cart.length?'Descartar venda':'Fechar aba')}</button>`:''}</div>
     <div class="lista">${listaCart()}</div>
     <div><label for="cliente">Cliente (programa de pontos)</label>
       <div class="row"><select id="cliente" data-c="cliente" style="flex:1"><option value="">Sem identificação</option>${S.clientes.map(c=>`<option value="${c.id}" ${c.id===S.clienteId?'selected':''}>${esc(c.nome)} · ${esc(c.fone)}</option>`).join('')}</select><button class="btn line sm" data-a="novoCli">Novo</button></div>
@@ -881,9 +950,10 @@ function vendaPanel(){
     ${S.novoCli?`<div class="form"><div><label for="nc-fone">WhatsApp do cliente</label><input type="text" id="nc-fone" inputmode="tel" placeholder="(85) 9..."></div><div><label for="nc-nome">Nome (opcional)</label><input type="text" id="nc-nome"></div><button class="btn sm" data-a="salvarCli">Usar este número</button></div>`:''}
     ${t.c?`<div class="sw"><span>${esc(t.c.nome.split(' ')[0])} tem ${t.c.pontos} pontos${t.pode?'':' (resgate a partir de '+S.regras.pontosResgate+')'}</span>${t.pode?`<button class="chip ${S.resgate?'on':''}" data-a="resgate">${S.resgate?'Desconto aplicado':'Usar '+brl(S.regras.valorResgate)}</button>`:''}</div>`:''}
     ${t.c?`<label class="sw" for="rec-zap"><span>Enviar recibo no WhatsApp${t.c.foneNorm?'':' (número inválido)'}</span><input type="checkbox" id="rec-zap" data-c="recibo" ${S.recibo&&t.c.foneNorm?'checked':''} ${t.c.foneNorm?'':'disabled'}></label>`:''}
-    <div>${t.desc?`<div class="tot"><span>Subtotal</span><span>${brl(t.sub)}</span></div><div class="tot"><span>Desconto por pontos</span><span>− ${brl(t.desc)}</span></div>`:''}
+    <div>${t.desc||t.dcli?`<div class="tot"><span>Subtotal</span><span>${brl(t.sub)}</span></div>`:''}${t.dcli?`<div class="tot"><span>Desconto de ${esc(t.c.nome.split(' ')[0])} (${pctTxt(t.c.descPct)} ${DSOBRE[t.c.descSobre]})</span><span>− ${brl(t.dcli)}</span></div>`:''}${t.desc?`<div class="tot"><span>Desconto por pontos</span><span>− ${brl(t.desc)}</span></div>`:''}
       <div class="tot g"><span>Total</span><strong>${brl(t.total)}</strong></div></div>
     <div class="formas">${Object.keys(FORMAS).map(f=>`<button class="forma f-${f} ${S.forma===f?'on':(S.forma||S.pags)?'':'none'}" data-a="forma" data-f="${f}">${FORMAS[f]}</button>`).join('')}</div>
+    ${valeChave('caixa')}
     <div class="row"><button class="btn line sm" data-a="abrirDividir" ${S.cart.length?'':'disabled'}>Dividir conta</button><button class="btn line sm" data-a="abrirMisto" ${S.cart.length?'':'disabled'}>Pagamento misto</button></div>
     ${S.pags?pagsBox():pg}
     <div class="fim"><button class="btn go" id="finalizar" data-a="finalizar" ${podeFinalizar()?'':'disabled'}>Finalizar venda</button>
@@ -966,7 +1036,7 @@ function vRelatorios(){
   const RANK={qtd:'mais vendidos',valor:'maior valor',nome:'nome'};
   const itens=F.produtos.slice().sort((x,y)=>S.rank==='nome'?x.nome.localeCompare(y.nome,'pt'):(S.rank==='valor'?Number(y.valor)-Number(x.valor):Number(y.qtd)-Number(x.qtd)));
   const maxQtd=Math.max(1,...itens.map(x=>Number(x.qtd)));
-  return cab+`<div class="kpis">
+  return cab+valeChave('fin')+`<div class="kpis">
     <div class="kpi" style="background-color:var(--op,var(--ink))"><span class="lbl">Entradas</span><strong>${brl(a.fat)}</strong></div>
     <div class="kpi" style="background-color:var(--bad)"><span class="lbl">Saídas</span><strong>${sai.total?'− '+brl(sai.total):brl(0)}</strong></div>
     <div class="kpi" style="background-color:${res<0?'#7a2020':'var(--ok)'}"><span class="lbl">Resultado</span><strong>${brl(res)}</strong></div>
@@ -979,8 +1049,6 @@ function vRelatorios(){
   <div class="grid2">
     <section class="panel ${linha?'larga':''}"><h2>Faturamento por ${I.por} (R$)</h2>${grafico}</section>
     <section class="panel"><h2>Por forma de pagamento</h2>
-      ${isAdmin()?`<label class="sw" for="vale-caixa">Somar o vale-alimentação no total do caixa <input type="checkbox" id="vale-caixa" data-c="valeCaixa" ${F.valeNoCaixa?'checked':''}></label>
-      ${F.valeNoCaixa?'':`<div class="note">O vale-alimentação (${brl(a.vale)}) está <b>fora</b> das entradas, do total e da quantidade de vendas.</div>`}`:''}
       ${Object.keys(FORMAS).map(f=>`<div class="hb"><b>${FORMAS[f]}${f==='vale'&&!F.valeNoCaixa?' <small>(fora do total)</small>':''}</b><div class="t"><i style="width:${a.fat?a[f]/a.fat*100:0}%;background:var(--${f})"></i></div><span>${brl(a[f])} · ${a.fat?Math.round(a[f]/a.fat*100):0}%</span></div>`).join('')}
       <div class="tot"><span>Outros itens vendidos</span><b>${a.itens.toLocaleString('pt-BR')} un.</b></div></section>
     <section class="panel"><div class="head"><h2>Itens mais vendidos</h2><div class="tabs">${Object.keys(RANK).map(k=>`<button class="chip sm ${S.rank===k?'on':''}" data-a="rank" data-k="${k}">${RANK[k]}</button>`).join('')}</div></div>
@@ -1067,8 +1135,9 @@ function vClientes(){
     <div><label for="r-vr">Vale em alimentação (R$)</label><input type="text" id="r-vr" inputmode="numeric" data-m data-c="regra" ${isAdmin()?'':'disabled'} data-k="valorResgate" value="${num(R.valorResgate)}"></div>
     <div><label for="r-mg">Mínimo em 30 dias para ficar no grupo</label><input type="text" id="r-mg" inputmode="numeric" data-c="regra" ${isAdmin()?'':'disabled'} data-k="minGrupo" value="${R.minGrupo}"></div>
   </div></section>
-  <section class="panel"><h2>Clientes</h2><div class="tw"><table><thead><tr><th>Cliente</th><th>WhatsApp</th><th>Número para envio</th><th class="n">Pontos</th><th class="n">Consumido</th><th class="n">Gasto</th><th class="n">Pontos em 30 dias</th><th>Grupo do WhatsApp</th></tr></thead><tbody>
-    ${S.clientes.slice().sort((x,y)=>y.pontos-x.pontos).map(c=>`<tr><td><b>${esc(c.nome)}</b></td><td>${esc(c.fone)}</td><td>${c.foneNorm?esc(c.foneNorm):'<span class="pill warn">inválido</span>'}</td><td class="n">${c.pontos}${c.pontos>=R.pontosResgate?' <span class="pill ok">pode resgatar</span>':''}</td><td class="n">${kg1(c.g)}</td><td class="n">${brl(c.gasto)}</td><td class="n">${c.p30}</td><td>${c.p30>=R.minGrupo?'<span class="pill ok">Permanece</span>':'<span class="pill warn">Abaixo do mínimo</span>'}</td></tr>`).join('')}
+  ${fiadosClientes()}
+  <section class="panel"><h2>Clientes</h2><div class="tw"><table><thead><tr><th>Cliente</th><th>Desconto</th><th>WhatsApp</th><th>Número para envio</th><th class="n">Pontos</th><th class="n">Consumido</th><th class="n">Gasto</th><th class="n">Pontos em 30 dias</th><th>Grupo do WhatsApp</th></tr></thead><tbody>
+    ${S.clientes.slice().sort((x,y)=>y.pontos-x.pontos).map(c=>`<tr><td><b>${esc(c.nome)}</b></td><td>${c.descPct?`<span class="pill ok">${pctTxt(c.descPct)} ${DSOBRE[c.descSobre]}</span>`:'<small>—</small>'}${isAdmin()?` <button class="chip sm" data-a="descAbrir" data-id="${c.id}">${c.descPct?'Mudar':'Dar desconto'}</button>`:''}</td><td>${esc(c.fone)}</td><td>${c.foneNorm?esc(c.foneNorm):'<span class="pill warn">inválido</span>'}</td><td class="n">${c.pontos}${c.pontos>=R.pontosResgate?' <span class="pill ok">pode resgatar</span>':''}</td><td class="n">${kg1(c.g)}</td><td class="n">${brl(c.gasto)}</td><td class="n">${c.p30}</td><td>${c.p30>=R.minGrupo?'<span class="pill ok">Permanece</span>':'<span class="pill warn">Abaixo do mínimo</span>'}</td></tr>`).join('')}
   </tbody></table></div>
   <div class="note">Quem fica abaixo do mínimo é enviado ao n8n no evento "grupo", para o senhor decidir a regra de aviso ou remoção.</div></section>`;
 }
@@ -1140,8 +1209,8 @@ async function carregarBase(){
     S.balancas=b.map(x=>{const ts=[{n:'Sem tara',g:0}].concat((x.taras||[]).slice().sort((m,n)=>m.gramas-n.gramas).map(t=>({n:t.nome,g:t.gramas}))),a=ant[x.id];
       return{id:x.id,nome:x.nome,grupo:x.grupo,marca:x.marca,conexao:x.conexao,baud:String(x.baud),precoKg:x.preco_kg_centavos,bruto:a?a.bruto:0,tara:0,conectada:a?a.conectada:true,taras:ts}})}
   if(Array.isArray(pr))S.produtos=pr.map(x=>({id:x.id,nome:x.nome,preco:x.preco_centavos,cat:x.categoria,destaque:x.destaque,imagem:x.imagem||''}));
-  if(cf&&cf!==true){S.regras={base:cf.base_pontos,pontosResgate:cf.pontos_resgate,valorResgate:cf.valor_resgate_centavos,minGrupo:cf.min_pontos_grupo};S.fundo=cf.fundo_troco_centavos;S.nomeRest=cf.nome_restaurante||'Restaurante';negAplicar({nome:S.nomeRest,fone:cf.telefone_restaurante||'',end:cf.endereco_restaurante||'',rodape:cf.rodape_recibo===undefined?'Obrigado pela preferência! 😊':cf.rodape_recibo||''});S.maq=!!cf.maquineta_ativa}
-  if(Array.isArray(cl)){const m={};(Array.isArray(p30)?p30:[]).forEach(x=>m[x.cliente_id]=Number(x.pontos));S.clientes=cl.map(x=>({id:x.id,nome:x.nome,fone:x.telefone,foneNorm:x.telefone_norm||'',pontos:x.pontos,g:Number(x.gramas_total),gasto:Number(x.gasto_centavos),p30:m[x.id]||0}))}
+  if(cf&&cf!==true){S.regras={base:cf.base_pontos,pontosResgate:cf.pontos_resgate,valorResgate:cf.valor_resgate_centavos,minGrupo:cf.min_pontos_grupo};S.fundo=cf.fundo_troco_centavos;S.nomeRest=cf.nome_restaurante||'Restaurante';negAplicar({nome:S.nomeRest,fone:cf.telefone_restaurante||'',end:cf.endereco_restaurante||'',rodape:cf.rodape_recibo===undefined?'Obrigado pela preferência! 😊':cf.rodape_recibo||''});S.maq=!!cf.maquineta_ativa;S.valeMaq=cf.vale_maquineta!==false}
+  if(Array.isArray(cl)){const m={};(Array.isArray(p30)?p30:[]).forEach(x=>m[x.cliente_id]=Number(x.pontos));S.clientes=cl.map(x=>({id:x.id,nome:x.nome,fone:x.telefone,foneNorm:x.telefone_norm||'',descPct:Number(x.desconto_pct||0),descSobre:x.desconto_sobre||'tudo',pontos:x.pontos,g:Number(x.gramas_total),gasto:Number(x.gasto_centavos),p30:m[x.id]||0}))}
   if(Array.isArray(cd))S.cardapio=cd.map(x=>({id:x.id,cat:x.categoria,nome:x.nome,on:x.disponivel}));
   // Se algum preço mudou, a venda em andamento acompanha o banco.
   if(S.logged&&S.abasDe!==S.user.id)abasRestaurar();
@@ -1171,7 +1240,7 @@ async function carregarDia(){
 async function carregarTudo(){
   await carregarPerfis();
   await Promise.all([carregarBase(),carregarDia()]);
-  S.pronto=true;render();if(S.view==='financeiro')carregarFin();if(S.view==='whatsapp')carregarN8n();if(S.view==='saidas')carregarSaidas();
+  S.pronto=true;render();if(S.view==='financeiro')carregarFin();if(S.view==='clientes')carregarFiados();if(S.view==='whatsapp')carregarN8n();if(S.view==='saidas')carregarSaidas();
 }
 function mudarRef(s){const r=refData(),P=S.periodo;
   if(P==='diario')r.setDate(r.getDate()+s);else if(P==='semanal')r.setDate(r.getDate()+7*s);else if(P==='anual')r.setFullYear(r.getFullYear()+s);else r.setMonth(r.getMonth()+s,1);
@@ -1335,7 +1404,7 @@ function render(){
       <button class="user" data-a="conta" aria-label="Meu perfil: ${esc(S.user.nome)}"><span class="av">${avHtml(S.user)}</span><span class="who"><b>${esc(S.user.nome)}</b><span>${S.user.perfil} · perfil</span></span></button></div>`;
   S.bump=false;S.abaPisca=false;
   if(document.documentElement&&document.documentElement.style)document.documentElement.style.setProperty('--op',S.logged?corOp(S.user):PADRAO);
-  const M=$('#modal'),mh=S.logged&&S.modal&&(fa||S.modal==='conta'||S.modal==='senha'||S.modal==='recibo')?modalHtml(fa):'';M.style.display=mh?'grid':'none';M.innerHTML=mh;
+  const M=$('#modal'),mh=S.logged&&S.modal&&(fa||S.modal==='conta'||S.modal==='senha'||S.modal==='recibo'||S.modal==='fiadoDia'||S.modal==='fiadoMes'||S.modal==='desc')?modalHtml(fa):'';M.style.display=mh?'grid':'none';M.innerHTML=mh;
   $('#main').className=S.view==='caixa'?'fixo':'';
   // Guarda onde cada parte estava rolada para a tela não pular ao redesenhar.
   const MN=$('#main'),rolMain=MN.scrollTop,rol=[].slice.call(MN.querySelectorAll('.col,.lista,.tw')).map(e=>e.scrollTop);
@@ -1355,7 +1424,7 @@ const bal=id=>S.balancas.find(b=>b.id===id);
 
 /* ---------- ações ---------- */
 const A={
-  ir:e=>{S.view=e.dataset.v;S.zerarConf=null;if(S.view==='saidas')carregarSaidas();if(S.view==='whatsapp')carregarN8n();if(S.view==='usuarios')carregarPerfis();if(S.view==='financeiro')carregarFin();if(typeof window!=='undefined'&&window.innerWidth<=980)S.menu=false;try{location.hash=S.view}catch(_){}},
+  ir:e=>{S.view=e.dataset.v;S.zerarConf=null;if(S.view==='saidas')carregarSaidas();if(S.view==='whatsapp')carregarN8n();if(S.view==='usuarios')carregarPerfis();if(S.view==='financeiro')carregarFin();if(S.view==='clientes')carregarFiados();if(typeof window!=='undefined'&&window.innerWidth<=980)S.menu=false;try{location.hash=S.view}catch(_){}},
   sair:()=>{abasSalvar();S.modal=null;S.recuperando=false;if(sb)sb.auth.signOut().then(()=>{},()=>{});else aoSessao(null);return true},
   apagarFluxo:e=>{const f=S.fin.fluxos.find(x=>x.id===e.dataset.id);if(!f)return;
     S.apagar={tipo:'fluxo',id:f.id,txt:`o Fluxo ${f.numero} de ${f.operador||''}, de ${new Date(f.aberto_em).toLocaleDateString('pt-BR')}`,extra:f.n?`${f.n===1?'A venda':'As '+f.n+' vendas'} deste fluxo (${brl(f.total)}) ${f.n===1?'será apagada':'serão apagadas'} junto, e os pontos que ${f.n===1?'ela deu':'elas deram'} aos clientes serão desfeitos.`:'Este fluxo não tem vendas.'};S.modal='senha'},
@@ -1455,18 +1524,18 @@ const A={
       await mudarPerfil(u.id,{ativo:true,perfil,nome},nome+' cadastrado e liberado.');
     },e=>toast(authErr(e)));return true},
   menu:()=>{S.menu=!S.menu},
-  abrirFechar:()=>{const n=abasComItens();if(n){toast(n===1?'Há 1 venda em aberto. Finalize ou descarte antes de fechar o caixa.':'Há '+n+' vendas em aberto. Finalize ou descarte antes de fechar o caixa.');return true}S.modal='fechar'},
+  abrirFechar:()=>{const pd=pendurados();if(pd.length){toast('Há fiado do dia pendurado ('+pd.map(a=>a.pend).join(', ')+'). Receba ou lance na conta do cliente antes de fechar o caixa.');return true}const n=abasComItens();if(n){toast(n===1?'Há 1 venda em aberto. Finalize ou descarte antes de fechar o caixa.':'Há '+n+' vendas em aberto. Finalize ou descarte antes de fechar o caixa.');return true}S.modal='fechar'},
   abaIr:e=>{if(S.enviando)return true;const k=+e.dataset.k;if(k===S.aba||!S.abas[k])return true;abaGuardar();abaCarregar(k);S.abaPisca=true;S.modal=null},
   abaNova:()=>{if(S.enviando)return true;abaGuardar();const l=S.abas.findIndex(abaLivre);
     if(l>=0){if(l===S.aba){toast('Esta venda já está vazia. Use ela para o próximo cliente.');return true}abaCarregar(l);return}
-    if(S.abas.length>=MAX_ABAS){toast('Limite de '+MAX_ABAS+' vendas em aberto. Finalize ou descarte uma para abrir outra.');return true}
+    if(abasNormais()>=MAX_ABAS){toast('Limite de '+MAX_ABAS+' vendas em aberto. Finalize ou descarte uma para abrir outra.');return true}
     S.abas.push(Object.assign({n:abaNumLivre()},vendaVazia()));abaCarregar(S.abas.length-1)},
   abaDescartar:()=>{if(S.enviando)return true;if(S.cart.length&&!S.abaConf){S.abaConf=true;return}
     const tinha=S.cart.length,n=(S.abas[S.aba]||{n:1}).n;abaGuardar();
     if(S.abas.length>1)abaTirar(S.aba);else abasReset();
     if(tinha)toast('Venda '+n+' descartada. Nada foi registrado.')},
-  cancelar:()=>{S.modal=null;S.crop=null;S.apagar=null},
-  confirmarFechar:()=>{if(abasComItens()){S.modal=null;toast('Há venda em aberto. Finalize ou descarte antes de fechar o caixa.');return}const v=$('#md-contado').value.trim();if(!v){toast('Informe o dinheiro contado na gaveta.');return true}
+  cancelar:()=>{S.modal=null;S.crop=null;S.apagar=null;S.descCli=null},
+  confirmarFechar:()=>{const pd=pendurados();if(pd.length){S.modal=null;toast('Há fiado do dia pendurado ('+pd.map(a=>a.pend).join(', ')+'). Receba ou lance na conta do cliente antes de fechar o caixa.');return}if(abasComItens()){S.modal=null;toast('Há venda em aberto. Finalize ou descarte antes de fechar o caixa.');return}const v=$('#md-contado').value.trim();if(!v){toast('Informe o dinheiro contado na gaveta.');return true}
     const f=fxAberto(S.user.id);
     q(sb.rpc('fechar_caixa',{p_fluxo:f.id,p_contado_centavos:parseMoney(v)})).then(async r=>{if(r){S.modal=null;toast(`Fluxo ${f.n} fechado. A pesagem fica desabilitada até reabrir o caixa ou trocar de operador.`)}await carregarDia();render()});return true},
   reabrir:e=>{const id=e.dataset.id;if(fxAberto(id))return;
@@ -1490,7 +1559,20 @@ const A={
         toast(r.novo?r.nome+' cadastrado. O recibo vai para o WhatsApp dele.':'Cliente já cadastrado: '+r.nome+'.')}
       render()});return true},
   resgate:()=>{S.resgate=!S.resgate;S.pags=null},
-  forma:e=>{S.forma=e.dataset.f;S.pags=null},
+  forma:e=>{if(e.dataset.f==='fiado'){if(!S.cart.length){toast('Adicione os itens antes de escolher o fiado.');return true}S.fdNome='';S.modal='fiadoTipo';return}S.forma=e.dataset.f;S.pags=null},
+  fiadoDia:()=>{const a=S.abas[S.aba];S.fdNome=a&&a.pend?a.pend:(S.clienteId?(S.clientes.find(c=>c.id===S.clienteId)||{}).nome||'':'');S.modal='fiadoDia'},
+  fiadoMes:()=>{S.modal='fiadoMes'},
+  pendurar:()=>{const nome=($('#fd-nome').value||'').trim().replace(/\s+/g,' ');if(!nome){toast('Digite o nome de quem vai pagar depois.');return true}
+    if(S.abas.filter(a=>a.pend).length>=MAX_PEND){toast('Muitos fiados do dia pendurados. Receba algum antes.');return true}
+    // O cliente da venda passa a ser quem foi digitado: um cadastrado com esse nome, ou ninguém.
+    const c=S.clientes.find(x=>x.nome.toLowerCase()===nome.toLowerCase()),antes=S.clienteId;S.clienteId=c?c.id:'';if(S.clienteId!==antes)S.resgate=false;
+    S.forma='';S.pags=null;S.pagoMaq=null;S.pend=nome;abaGuardar();S.abas[S.aba].n=0;
+    let l=S.abas.findIndex(abaLivre);if(l<0){S.abas.push(Object.assign({n:abaNumLivre()||0},vendaVazia()));l=S.abas.length-1}
+    abaCarregar(l);S.modal=null;S.abaPisca=true;S.balancas.forEach(x=>x.bruto=0);
+    toast(`Venda de ${nome} pendurada como fiado do dia. Ela fica na aba com o nome, para chamar quando voltar.`)},
+  despendurar:()=>{const a=S.abas[S.aba];if(!a||!a.pend)return true;if(abasNormais()>=MAX_ABAS){toast('Já há '+MAX_ABAS+' vendas comuns abertas. Finalize uma antes.');return true}
+    const nm=a.pend;S.pend='';a.pend='';a.n=abaNumLivre();toast(nm+' saiu da espera. A venda voltou a ser comum.')},
+  lancarConta:()=>{const id=$('#fm-cli').value;if(!id){toast('Escolha o cliente da conta.');return true}S.clienteId=id;S.forma='fiado';S.pags=null;S.modal='confirmar'},
   limparPags:()=>{S.pags=null},
   limparFil:()=>{S.fil={forma:'',tipo:'',op:'',cli:''};S.finLimite=200;carregarFin();return true},
   exportPdf:()=>{exportPdf();return true},
@@ -1530,6 +1612,13 @@ const A={
   fiadoQuitar:e=>{const id=e.dataset.id,f=e.dataset.f,x=((S.fin&&S.fin.fiados)||[]).find(y=>y.id===id);if(!x)return true;
     if(S.fiadoConf!==id+f){S.fiadoConf=id+f;toast(`Toque de novo em "${FORMAS[f]}" para confirmar: ${x.cliente} pagou ${brl(Number(x.valor))}.`);return true}
     S.fiadoConf=null;q(sb.rpc('fiado_quitar',{p_pagamento:id,p_forma:f}),'Fiado').then(r=>{if(r&&r.ok){toast(`Fiado de ${r.cliente||'cliente'} recebido: ${brl(Number(r.valor))} no ${FORMAS[f].toLowerCase()}.`);carregarFin()}});return true},
+  fcAbrir:e=>{S.fcAberto=S.fcAberto===e.dataset.id?null:e.dataset.id;S.fcConf=null},
+  fcFechar:e=>{const id=e.dataset.id,f=e.dataset.f;if(S.fcConf!==id+f){S.fcConf=id+f;return}
+    S.fcConf=null;q(sb.rpc('fiado_fechar_conta',{p_cliente:id,p_forma:f}),'Fiado').then(r=>{if(r&&r.ok){toast(`Conta de ${r.cliente} fechada: ${r.compras} ${r.compras>1?'compras':'compra'}, ${brl(Number(r.total))} no ${FORMAS[f].toLowerCase()}.`);S.fcAberto=null;carregarFiados()}});return true},
+  descAbrir:e=>{S.descCli=e.dataset.id;S.modal='desc'},
+  descSalvar:()=>{const pct=parseFloat(($('#ds-pct').value||'0').replace(',','.'))||0,sb2=$('#ds-sobre').value,c=S.clientes.find(x=>x.id===S.descCli);
+    if(pct<0||pct>100){toast('O desconto vai de 0 a 100%.');return true}
+    q(sb.rpc('cliente_desconto',{p_cliente:S.descCli,p_pct:pct,p_sobre:sb2}),'Desconto').then(async r=>{if(r&&r.id){toast(pct?`${c?c.nome:'Cliente'} agora tem ${pctTxt(pct)} de desconto ${DSOBRE[sb2]}.`:`Desconto de ${c?c.nome:'cliente'} retirado.`);S.modal=null;S.descCli=null;await carregarBase()}render()});return true},
   maqDeNovo:()=>{cobFim();S.cob=null;S.modal=null;if(podeFinalizar()&&usaMaq())cobrarMaq()},
   maqManual:()=>{cobFim();S.cob=null;S.modal='confirmar'},
   maqFechar:()=>{cobFim();S.cob=null;S.modal=null},
@@ -1543,21 +1632,26 @@ const A={
     S.modal=null;
     if(!podeFinalizar()||S.enviando){render();return true}
     const t=totais(),rec=parseMoney(S.recebido);
-    const pags=S.pags?S.pags.linhas.map(l=>({rotulo:l.rot,forma:l.forma,valor_centavos:l.valor,recebido_centavos:l.forma==='dinheiro'&&S.pags.troco?l.valor+S.pags.troco:null}))
-      :[{rotulo:'',forma:S.forma,valor_centavos:t.total,recebido_centavos:S.forma==='dinheiro'?rec:null}];
+    const pagoNaPoint=maqPaga();
+    const pags=S.pags?S.pags.linhas.map(l=>({rotulo:l.forma==='vale'?(l.rot?l.rot+' · ':'')+EXT:l.rot,forma:l.forma,valor_centavos:l.valor,recebido_centavos:l.forma==='dinheiro'&&S.pags.troco?l.valor+S.pags.troco:null}))
+      :[{rotulo:S.forma==='vale'&&!pagoNaPoint?EXT:'',forma:S.forma,valor_centavos:t.total,recebido_centavos:S.forma==='dinheiro'?rec:null}];
     const p={cliente_id:S.clienteId||null,usar_resgate:!!t.desc,tipo:S.pags?S.pags.tipo:'simples',
       itens:S.cart.map(i=>i.grupo==='produto'?{produto_id:i.src}:{balanca_id:i.src,gramas:i.g,tara_gramas:i.tara||0}),pagamentos:pags};
     const troco=S.pags?(S.pags.troco||0):S.forma==='dinheiro'?rec-t.total:0,nomeC=t.c?t.c.nome.split(' ')[0]:'';
-    const como=S.pags?'('+S.pags.linhas.map(l=>FORMAS[l.forma]+' '+brl(l.valor)).join(' + ')+')':'no '+FORMAS[S.forma].toLowerCase();
+    const como=(S.pags?'('+S.pags.linhas.map(l=>FORMAS[l.forma]+' '+brl(l.valor)).join(' + ')+')':'no '+FORMAS[S.forma].toLowerCase())+(pags.some(x=>x.forma==='vale'&&x.rotulo.includes(EXT))?' · voucher de maquininha externa':'');
     const querRecibo=!!(t.c&&t.c.foneNorm&&S.recibo);
     S.enviando=true;render();toast('Registrando a venda…');
     q(sb.rpc('registrar_venda',{p})).then(async r=>{S.enviando=false;
       if(!r||!r.numero){await carregarBase();return render()}
       toast(`Venda nº ${r.numero} de ${brl(r.total_centavos)} registrada ${como}`+(troco?` · Troco ${brl(troco)}`:'')+(r.pontos_ganhos?` · ${nomeC} ganhou ${r.pontos_ganhos} pontos`:'')+(querRecibo?' · recibo no WhatsApp':''));
       if(querRecibo&&r.venda_id)q(sb.rpc('enfileirar_recibo',{p_venda:r.venda_id}),'Recibo');
-      {const k=S.aba,n=S.abas[k].n;S.abas[k]=Object.assign({n},vendaVazia());abaCarregar(k);
-        if(S.abas.some((a,j)=>j!==k&&abaLivre(a))){S.abas.splice(k,1);abaCarregar(S.abas.findIndex(abaLivre))}
-        const esp=S.abas.filter(a=>a.cart.length).length;if(esp)setTimeout(()=>toast(esp===1?'Lembrete: há 1 venda em espera nas abas.':'Lembrete: há '+esp+' vendas em espera nas abas.'),3500)}
+      {const k=S.aba,era=S.abas[k].pend;
+        if(era){S.abas.splice(k,1);let l=S.abas.findIndex(abaLivre);
+          if(l<0){if(abasNormais()<MAX_ABAS){S.abas.push(Object.assign({n:abaNumLivre()},vendaVazia()));l=S.abas.length-1}else l=Math.max(0,S.abas.findIndex(a=>!a.pend))}
+          if(!S.abas.length)abasReset();else abaCarregar(l)}
+        else{const n=S.abas[k].n;S.abas[k]=Object.assign({n},vendaVazia());abaCarregar(k);
+        if(S.abas.some((a,j)=>j!==k&&abaLivre(a))){S.abas.splice(k,1);abaCarregar(S.abas.findIndex(abaLivre))}}
+        const esp=S.abas.filter(a=>a.cart.length&&!a.pend).length;if(esp)setTimeout(()=>toast(esp===1?'Lembrete: há 1 venda em espera nas abas.':'Lembrete: há '+esp+' vendas em espera nas abas.'),3500)}
       S.balancas.forEach(x=>x.bruto=0);
       await Promise.all([carregarDia(),carregarBase()]);render()});return true},
   rmProd:e=>{salvar(sb.from('produtos').update({ativo:false}).eq('id',e.dataset.id),'Produto removido do Caixa.');return true},
@@ -1632,6 +1726,7 @@ const C={
       im.onerror=()=>toast('Não foi possível ler essa imagem.');im.src=rd.result};rd.readAsDataURL(f)},
   fil:e=>{S.fil[e.dataset.k]=e.value;S.finLimite=200;carregarFin()},
   prodCat:e=>{prodMarcar(e.dataset.pe,'cat',e.value)},
+  valeMaq:e=>{const v=e.checked;S.valeMaq=v;q(sb.rpc('vale_maquineta_definir',{p_ligado:v}),'Vale').then(r=>{if(r===null){S.valeMaq=!v}else toast(v?'Vale-alimentação pela maquineta do Mercado Pago.':'Vale-alimentação em maquininha externa: o Caixa confirma sem chamar a maquineta.');render()})},
   valeCaixa:e=>{q(sb.rpc('vale_no_caixa_definir',{p_ligado:e.checked}),'Vale').then(r=>{if(r!==null){toast(e.checked?'O vale-alimentação voltou a somar no total do caixa.':'O vale-alimentação saiu do total do caixa.');carregarFin()}})},
   recVenda:e=>{const r=S.rec;if(!r)return;r.venda=e.value;const v=(r.lista||[]).find(x=>x.id===e.value),c=v&&v.cli&&S.clientes.find(x=>x.id===v.cli);
     r.fone=c?c.fone||'':'';r.nome=c&&!/^Cliente \d{4}$/.test(c.nome)?c.nome:''},
@@ -1677,7 +1772,7 @@ document.addEventListener('keydown',ev=>{
     if(pr){ev.preventDefault();A.addProd({dataset:{id:pr.id}});return render()}
     return}
 },true);
-document.addEventListener('keydown',ev=>{if(ev.key!=='Enter')return;{const t=ev.target;if(t&&t.dataset&&(t.dataset.pe||t.dataset.ke)){ev.preventDefault();t.dataset.pe?prodGravar([t.dataset.pe],[]):prodGravar([],[t.dataset.ke]);return}}if(ev.target.id==='ap-senha'){ev.preventDefault();const o=document.getElementById('ap-ok');if(o)o.click();return}const cx=ev.target.closest&&ev.target.closest('#login');const b=cx&&cx.querySelector('[data-enter]');if(b){ev.preventDefault();b.click()}});
+document.addEventListener('keydown',ev=>{if(ev.key!=='Enter')return;{const t=ev.target;if(t&&t.id==='fd-nome'){ev.preventDefault();A.pendurar();render();return}if(t&&t.dataset&&(t.dataset.pe||t.dataset.ke)){ev.preventDefault();t.dataset.pe?prodGravar([t.dataset.pe],[]):prodGravar([],[t.dataset.ke]);return}}if(ev.target.id==='ap-senha'){ev.preventDefault();const o=document.getElementById('ap-ok');if(o)o.click();return}const cx=ev.target.closest&&ev.target.closest('#login');const b=cx&&cx.querySelector('[data-enter]');if(b){ev.preventDefault();b.click()}});
 function rota(){const h=(location.hash||'').slice(1);if(RENDER[h])S.view=h;render()}
 window.addEventListener('hashchange',rota);
 rota();
