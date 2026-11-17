@@ -389,6 +389,13 @@ input[type=range]{width:100%;accent-color:var(--op,var(--ink));min-height:32px}
 .sugs{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:8px}
 .quadro{border:2px solid var(--qc,var(--line));border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
 .quadro+.quadro{margin-top:4px}
+.quadro.pfdest .prods{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.quadro.pfdest .prod{min-height:112px;font-size:18px}
+.quadro.pfdest .prod b{font-size:19px}
+.kgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.kcard{border:2px solid var(--qc);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.kcard.comida{--qc:var(--comida,#c2410c)}.kcard.acai{--qc:var(--acai,#6d28d9)}
+.kcard b{font-size:16px}.kcard .kin{display:flex;align-items:center;gap:8px}.kcard .kin input{max-width:140px;font-size:18px;font-weight:700}
 .quadro h3{color:var(--qc,var(--ink));font-size:15px;letter-spacing:.02em;text-transform:uppercase}
 .quadro.prato{--qc:#5f6f2a}.quadro.doce{--qc:var(--doce)}.quadro.bebida{--qc:var(--bebida)}
 .pf{--c:#5f6f2a}.prod.prato{--c:#5f6f2a}.prod.doce{--c:var(--doce)}.prod.bebida{--c:var(--bebida)}
@@ -515,7 +522,8 @@ const balAcai=()=>S.balancas.find(b=>b.grupo==='acai')||S.balancas[1]||S.balanca
 // A ordem do Tab: balanças primeiro, depois os produtos em destaque e os demais.
 const CATORD=['prato','doce','bebida'],CATNOME={prato:'Pratos',doce:'Sobremesas',bebida:'Bebidas'};
 const catPos=c=>{const i=CATORD.indexOf(c);return i<0?CATORD.length:i};
-const prodsOrd=()=>S.produtos.slice().sort((a,b)=>catPos(a.cat)-catPos(b.cat)||a.nome.localeCompare(b.nome,'pt'));
+const ehPF=p=>p.cat==='prato'&&/^prato feito/i.test((p.nome||'').trim());
+const prodsOrd=()=>S.produtos.slice().sort((a,b)=>catPos(a.cat)-catPos(b.cat)||(ehPF(b)-ehPF(a))||a.nome.localeCompare(b.nome,'pt',{numeric:true}));
 const focoLista=()=>S.balancas.map(b=>b.id).concat(prodsOrd().map(p=>p.id));
 function focoProx(){const L=focoLista();if(!L.length)return '';const i=L.indexOf(S.foco);return L[(i+1)%L.length]}
 function focoAnt(){const L=focoLista();if(!L.length)return '';const i=L.indexOf(S.foco);return L[(i-1+L.length)%L.length]}
@@ -844,9 +852,9 @@ function vCaixa(){
   ${f?`<div class="pasta">${abasHtml()}<div class="folha ${S.abaPisca?'piscar':''}">`:'<div class="folha">'}<div class="pdv"><div class="col"><div class="scales">${S.balancas.map(scaleCard).join('')}</div>
     ${f&&S.balancas.length?`<div class="note dica">Digite as gramas: <b>452</b> é 0,452 kg e <b>1257</b> é 1,257 kg. <b>Tab</b> avança a seleção e <b>Shift+Tab</b> volta · <b>Enter</b> adiciona (em produto, +1 a cada toque) · <b>Backspace</b> apaga o número ou tira 1 unidade do produto.</div>`:''}
     <section class="panel"><h2>Outros itens</h2>
-      ${(()=>{const ps=prodsOrd();const bloco=(c,nome)=>{const its=ps.filter(p=>(catPos(p.cat)===catPos(c)));if(!its.length)return '';
-        return `<div class="quadro ${esc(c)}"><h3>${esc(nome)}</h3><div class="prods">${its.map(p=>`<button class="prod ${p.cat} ${S.foco===p.id?'sel':''} ${p.imagem?'comfoto':''}" ${p.imagem?`style="--foto:url('${esc(p.imagem)}')"`:''} data-a="addProd" data-id="${p.id}" ${f?'':'disabled'}>${badge(p.id,true)}<b>${esc(p.nome)}</b><span>${brl(p.preco)}</span></button>`).join('')}</div></div>`};
-        return CATORD.map(c=>bloco(c,CATNOME[c])).join('')||'<div class="empty">Nenhum produto cadastrado ainda.</div>'})()}
+      ${(()=>{const ps=prodsOrd();const bloco=(c,nome)=>{const its=ps.filter(p=>(catPos(p.cat)===catPos(c))&&!(c==='pf'?false:ehPF(p))).concat(c==='pf'?ps.filter(ehPF):[]);if(!its.length)return '';
+        return `<div class="quadro ${c==='pf'?'prato pfdest':esc(c)}"><h3>${esc(nome)}</h3><div class="prods">${its.map(p=>`<button class="prod ${p.cat} ${S.foco===p.id?'sel':''} ${p.imagem?'comfoto':''}" ${p.imagem?`style="--foto:url('${esc(p.imagem)}')"`:''} data-a="addProd" data-id="${p.id}" ${f?'':'disabled'}>${badge(p.id,true)}<b>${esc(p.nome)}</b><span>${brl(p.preco)}</span></button>`).join('')}</div></div>`};
+        return (bloco('pf','Prato feito')+CATORD.map(c=>bloco(c,CATNOME[c])).join(''))||'<div class="empty">Nenhum produto cadastrado ainda.</div>'})()}
     </section>
   </div><aside class="col">${vendaPanel()}</aside></div></div>${f?'</div>':''}`;
 }
@@ -975,7 +983,10 @@ function vSaidas(){
 }
 function vProdutos(){
   const CP={prato:'Prato',doce:'Sobremesa',bebida:'Bebida'},ops=v=>Object.keys(CP).map(k=>`<option value="${k}" ${k===v?'selected':''}>${CP[k]}</option>`).join('');
-  return `<div class="head"><div><h1>Produtos</h1><p>Itens de preço fixo que viram botão no Caixa, agrupados por categoria: pratos, sobremesas e bebidas.</p></div></div>
+  return `<div class="head"><div><h1>Produtos</h1><p>Preço do quilo e itens de preço fixo que viram botão no Caixa, agrupados por categoria: pratos, sobremesas e bebidas.</p></div></div>
+  <section class="panel"><h2>Vendidos por quilo</h2><div class="kgrid">${S.balancas.map(s=>`<div class="kcard ${s.grupo}"><b>${esc(s.nome)}</b>
+      <label class="kin" for="pk-${s.id}"><span>R$ por kg</span><input type="text" id="pk-${s.id}" inputmode="numeric" data-m data-c="bal" data-id="${s.id}" data-k="precoKg" value="${num(s.precoKg)}"></label></div>`).join('')||'<div class="empty">Nenhuma balança cadastrada.</div>'}</div>
+    <div class="note">O preço novo vale para as próximas pesagens. As vendas já registradas não mudam.</div></section>
   <section class="panel"><h2>Produtos cadastrados</h2>
   <div class="pgrid">
     ${prodsOrd().map(p=>`<div class="pcard ${p.cat}">
@@ -988,8 +999,7 @@ function vProdutos(){
         <button class="x" data-a="rmProd" data-id="${p.id}" aria-label="Remover ${esc(p.nome)}">×</button></div>
     </div>`).join('')||'<div class="empty">Nenhum produto cadastrado ainda.</div>'}
   </div>
-  <div class="form compacta"><div><label for="np2-nome">Novo produto</label><input type="text" id="np2-nome"></div><div><label for="np2-cat">Categoria</label><select id="np2-cat">${ops('doce')}</select></div><div><label for="np2-preco">Preço (R$)</label><input type="text" id="np2-preco" inputmode="numeric" data-m placeholder="0,00"></div><button class="btn" data-a="novoProd">Cadastrar produto</button></div></section>
-  <section class="panel"><h2>Preço por kg</h2><div class="form compacta">${S.balancas.map(s=>`<div><label for="pk-${s.id}">${esc(s.nome)} (R$ por kg)</label><input type="text" id="pk-${s.id}" inputmode="numeric" data-m data-c="bal" data-id="${s.id}" data-k="precoKg" value="${num(s.precoKg)}"></div>`).join('')}</div></section>`;
+  <div class="form compacta"><div><label for="np2-nome">Novo produto</label><input type="text" id="np2-nome"></div><div><label for="np2-cat">Categoria</label><select id="np2-cat">${ops('doce')}</select></div><div><label for="np2-preco">Preço (R$)</label><input type="text" id="np2-preco" inputmode="numeric" data-m placeholder="0,00"></div><button class="btn" data-a="novoProd">Cadastrar produto</button></div></section>`;
 }
 function vClientes(){
   const R=S.regras;
