@@ -389,6 +389,9 @@ input[type=range]{width:100%;accent-color:var(--op,var(--ink));min-height:32px}
 .sugs{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:8px}
 .quadro{border:2px solid var(--qc,var(--line));border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px}
 .quadro+.quadro{margin-top:4px}
+.pcard .psalvar,.kcard .psalvar{display:none;align-self:flex-start}
+.pcard.sujo,.kcard.sujo{box-shadow:0 0 0 3px var(--warn,#d97706)}
+.pcard.sujo .psalvar,.kcard.sujo .psalvar{display:inline-flex}
 .quadro.pfdest .prods{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
 .quadro.pfdest .prod{min-height:112px;font-size:18px}
 .quadro.pfdest .prod b{font-size:19px}
@@ -473,7 +476,7 @@ const S={
   clientes:[],
   regras:{base:'valor',pontosResgate:100,valorResgate:1000,minGrupo:50},
   cardapio:[],
-  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},rec:null,maq:false,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
+  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',pedit:{},kedit:{},salvandoProd:false,neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},rec:null,maq:false,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
   periodo:'diario',refData:'',fin:null,saidas:[],saidaCats:[],saidaMes:'',rank:'qtd',logAberto:false,finSeq:0,finLimite:200,finCarregando:false,contado:{},fluxos:[],log:[],modal:null,menu:(typeof window!=='undefined'&&window.innerWidth>980),fundo:10000,
   wa:{url:'',eventos:{resumo:true,cardapio:true,pontos:true,grupo:false}},
   vendas:[]
@@ -814,6 +817,31 @@ function vNegocio(){const n=S.neg,contato=[n.end?'📍 '+n.end:'',n.foneBonito?'
     <div class="note">O número é guardado no formato do WhatsApp (55 + DDD + número). Campos opcionais em branco simplesmente não aparecem nas mensagens. Recibos que já estão na fila ou já foram enviados não mudam; os próximos saem com os dados novos.</div>
   </section>
   <section class="panel"><h2>Como fica o recibo</h2><div class="bubble bot" id="ng-previa" style="white-space:pre-wrap">${esc(previa)}</div></section>`}
+/* ---------- Produtos: editar e salvar com botão ---------- */
+function prodMarcar(id,k,val){const p=S.produtos.find(x=>x.id===id);if(!p)return;const e=Object.assign({},S.pedit[id]||{});e[k]=val;
+  const igual=(e.nome===undefined||e.nome.trim()===p.nome)&&(e.preco===undefined||parseMoney(e.preco)===p.preco)&&(e.cat===undefined||e.cat===p.cat);
+  if(igual)delete S.pedit[id];else S.pedit[id]=e;
+  const c=document.getElementById('pc-card-'+id);if(c)c.classList.toggle('sujo',!!S.pedit[id]);prodBotao()}
+function prodBotao(){const b=document.querySelector('[data-a="prodSalvarTudo"]');if(!b)return;const n=Object.keys(S.pedit).length+Object.keys(S.kedit).length;
+  b.disabled=!n||S.salvandoProd;b.textContent=S.salvandoProd?'Salvando…':n?`Salvar alterações (${n})`:'Tudo salvo'}
+async function prodGravar(ids,kids){if(S.salvandoProd)return;S.salvandoProd=true;prodBotao();let ok=0,falhou=[];
+  for(const id of ids){const p=S.produtos.find(x=>x.id===id),e=S.pedit[id];if(!p||!e)continue;const c={};
+    if(e.nome!==undefined){const n=e.nome.trim();if(!n){falhou.push(p.nome+' (nome vazio)');continue}if(n!==p.nome)c.nome=n}
+    if(e.preco!==undefined){const v=parseMoney(e.preco);if(!v){falhou.push(p.nome+' (preço vazio)');continue}if(v!==p.preco)c.preco_centavos=v}
+    if(e.cat!==undefined&&e.cat!==p.cat)c.categoria=e.cat;
+    if(!Object.keys(c).length){delete S.pedit[id];continue}
+    const r=await q(sb.from('produtos').update(c).eq('id',id),'Produto');
+    const x=r?await q(sb.from('produtos').select('nome,preco_centavos,categoria').eq('id',id).maybeSingle(),'Produto'):null;
+    const gravou=x&&x!==true&&(c.nome===undefined||x.nome===c.nome)&&(c.preco_centavos===undefined||x.preco_centavos===c.preco_centavos)&&(c.categoria===undefined||x.categoria===c.categoria);
+    if(gravou){delete S.pedit[id];ok++}else if(r)falhou.push(p.nome)}
+  for(const id of kids){const b=S.balancas.find(x=>x.id===id);if(!b||S.kedit[id]===undefined)continue;const v=parseMoney(S.kedit[id]);
+    if(!v){falhou.push(b.nome+' (preço vazio)');continue}
+    const r=await q(sb.from('balancas').update({preco_kg_centavos:v}).eq('id',id),'Preço do kg');
+    const x=r?await q(sb.from('balancas').select('preco_kg_centavos').eq('id',id).maybeSingle(),'Preço do kg'):null;
+    if(x&&x!==true&&x.preco_kg_centavos===v){delete S.kedit[id];ok++}else if(r)falhou.push(b.nome)}
+  S.salvandoProd=false;await carregarBase();render();
+  if(falhou.length)toast('Não foi salvo: '+falhou.join(', ')+'. Confira se você é administrador e se o modo teste está como deveria.');
+  else if(ok)toast(ok===1?'Salvo. O Caixa já usa o valor novo.':`${ok} alterações salvas. O Caixa já usa os valores novos.`)}
 function trocoBox(){const t=totais(),rec=parseMoney(S.recebido);return rec<t.total?{c:'troco falta',h:`<span>Faltam</span><strong>${brl(t.total-rec)}</strong>`}:{c:'troco',h:`<span>Troco</span><strong>${brl(rec-t.total)}</strong>`}}
 function vendaPanel(){
   const t=totais(),tb=trocoBox();
@@ -983,21 +1011,27 @@ function vSaidas(){
 }
 function vProdutos(){
   const CP={prato:'Prato',doce:'Sobremesa',bebida:'Bebida'},ops=v=>Object.keys(CP).map(k=>`<option value="${k}" ${k===v?'selected':''}>${CP[k]}</option>`).join('');
-  return `<div class="head"><div><h1>Produtos</h1><p>Preço do quilo e itens de preço fixo que viram botão no Caixa, agrupados por categoria: pratos, sobremesas e bebidas.</p></div></div>
-  <section class="panel"><h2>Vendidos por quilo</h2><div class="kgrid">${S.balancas.map(s=>`<div class="kcard ${s.grupo}"><b>${esc(s.nome)}</b>
-      <label class="kin" for="pk-${s.id}"><span>R$ por kg</span><input type="text" id="pk-${s.id}" inputmode="numeric" data-m data-c="bal" data-id="${s.id}" data-k="precoKg" value="${num(s.precoKg)}"></label></div>`).join('')||'<div class="empty">Nenhuma balança cadastrada.</div>'}</div>
+  const pe=p=>Object.assign({nome:p.nome,preco:num(p.preco),cat:p.cat},S.pedit[p.id]||{}),ke=b=>S.kedit[b.id]!==undefined?S.kedit[b.id]:num(b.precoKg);
+  const nSujos=Object.keys(S.pedit).length+Object.keys(S.kedit).length;
+  return `<div class="head"><div><h1>Produtos</h1><p>Preço do quilo e itens de preço fixo que viram botão no Caixa. Mude o que precisar e toque em <b>Salvar</b>.</p></div>
+    <button class="btn" data-a="prodSalvarTudo" ${nSujos&&!S.salvandoProd?'':'disabled'}>${S.salvandoProd?'Salvando…':nSujos?`Salvar alterações (${nSujos})`:'Tudo salvo'}</button></div>
+  ${emTeste()?`<div class="note" role="alert" style="color:var(--warn)"><b>Você está no modo teste.</b> Preços mudados aqui só valem no modo teste. Para mudar os preços de verdade, desligue o modo teste no seu perfil.</div>`:''}
+  <section class="panel"><h2>Vendidos por quilo</h2><div class="kgrid">${S.balancas.map(s=>`<div class="kcard ${s.grupo} ${S.kedit[s.id]!==undefined?'sujo':''}" id="kc-${s.id}"><b>${esc(s.nome)}</b>
+      <label class="kin" for="pk-${s.id}"><span>R$ por kg</span><input type="text" id="pk-${s.id}" inputmode="numeric" data-m data-ke="${s.id}" value="${esc(ke(s))}"></label>
+      <button class="btn sm psalvar" data-a="kgSalvar" data-id="${s.id}">Salvar</button></div>`).join('')||'<div class="empty">Nenhuma balança cadastrada.</div>'}</div>
     <div class="note">O preço novo vale para as próximas pesagens. As vendas já registradas não mudam.</div></section>
   <section class="panel"><h2>Produtos cadastrados</h2>
   <div class="pgrid">
-    ${prodsOrd().map(p=>`<div class="pcard ${p.cat}">
+    ${prodsOrd().map(p=>{const v=pe(p);return `<div class="pcard ${v.cat} ${S.pedit[p.id]?'sujo':''}" id="pc-card-${p.id}">
       <label class="foto-esc" for="pi-${p.id}" title="Escolher foto de ${esc(p.nome)}">${p.imagem?`<img class="mini" src="${esc(p.imagem)}" alt="">`:'<span>+ foto</span>'}</label>
       <input type="file" id="pi-${p.id}" accept="image/*" data-c="prodFoto" data-id="${p.id}" hidden>
-      <input type="text" class="pnome" id="pn-${p.id}" aria-label="Nome do produto" data-c="prod" data-id="${p.id}" data-k="nome" value="${esc(p.nome)}">
-      <div class="plin"><select id="pc-${p.id}" aria-label="Categoria de ${esc(p.nome)}" data-c="prod" data-id="${p.id}" data-k="cat">${ops(p.cat)}</select>
-        <input type="text" class="ppreco" id="pp-${p.id}" aria-label="Preço de ${esc(p.nome)}" inputmode="numeric" data-m data-c="prod" data-id="${p.id}" data-k="preco" value="${num(p.preco)}">
+      <input type="text" class="pnome" id="pn-${p.id}" aria-label="Nome do produto" data-pe="${p.id}" data-k="nome" value="${esc(v.nome)}">
+      <div class="plin"><select id="pc-${p.id}" aria-label="Categoria de ${esc(p.nome)}" data-c="prodCat" data-pe="${p.id}" data-k="cat">${ops(v.cat)}</select>
+        <input type="text" class="ppreco" id="pp-${p.id}" aria-label="Preço de ${esc(p.nome)}" inputmode="numeric" data-m data-pe="${p.id}" data-k="preco" value="${esc(v.preco)}">
         ${p.imagem?`<button class="x sm" data-a="prodFotoTirar" data-id="${p.id}" aria-label="Remover a foto de ${esc(p.nome)}">⌫</button>`:''}
         <button class="x" data-a="rmProd" data-id="${p.id}" aria-label="Remover ${esc(p.nome)}">×</button></div>
-    </div>`).join('')||'<div class="empty">Nenhum produto cadastrado ainda.</div>'}
+      <button class="btn sm psalvar" data-a="prodSalvar" data-id="${p.id}">Salvar</button>
+    </div>`}).join('')||'<div class="empty">Nenhum produto cadastrado ainda.</div>'}
   </div>
   <div class="form compacta"><div><label for="np2-nome">Novo produto</label><input type="text" id="np2-nome"></div><div><label for="np2-cat">Categoria</label><select id="np2-cat">${ops('doce')}</select></div><div><label for="np2-preco">Preço (R$)</label><input type="text" id="np2-preco" inputmode="numeric" data-m placeholder="0,00"></div><button class="btn" data-a="novoProd">Cadastrar produto</button></div></section>`;
 }
@@ -1467,6 +1501,9 @@ const A={
   negSalvar:()=>{const v=id=>$('#'+id).value.trim();
     q(sb.rpc('negocio_salvar',{p_nome:v('ng-nome'),p_telefone:v('ng-fone'),p_endereco:v('ng-end'),p_rodape:v('ng-rod')}),'Negócio').then(async r=>{
       if(r&&r.nome){negAplicar({nome:r.nome,fone:r.telefone,end:r.endereco,rodape:r.rodape});toast('Dados do negócio atualizados. Já valem para os próximos recibos e mensagens.');await carregarBase()}render()});return true},
+  prodSalvar:e=>{prodGravar([e.dataset.id],[]);return true},
+  kgSalvar:e=>{prodGravar([],[e.dataset.id]);return true},
+  prodSalvarTudo:()=>{prodGravar(Object.keys(S.pedit),Object.keys(S.kedit));return true},
   maqDeNovo:()=>{cobFim();S.cob=null;S.modal=null;if(podeFinalizar()&&usaMaq())cobrarMaq()},
   maqManual:()=>{cobFim();S.cob=null;S.modal='confirmar'},
   maqFechar:()=>{cobFim();S.cob=null;S.modal=null},
@@ -1568,6 +1605,7 @@ const C={
       im.onload=()=>{if(!im.width||!im.height)return toast('Não foi possível ler essa imagem.');S.crop={im,w:im.width,h:im.height,z:1,ox:0,oy:0};render()};
       im.onerror=()=>toast('Não foi possível ler essa imagem.');im.src=rd.result};rd.readAsDataURL(f)},
   fil:e=>{S.fil[e.dataset.k]=e.value;S.finLimite=200;carregarFin()},
+  prodCat:e=>{prodMarcar(e.dataset.pe,'cat',e.value)},
   recVenda:e=>{const r=S.rec;if(!r)return;r.venda=e.value;const v=(r.lista||[]).find(x=>x.id===e.value),c=v&&v.cli&&S.clientes.find(x=>x.id===v.cli);
     r.fone=c?c.fone||'':'';r.nome=c&&!/^Cliente \d{4}$/.test(c.nome)?c.nome:''},
   nomeRest:e=>{const n=e.value.trim();if(!n)return;salvar(sb.from('config').update({nome_restaurante:n}).eq('id',1),'Nome do recibo atualizado.')},
@@ -1584,6 +1622,9 @@ document.addEventListener('input',ev=>{const t=ev.target;
   if(S.conta&&t.id==='cs-nome')S.conta.nome=t.value;
   if(S.conta&&t.id==='cs-nova')S.conta.senha=t.value;
   if(t.dataset&&t.dataset.m!==undefined){const d=t.value.replace(/\D/g,'');t.value=d?num(parseInt(d,10)):''}
+  if(t.dataset&&t.dataset.pe){prodMarcar(t.dataset.pe,t.dataset.k,t.value);return}
+  if(t.dataset&&t.dataset.ke){const b=S.balancas.find(x=>x.id===t.dataset.ke);if(!b)return;if(parseMoney(t.value)===b.precoKg)delete S.kedit[b.id];else S.kedit[b.id]=t.value;
+    const c=document.getElementById('kc-'+b.id);if(c)c.classList.toggle('sujo',S.kedit[b.id]!==undefined);prodBotao();return}
   if(t.id==='recebido'){S.recebido=t.value;const tb=trocoBox(),x=$('#troco');x.className=tb.c;x.innerHTML=tb.h;$('#finalizar').disabled=!podeFinalizar()}
   else if(t.dataset.i==='mx'){S.mx[t.dataset.f]=t.value;const m=mistoInfo();$('#mx-status').innerHTML=statusBox(m);$('#mx-ok').disabled=!m.ok;$('#mx-troco').textContent=m.troco?'Troco '+brl(m.troco):''}
   else if(t.dataset.i==='dv'){S.dv[+t.dataset.k].valor=t.value;const m=dvInfo();$('#dv-status').innerHTML=statusBox(m,!m.falta&&!m.ok);$('#dv-ok').disabled=!m.ok}
@@ -1609,7 +1650,7 @@ document.addEventListener('keydown',ev=>{
     if(pr){ev.preventDefault();A.addProd({dataset:{id:pr.id}});return render()}
     return}
 },true);
-document.addEventListener('keydown',ev=>{if(ev.key!=='Enter')return;if(ev.target.id==='ap-senha'){ev.preventDefault();const o=document.getElementById('ap-ok');if(o)o.click();return}const cx=ev.target.closest&&ev.target.closest('#login');const b=cx&&cx.querySelector('[data-enter]');if(b){ev.preventDefault();b.click()}});
+document.addEventListener('keydown',ev=>{if(ev.key!=='Enter')return;{const t=ev.target;if(t&&t.dataset&&(t.dataset.pe||t.dataset.ke)){ev.preventDefault();t.dataset.pe?prodGravar([t.dataset.pe],[]):prodGravar([],[t.dataset.ke]);return}}if(ev.target.id==='ap-senha'){ev.preventDefault();const o=document.getElementById('ap-ok');if(o)o.click();return}const cx=ev.target.closest&&ev.target.closest('#login');const b=cx&&cx.querySelector('[data-enter]');if(b){ev.preventDefault();b.click()}});
 function rota(){const h=(location.hash||'').slice(1);if(RENDER[h])S.view=h;render()}
 window.addEventListener('hashchange',rota);
 rota();
