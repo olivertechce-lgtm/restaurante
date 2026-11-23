@@ -405,6 +405,11 @@ input[type=range]{width:100%;accent-color:var(--op,var(--ink));min-height:32px}
 .fcab{all:unset;cursor:pointer;display:flex;gap:12px;align-items:center;width:100%;box-sizing:border-box;padding:12px 14px}.fcab span{color:var(--muted);flex:1}.fcab strong{font-size:17px}
 .fcab:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}.fcli .tw{padding:0 14px}
 .fcfecha{display:flex;flex-direction:column;gap:6px;padding:12px 14px;background:var(--soft)}.fcfecha span{color:var(--muted)}
+.quadro.pftopo{margin-top:-8px;padding:10px;border-radius:18px}
+.dvbtns{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.dvbtns span{font-size:13px;color:var(--muted);margin-right:2px}.dvbtns .chip.on{background:var(--warn,#d97706);color:#fff;border-color:transparent}
+.tot.dvlinha{color:#7a4b00}.tot.dvlinha .chip{padding:0 8px;margin-left:4px}
+tr.comdesc td{background:#fff3df}tr.comdesc td:first-child{box-shadow:inset 4px 0 0 #d97706}
+.pill.dtag{background:#fde3b6;color:#7a4b00;white-space:normal;text-align:right;font-weight:600}
 .quadro.pfdest .prods{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
 .quadro.pfdest .prod{min-height:112px;font-size:18px}
 .quadro.pfdest .prod b{font-size:19px}
@@ -489,7 +494,7 @@ const S={
   clientes:[],
   regras:{base:'valor',pontosResgate:100,valorResgate:1000,minGrupo:50},
   cardapio:[],
-  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pend:'',pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',pedit:{},kedit:{},salvandoProd:false,neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},rec:null,maq:false,valeMaq:true,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
+  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pend:'',dven:null,pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',pedit:{},kedit:{},salvandoProd:false,neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},rec:null,maq:false,valeMaq:true,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
   periodo:'diario',refData:'',fin:null,saidas:[],saidaCats:[],saidaMes:'',rank:'qtd',logAberto:false,finSeq:0,finLimite:200,finCarregando:false,contado:{},fluxos:[],log:[],modal:null,menu:(typeof window!=='undefined'&&window.innerWidth>980),fundo:10000,
   wa:{url:'',eventos:{resumo:true,cardapio:true,pontos:true,grupo:false}},
   vendas:[]
@@ -520,13 +525,14 @@ const pctTxt=n=>String(Math.round(n*100)/100).replace('.',',')+'%';
 function totaisDe(v){const sub=v.cart.reduce((a,i)=>a+i.valor,0),c=S.clientes.find(x=>x.id===v.clienteId);
   const base=c&&c.descPct>0?v.cart.filter(i=>descAplica(c.descSobre,i.grupo)).reduce((a,i)=>a+i.valor,0):0;
   const dcli=base?Math.min(sub,Math.round(base*Math.round(c.descPct*100)/10000)):0;
-  const pode=!!c&&c.pontos>=S.regras.pontosResgate&&sub-dcli>0,desc=v.resgate&&pode?Math.min(S.regras.valorResgate,sub-dcli):0;
-  return{sub,dcli,desc,total:sub-dcli-desc,pode,c}}
+  const dpct=v.dven&&v.dven.pct||0,dven=dpct?Math.round((sub-dcli)*dpct/100):0;
+  const pode=!!c&&c.pontos>=S.regras.pontosResgate&&sub-dcli-dven>0,desc=v.resgate&&pode?Math.min(S.regras.valorResgate,sub-dcli-dven):0;
+  return{sub,dcli,dpct,dven,desc,total:sub-dcli-dven-desc,pode,c}}
 const totais=()=>totaisDe(S);
 /* ---------- vendas em abas (até 4 em aberto) ----------
    A venda da aba ativa vive em S.cart, S.forma etc., como sempre. As outras ficam guardadas em S.abas. */
-const MAX_ABAS=4,MAX_PEND=20,CAMPOS=['cart','pags','mx','dv','clienteId','resgate','forma','recebido','novoCli','recibo','pagoMaq','pend'];
-const vendaVazia=()=>({cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',rec:''},dv:[],clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,pagoMaq:null,pend:'',pesos:null});
+const MAX_ABAS=4,MAX_PEND=20,CAMPOS=['cart','pags','mx','dv','clienteId','resgate','forma','recebido','novoCli','recibo','pagoMaq','pend','dven'];
+const vendaVazia=()=>({cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',rec:''},dv:[],clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,pagoMaq:null,pend:'',dven:null,pesos:null});
 function abaGuardar(){const a=S.abas[S.aba];if(a){CAMPOS.forEach(k=>a[k]=S[k]);a.pesos=S.balancas.map(b=>({id:b.id,bruto:b.bruto,tara:b.tara}))}}
 function abaCarregar(k){S.aba=k;const a=S.abas[k];CAMPOS.forEach(c=>S[c]=a[c]);
   // Cada venda tem a sua pesagem em andamento: trocar de aba troca o que está na tela.
@@ -593,7 +599,7 @@ const fxDe=uid=>S.fluxos.filter(f=>f.op===uid).sort((a,b)=>a.n-b.n);
 const fxAberto=uid=>S.fluxos.find(f=>f.op===uid&&!f.fechamento);
 const somaPags=()=>S.pags?S.pags.linhas.reduce((a,l)=>a+l.valor,0):0;
 const temFiado=()=>S.pags?S.pags.linhas.some(l=>l.forma==='fiado'):S.forma==='fiado';
-const podeFinalizar=()=>{const t=totais();if(!fxAberto(S.user.id)||!S.cart.length)return false;if(temFiado()&&!S.clienteId)return false;return S.pags?somaPags()===t.total:!!S.forma&&(S.forma!=='dinheiro'||parseMoney(S.recebido)>=t.total)};
+const podeFinalizar=()=>{const t=totais();if(!fxAberto(S.user.id)||!S.cart.length)return false;if(t.total===0&&t.dpct===100)return true;if(temFiado()&&!S.clienteId)return false;return S.pags?somaPags()===t.total:!!S.forma&&(S.forma!=='dinheiro'||parseMoney(S.recebido)>=t.total)};
 const GR=[['prato','Pratos'],['comida','Comida a quilo'],['acai','Açaí'],['doce','Sobremesas'],['bebida','Bebidas']];
 const gk=i=>i.grupo==='produto'?(i.cat||'doce'):i.grupo;
 function listaCart(){
@@ -607,6 +613,19 @@ function dvInfo(){const t=totais().total,s=S.dv.reduce((a,d)=>a+parseMoney(d.val
 function statusBox(m,semForma){return m.falta>0?`<div class="troco falta"><span>Falta distribuir</span><strong>${brl(m.falta)}</strong></div>`:m.falta<0?`<div class="troco falta"><span>Passou do total em</span><strong>${brl(-m.falta)}</strong></div>`:semForma?`<div class="troco falta"><span>Escolha a forma de cada pessoa</span><strong>${brl(m.t)}</strong></div>`:`<div class="troco"><span>Valores conferem</span><strong>${brl(m.t)}</strong></div>`}
 function dvIgual(){const t=totais().total,n=S.dv.length,b=Math.floor(t/n);S.dv.forEach((d,k)=>d.valor=num(k===n-1?t-b*(n-1):b))}
 function modalHtml(fa){
+  if(S.modal==='dven'&&S.dvNovo){const t=totais(),base=t.sub-t.dcli,v=Math.round(base*S.dvNovo/100);
+    return `<div class="panel" style="width:min(480px,100%)"><h1>Desconto de ${S.dvNovo}%</h1>
+    <div class="conf-total"><span>${brl(base)} − ${S.dvNovo}%</span><strong>− ${brl(v)}</strong></div>
+    <div><label for="dv-cli">Cliente</label><select id="dv-cli"><option value="">Sem cliente</option>${cliOps(S.clienteId)}</select></div>
+    <div><label for="dv-obs">Ou uma observação</label><input type="text" id="dv-obs" maxlength="120" placeholder="Ex.: funcionário, cortesia, prato errado" value="${esc((S.dven&&S.dven.obs)||'')}"></div>
+    <div class="note">Escolha o cliente <b>ou</b> escreva uma observação. O desconto fica marcado na venda e no Financeiro.</div>
+    <div class="row"><button class="btn line" data-a="cancelar">Voltar</button><button class="btn" data-a="dvAplicar">Aplicar ${S.dvNovo}%</button></div></div>`}
+  if(S.modal==='cadCli')return `<div class="panel" style="width:min(480px,100%)"><h1>Cadastrar cliente</h1>
+    <div class="form compacta"><div><label for="cc-nome">Nome</label><input type="text" id="cc-nome" maxlength="60" autocomplete="off"></div>
+      <div><label for="cc-emp">Empresa (opcional)</label><input type="text" id="cc-emp" maxlength="60" autocomplete="off"></div>
+      <div><label for="cc-fone">Telefone / WhatsApp</label><input type="text" id="cc-fone" inputmode="tel" placeholder="(85) 9..."></div></div>
+    <div class="note">Se o telefone já estiver cadastrado, o cadastro é atualizado com o nome e a empresa.</div>
+    <div class="row"><button class="btn line" data-a="${S.cadVolta||'cancelar'}">Voltar</button><button class="btn" data-a="cadSalvar">Cadastrar</button></div></div>`;
   if(S.modal==='fiadoTipo'){const t=totais();return `<div class="panel" style="width:min(520px,100%)"><h1>Fiado de ${brl(t.total)}</h1><p style="margin:0">Quando o cliente vai pagar?</p>
     <button class="btn fdop" data-a="fiadoDia"><b>Fiado do dia</b><small>Volta para pagar hoje. A venda fica pendurada numa aba com o nome dele.</small></button>
     <button class="btn line fdop" data-a="fiadoMes"><b>Fiado do mês</b><small>Vai para a conta do cliente cadastrado e é paga depois, em "Fechar conta".</small></button>
@@ -616,10 +635,11 @@ function modalHtml(fa){
     <div class="note">A venda sai da tela e fica numa aba com esse nome. Uma venda nova, em branco, abre para o próximo cliente.</div>
     <div class="row"><button class="btn line" data-a="cancelar">Voltar</button><button class="btn" data-a="pendurar">Pendurar venda</button></div></div>`;
   if(S.modal==='fiadoMes'){const t=totais();return `<div class="panel" style="width:min(480px,100%)"><h1>Fiado do mês</h1>
-    ${S.clientes.length?`<div><label for="fm-cli">Cliente da conta</label><select id="fm-cli"><option value="">Escolha o cliente</option>${S.clientes.slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt')).map(c=>`<option value="${c.id}" ${c.id===S.clienteId?'selected':''}>${esc(c.nome)} · ${esc(c.fone)}</option>`).join('')}</select></div>
-    <div class="note">${brl(t.total)} entra na conta do cliente. Quem não está na lista precisa ser cadastrado antes pelo botão "Novo" do Caixa.</div>
+    ${S.clientes.length?`<div><label for="fm-cli">Cliente da conta</label><select id="fm-cli"><option value="">Escolha o cliente</option>${cliOps(S.clienteId)}</select></div>
+    <button class="btn line sm" data-a="cadAbrir" data-volta="fiadoMes">+ Cadastrar cliente novo</button>
+    <div class="note">${brl(t.total)} entra na conta do cliente.</div>
     <div class="row"><button class="btn line" data-a="cancelar">Voltar</button><button class="btn" data-a="lancarConta">Lançar na conta</button></div>`
-    :`<div class="note">Ainda não há clientes cadastrados. Cadastre pelo botão "Novo" do Caixa e tente de novo.</div><button class="btn line" data-a="cancelar">Voltar</button>`}</div>`}
+    :`<div class="note">Ainda não há clientes cadastrados.</div><div class="row"><button class="btn line" data-a="cancelar">Voltar</button><button class="btn" data-a="cadAbrir" data-volta="fiadoMes">Cadastrar cliente</button></div>`}</div>`}
   if(S.modal==='desc'&&S.descCli){const c=S.clientes.find(x=>x.id===S.descCli);if(!c)return '';return `<div class="panel" style="width:min(460px,100%)"><h1>Desconto de ${esc(c.nome)}</h1>
     <div class="form compacta"><div><label for="ds-pct">Desconto (%)</label><input type="text" id="ds-pct" inputmode="decimal" placeholder="10" value="${c.descPct?String(c.descPct).replace('.',','):''}"></div>
       <div><label for="ds-sobre">Vale sobre</label><select id="ds-sobre">${Object.keys(DSOBRE).map(k=>`<option value="${k}" ${c.descSobre===k?'selected':''}>${({comida:'Comida a quilo',acai:'Açaí',peso:'Comida e açaí (peso)',tudo:'Tudo o que comprar'})[k]}</option>`).join('')}</select></div></div>
@@ -707,8 +727,10 @@ function intervalo(){
   return{ini:new Date(y,0,1),fim:new Date(y+1,0,1),gran:'month',por:'mês',t:'Ano de '+y};
 }
 const filtrosRpc=()=>({p_forma:S.fil.forma||null,p_tipo:S.fil.tipo||null,p_operador:S.fil.op||null,p_cliente:S.fil.cli&&S.fil.cli!=='_sem'?S.fil.cli:null,p_sem_cliente:S.fil.cli==='_sem'});
-const mapVenda=l=>({n:l.numero,v:{id:l.id,ts:new Date(l.criado_em),op:l.operador_id,opNome:l.operador||'',cli:l.cliente_id||'',cliNome:l.cliente||'',tipo:l.tipo,total:l.total,
-  itens:(l.itens||[]).map(i=>({desc:i.descricao,g:i.gramas||0,valor:i.valor})),pags:(l.pagamentos||[]).map(x=>({rot:x.rotulo,forma:x.forma,valor:x.valor}))}});
+const mapVenda=l=>({n:l.numero,v:{id:l.id,ts:new Date(l.criado_em),op:l.operador_id,opNome:l.operador||'',cli:l.cliente_id||'',cliNome:l.cliente||'',tipo:l.tipo,total:l.total,sub:l.subtotal||l.total,dVen:l.desc_venda||0,dPct:l.desc_pct||0,dObs:l.desc_obs||'',dCli:l.desc_cliente||0,dPts:l.desconto||0,
+  itens:(l.itens||[]).map(i=>({desc:i.descricao,g:i.gramas||0,valor:i.valor})),pags:(l.pagamentos&&l.pagamentos.length?l.pagamentos:[{rotulo:'Sem pagamento',forma:'',valor:0}]).map(x=>({rot:x.rotulo,forma:x.forma,valor:x.valor}))}});
+const descTag=v=>{const t=[];if(v.dPct)t.push('Desconto '+v.dPct+'%'+(v.dObs?' · '+v.dObs:''));if(v.dCli)t.push('Desc. cliente '+brl(v.dCli));if(v.dPts)t.push('Pontos '+brl(v.dPts));return t.join(' · ')};
+const temDesc=v=>!!(v.dVen||v.dCli||v.dPts);
 async function carregarFin(){
   if(!sb||!isAdmin())return;
   const I=intervalo(),seq=++S.finSeq,args={p_inicio:I.ini.toISOString(),p_fim:I.fim.toISOString()};
@@ -734,7 +756,7 @@ async function carregarFin(){
   const mapSai=(sd&&sd!==true&&sd.dias)?Object.fromEntries(sd.dias.map(d=>[d.dia,Number(d.valor)])):{};
   bs.forEach(x=>{if(x.chave)x.saida=mapSai[x.chave]||0});
   S.fin={I,valeNoCaixa:vNo,fiados:Array.isArray(fi)?fi:[],buckets:bs,total:rs.buckets.reduce((a,x)=>soma(a,N(x)),Z()),produtos:rs.produtos||[],
-    vendas:{qtd:Number(vs.qtd),soma:Number(vs.soma),linhas:(vs.linhas||[]).map(mapVenda)},
+    vendas:{qtd:Number(vs.qtd),soma:Number(vs.soma),descontos:Number(vs.descontos||0),linhas:(vs.linhas||[]).map(mapVenda)},
     fluxos:Array.isArray(fx)?fx:[],
     log:Array.isArray(at)?at.map(a=>({id:a.id,ts:new Date(a.criado_em),quem:nomeOp(a.usuario_id)||'Sistema',txt:a.texto})):[],
     saidas:(sd&&sd!==true)?{total:Number(sd.total),categorias:(sd.categorias||[]).map(c=>({cat:c.categoria,valor:Number(c.valor),qtd:Number(c.qtd)})),
@@ -764,7 +786,7 @@ function vendasFin(){
   return `<section class="panel"><div class="head"><h2>Vendas do período</h2><span class="pill">${V.qtd.toLocaleString('pt-BR')} ${V.qtd===1?'venda':'vendas'}${ativo?' com esses filtros':''} · ${brl(V.soma)}</span></div>
   <div class="form">${sel('forma','Forma de pagamento',Object.entries(FORMAS))}${sel('tipo','Tipo de pagamento',Object.entries(TIPOS))}${sel('op','Operador',S.usuarios.map(u=>[u.id,u.nome]))}${sel('cli','Cliente',[['_sem','Sem cliente identificado']].concat(S.clientes.map(c=>[c.id,c.nome])))}<button class="btn line" data-a="limparFil" ${ativo?'':'disabled'}>Limpar filtros</button></div>
   <div class="tw"><table><thead><tr><th>Venda</th><th>${S.periodo==='diario'?'Hora':'Data e hora'}</th><th>Operador</th><th>Cliente</th><th>Itens</th><th>Parte</th><th>Forma</th><th class="n">Valor pago</th><th class="n">Total da venda</th><th></th></tr></thead><tbody>
-    ${V.linhas.map(({v,n})=>v.pags.map((p,k)=>{const rs=`rowspan="${v.pags.length}"`;return `<tr ${k?'class="cont"':''}>${k?'':`<td ${rs}><b>#${n}</b>${v.tipo==='simples'?'':` <span class="pill warn">${TIPOS[v.tipo]}</span>`}</td><td ${rs}>${dataHora(v.ts)}</td><td ${rs}>${esc(v.opNome)}</td><td ${rs}>${esc(v.cliNome)}</td><td ${rs} style="white-space:normal;min-width:180px">${esc(itensTxt(v))}</td>`}<td>${esc(p.rot)||'Única'}</td><td><span class="pill" style="background:var(--${p.forma});color:#fff">${FORMAS[p.forma]}</span></td><td class="n">${brl(p.valor)}</td>${k?'':`<td class="n" ${rs}><b>${brl(v.total)}</b></td><td ${rs}><div class="row" style="flex-wrap:nowrap;gap:6px"><button class="btn line sm" data-a="recAbrir" data-id="${v.id}" data-n="${n}" data-t="${v.total}" data-cli="${v.cli||''}">Comprovante</button>${ehDono()?`<button class="btn line sm perigo" data-a="apagarVenda" data-id="${v.id}">Apagar</button>`:''}</div></td>`}</tr>`}).join('')).join('')||`<tr><td colspan="10">Nenhuma venda neste período${ativo?' com esses filtros':''}.</td></tr>`}
+    ${V.linhas.map(({v,n})=>v.pags.map((p,k)=>{const rs=`rowspan="${v.pags.length}"`;return `<tr class="${k?'cont':''} ${temDesc(v)?'comdesc':''}">${k?'':`<td ${rs}><b>#${n}</b>${v.tipo==='simples'?'':` <span class="pill warn">${TIPOS[v.tipo]}</span>`}</td><td ${rs}>${dataHora(v.ts)}</td><td ${rs}>${esc(v.opNome)}</td><td ${rs}>${esc(v.cliNome)}</td><td ${rs} style="white-space:normal;min-width:180px">${esc(itensTxt(v))}</td>`}<td>${esc(p.rot)||'Única'}</td><td>${p.forma?`<span class="pill" style="background:var(--${p.forma});color:#fff">${FORMAS[p.forma]}</span>`:'<small>—</small>'}</td><td class="n">${brl(p.valor)}</td>${k?'':`<td class="n" ${rs}><b>${brl(v.total)}</b>${temDesc(v)?`<br><span class="pill dtag">${esc(descTag(v))}</span><br><small>de ${brl(v.sub)}</small>`:''}</td><td ${rs}><div class="row" style="flex-wrap:nowrap;gap:6px"><button class="btn line sm" data-a="recAbrir" data-id="${v.id}" data-n="${n}" data-t="${v.total}" data-cli="${v.cli||''}">Comprovante</button>${ehDono()?`<button class="btn line sm perigo" data-a="apagarVenda" data-id="${v.id}">Apagar</button>`:''}</div></td>`}</tr>`}).join('')).join('')||`<tr><td colspan="10">Nenhuma venda neste período${ativo?' com esses filtros':''}.</td></tr>`}
   </tbody></table></div>${V.linhas.length<V.qtd?`<button class="btn line" data-a="finMais">Mostrar mais (${V.linhas.length.toLocaleString('pt-BR')} de ${V.qtd.toLocaleString('pt-BR')})</button>`:''}</section>`;
 }
 function fluxosFin(){
@@ -794,14 +816,15 @@ async function exportPdf(){
   doc.setFont('helvetica','normal');doc.setFontSize(11);doc.setTextColor(103,99,120);
   doc.text(X(TT[S.periodo]+' · '+I.t+'  |  gerado em '+new Date().toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})+' por '+S.user.nome),40,66);
   let y=86;
-  const tab=(titulo,head,body)=>{doc.autoTable({startY:y,margin:{left:40,right:40,bottom:44},head:[[{content:X(titulo),colSpan:head.length,styles:{fillColor:[255,255,255],textColor:[28,26,39],fontSize:12,cellPadding:{top:2,bottom:6,left:0,right:0}}}],head.map(X)],body:body.map(r=>r.map(X)),styles:{font:'helvetica',fontSize:9,cellPadding:5,textColor:[28,26,39],lineColor:[230,227,238],lineWidth:.5},headStyles:{fillColor:[28,26,39],textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[247,246,251]}});y=doc.lastAutoTable.finalY+22};
+  const tab=(titulo,head,body,pintar)=>{doc.autoTable({startY:y,didParseCell:pintar?(d=>{if(d.section==='body'&&pintar[d.row.index]){d.cell.styles.fillColor=[255,240,214];d.cell.styles.textColor=[122,75,0]}}):undefined,margin:{left:40,right:40,bottom:44},head:[[{content:X(titulo),colSpan:head.length,styles:{fillColor:[255,255,255],textColor:[28,26,39],fontSize:12,cellPadding:{top:2,bottom:6,left:0,right:0}}}],head.map(X)],body:body.map(r=>r.map(X)),styles:{font:'helvetica',fontSize:9,cellPadding:5,textColor:[28,26,39],lineColor:[230,227,238],lineWidth:.5},headStyles:{fillColor:[28,26,39],textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[247,246,251]}});y=doc.lastAutoTable.finalY+22};
   tab('Resumo',['Faturamento','Comida vendida','Açaí vendido','Vendas','Ticket médio','Outros itens'],[[brl(a.fat),kg1(a.gCom),kg1(a.gAcai),String(a.n),brl(a.n?Math.round(a.fat/a.n):0),a.itens+' un.']]);
   tab('Por forma de pagamento',['Forma','Valor','Participação'],Object.keys(FORMAS).map(f=>[FORMAS[f],brl(a[f]),pct(a[f])]));
   if(b.length)tab('Por '+I.por,['Período','Vendas','Comida','Açaí','Pix','Crédito','Débito','Dinheiro','Vale','Fiado','Faturamento'],b.map(x=>[x.l,String(x.a.n),kg1(x.a.gCom),kg1(x.a.gAcai),brl(x.a.pix),brl(x.a.credito),brl(x.a.debito),brl(x.a.dinheiro),brl(x.a.vale||0),brl(x.a.fiado||0),brl(x.a.fat)]));
   if(Fn.produtos.length)tab('Outros itens vendidos',['Item','Quantidade','Valor'],Fn.produtos.map(x=>[x.nome,String(x.qtd),brl(Number(x.valor))]));
   const F=S.fil,fs=[F.forma&&'forma '+FORMAS[F.forma],F.tipo&&'tipo '+TIPOS[F.tipo],F.op&&'operador '+nomeOp(F.op),F.cli&&'cliente '+(F.cli==='_sem'?'não identificado':nomeCli(F.cli))].filter(Boolean);
   tab('Vendas do período ('+Fn.vendas.qtd+' · '+brl(Fn.vendas.soma)+')'+(fs.length?' · filtros: '+fs.join(', '):'')+(linhas.length<Fn.vendas.qtd?' · mostrando as '+linhas.length+' mais recentes':''),['Venda','Data e hora','Operador','Cliente','Itens','Parte','Forma','Valor pago','Total'],
-    [].concat(...linhas.map(({v,n})=>v.pags.map((p,k)=>[k?'':'#'+n+(v.tipo==='simples'?'':' ('+TIPOS[v.tipo]+')'),k?'':v.ts.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+hhmm(v.ts),k?'':v.opNome,k?'':v.cliNome,k?'':itensTxt(v),p.rot||'Única',FORMAS[p.forma],brl(p.valor),k?'':brl(v.total)]))));
+    [].concat(...linhas.map(({v,n})=>v.pags.map((p,k)=>[k?'':'#'+n+(v.tipo==='simples'?'':' ('+TIPOS[v.tipo]+')'),k?'':v.ts.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+hhmm(v.ts),k?'':v.opNome,k?'':v.cliNome,k?'':itensTxt(v),p.rot||'Única',FORMAS[p.forma]||'—',brl(p.valor),k?'':brl(v.total)+(temDesc(v)?'\n'+descTag(v)+' (de '+brl(v.sub)+')':'')]))),
+    [].concat(...linhas.map(({v})=>v.pags.map(()=>temDesc(v)))));
   if(Fn.fluxos.length)tab('Fluxo de caixa do período',['Operador','Dia','Fluxo','Abertura','Fechamento','Vendas','Dinheiro','Total','Gaveta esperada','Contado','Diferença'],
     Fn.fluxos.map(f=>{const esp=f.fundo+f.dinheiro,dif=f.fechado_em?f.contado-esp:null,ab=new Date(f.aberto_em);return [f.operador||'',ab.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}),'Fluxo '+f.numero,hhmm(ab),f.fechado_em?hhmm(new Date(f.fechado_em)):'Aberto',String(f.n),brl(f.dinheiro),brl(f.total),brl(esp),f.fechado_em?brl(f.contado):'',dif===null?'':(dif>0?'+':dif<0?'-':'')+brl(Math.abs(dif))]}));
   const np=doc.getNumberOfPages();
@@ -830,7 +853,7 @@ function scaleCard(s){
 /* ---------- Maquineta do Mercado Pago ----------
    O Caixa pede a cobrança ao banco, o n8n leva ao Mercado Pago e o Caixa acompanha o andamento. */
 const COB_FIM=['aprovada','cancelada','falhou','expirada','estornada'];
-const usaMaq=()=>!!S.maq&&!S.pags&&(['credito','debito','pix'].includes(S.forma)||(S.forma==='vale'&&S.valeMaq));
+const usaMaq=()=>!!S.maq&&!S.pags&&totais().total>0&&(['credito','debito','pix'].includes(S.forma)||(S.forma==='vale'&&S.valeMaq));
 const EXT='Maquininha externa';
 const maqPaga=()=>!!(S.pagoMaq&&S.pagoMaq.valor===totais().total&&S.pagoMaq.forma===S.forma);
 function cobFim(){clearInterval(S.cobT);S.cobT=null}
@@ -927,6 +950,7 @@ function fiadosClientes(){const pd=pendurados(),L=(S.fiadosCli||[]).filter(x=>!x
       ${ab?`<div class="tw"><table><thead><tr><th>Dia</th><th>Venda</th><th>Itens</th><th class="n">Valor</th></tr></thead><tbody>${x.itens.slice().sort((a,b)=>new Date(a.criado_em)-new Date(b.criado_em)).map(i=>`<tr><td>${new Date(i.criado_em).toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'2-digit'})} ${hhmm(new Date(i.criado_em))}</td><td>#${i.numero}</td><td>${esc(i.itens||'')}</td><td class="n">${brl(Number(i.valor))}</td></tr>`).join('')}</tbody></table></div>
         <div class="fcfecha"><b>Fechar conta de ${brl(x.v)}</b><span>Como ${esc(x.nome.split(' ')[0])} pagou?</span><div class="row">${['pix','dinheiro','debito','credito','vale'].map(f=>`<button class="chip ${S.fcConf===(x.id+f)?'perigo':''}" data-a="fcFechar" data-id="${x.id}" data-f="${f}">${S.fcConf===(x.id+f)?'Confirmar: '+FORMAS[f]:FORMAS[f]}</button>`).join('')}</div></div>`:''}</div>`}).join('')}</div>`:'<p style="margin:0">Nenhum cliente com fiado em conta.</p>'}
   </section>`}
+const cliOps=sel=>S.clientes.slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt')).map(c=>`<option value="${c.id}" ${c.id===sel?'selected':''}>${esc(c.nome)}${c.empresa?' · '+esc(c.empresa):''} · ${esc(c.fone)}</option>`).join('');
 function trocoBox(){const t=totais(),rec=parseMoney(S.recebido);return rec<t.total?{c:'troco falta',h:`<span>Faltam</span><strong>${brl(t.total-rec)}</strong>`}:{c:'troco',h:`<span>Troco</span><strong>${brl(rec-t.total)}</strong>`}}
 function vendaPanel(){
   const t=totais(),tb=trocoBox();
@@ -934,6 +958,7 @@ function vendaPanel(){
   if(S.forma==='dinheiro')pg=`<div class="cash"><label for="recebido">Valor recebido em dinheiro</label><input type="text" id="recebido" data-i="recebido" inputmode="numeric" data-m value="${esc(S.recebido)}" placeholder="0,00">
     <div class="row">${[1000,2000,5000,10000].map(v=>`<button class="chip" data-a="quick" data-v="${v}">+ ${brl(v)}</button>`).join('')}<button class="chip" data-a="exato">Valor exato</button><button class="chip" data-a="limparRec">Limpar</button></div>
     <div class="${tb.c}" id="troco">${tb.h}</div></div>`;
+  else if(t.total===0&&t.dpct===100)pg=`<div class="note"><b>Venda com 100% de desconto.</b> Não há nada a cobrar: é só finalizar.</div>`;
   else if(temFiado()&&!S.clienteId)pg=`<div class="note" role="alert" style="color:var(--bad)"><b>Para vender fiado, escolha o cliente.</b> Use o campo de cliente acima (ou "Novo" para cadastrar pelo WhatsApp). O fiado fica no nome dele até ser recebido.</div>`;
   else if(S.forma==='fiado')pg=`<div class="note">${brl(t.total)} fica <b>fiado</b> no nome do cliente. Quando ele pagar, receba na lista de fiados do Financeiro.</div>`;
   else if(S.forma==='vale'&&!usaMaq())pg=`<div class="note"><b>Vale em maquininha externa.</b> Passe ${brl(t.total)} no cartão de vale na outra maquininha e finalize quando aprovar. A venda fica marcada como voucher de maquininha externa.</div>`;
@@ -947,12 +972,13 @@ function vendaPanel(){
     <div><label for="cliente">Cliente (programa de pontos)</label>
       <div class="row"><select id="cliente" data-c="cliente" style="flex:1"><option value="">Sem identificação</option>${S.clientes.map(c=>`<option value="${c.id}" ${c.id===S.clienteId?'selected':''}>${esc(c.nome)} · ${esc(c.fone)}</option>`).join('')}</select><button class="btn line sm" data-a="novoCli">Novo</button></div>
     </div>
-    ${S.novoCli?`<div class="form"><div><label for="nc-fone">WhatsApp do cliente</label><input type="text" id="nc-fone" inputmode="tel" placeholder="(85) 9..."></div><div><label for="nc-nome">Nome (opcional)</label><input type="text" id="nc-nome"></div><button class="btn sm" data-a="salvarCli">Usar este número</button></div>`:''}
+    ${S.novoCli?`<div class="form"><div><label for="nc-fone">Telefone / WhatsApp</label><input type="text" id="nc-fone" inputmode="tel" placeholder="(85) 9..."></div><div><label for="nc-nome">Nome</label><input type="text" id="nc-nome" maxlength="60"></div><div><label for="nc-emp">Empresa (opcional)</label><input type="text" id="nc-emp" maxlength="60"></div><button class="btn sm" data-a="salvarCli">Cadastrar e usar</button></div>`:''}
     ${t.c?`<div class="sw"><span>${esc(t.c.nome.split(' ')[0])} tem ${t.c.pontos} pontos${t.pode?'':' (resgate a partir de '+S.regras.pontosResgate+')'}</span>${t.pode?`<button class="chip ${S.resgate?'on':''}" data-a="resgate">${S.resgate?'Desconto aplicado':'Usar '+brl(S.regras.valorResgate)}</button>`:''}</div>`:''}
     ${t.c?`<label class="sw" for="rec-zap"><span>Enviar recibo no WhatsApp${t.c.foneNorm?'':' (número inválido)'}</span><input type="checkbox" id="rec-zap" data-c="recibo" ${S.recibo&&t.c.foneNorm?'checked':''} ${t.c.foneNorm?'':'disabled'}></label>`:''}
-    <div>${t.desc||t.dcli?`<div class="tot"><span>Subtotal</span><span>${brl(t.sub)}</span></div>`:''}${t.dcli?`<div class="tot"><span>Desconto de ${esc(t.c.nome.split(' ')[0])} (${pctTxt(t.c.descPct)} ${DSOBRE[t.c.descSobre]})</span><span>− ${brl(t.dcli)}</span></div>`:''}${t.desc?`<div class="tot"><span>Desconto por pontos</span><span>− ${brl(t.desc)}</span></div>`:''}
+    <div>${t.desc||t.dcli||t.dven?`<div class="tot"><span>Subtotal</span><span>${brl(t.sub)}</span></div>`:''}${t.dpct?`<div class="tot dvlinha"><span>Desconto ${t.dpct}%${S.dven.obs?' · '+esc(S.dven.obs):''} <button class="chip sm" data-a="dvTirar" aria-label="Tirar o desconto">×</button></span><span>− ${brl(t.dven)}</span></div>`:''}${t.dcli?`<div class="tot"><span>Desconto de ${esc(t.c.nome.split(' ')[0])} (${pctTxt(t.c.descPct)} ${DSOBRE[t.c.descSobre]})</span><span>− ${brl(t.dcli)}</span></div>`:''}${t.desc?`<div class="tot"><span>Desconto por pontos</span><span>− ${brl(t.desc)}</span></div>`:''}
       <div class="tot g"><span>Total</span><strong>${brl(t.total)}</strong></div></div>
     <div class="formas">${Object.keys(FORMAS).map(f=>`<button class="forma f-${f} ${S.forma===f?'on':(S.forma||S.pags)?'':'none'}" data-a="forma" data-f="${f}">${FORMAS[f]}</button>`).join('')}</div>
+    <div class="dvbtns"><span>Desconto</span>${[10,15,50,100].map(x=>`<button class="chip sm ${t.dpct===x?'on':''}" data-a="dvAbrir" data-p="${x}" ${S.cart.length?'':'disabled'}>${x}%</button>`).join('')}</div>
     ${valeChave('caixa')}
     <div class="row"><button class="btn line sm" data-a="abrirDividir" ${S.cart.length?'':'disabled'}>Dividir conta</button><button class="btn line sm" data-a="abrirMisto" ${S.cart.length?'':'disabled'}>Pagamento misto</button></div>
     ${S.pags?pagsBox():pg}
@@ -964,14 +990,16 @@ function vCaixa(){
   const f=fxAberto(S.user.id),meus=fxDe(S.user.id),ult=meus[meus.length-1],nome=esc(S.user.nome);
   const aviso=f?'':`<div class="banner" role="alert"><div><b>Caixa de ${nome} fechado${ult?` (Fluxo ${ult.n} fechado às ${hhmm(ult.fechamento)})`:''}.</b><span>A pesagem e o registro de vendas estão desabilitados. Selecione outro operador ou ${ult?'reabra':'abra'} o caixa. A reabertura fica registrada.</span></div>
     <div class="row"><button class="btn line" data-a="sair">Selecionar outro operador</button><button class="btn" data-a="reabrir" data-id="${S.user.id}">${ult?'Reabrir':'Abrir'} caixa (Fluxo ${meus.length+1})</button></div></div>`;
+  const pfs=prodsOrd().filter(ehPF);
+  const pfDestaque=pfs.length?`<div class="quadro prato pfdest pftopo"><div class="prods">${pfs.map(p=>`<button class="prod ${p.cat} ${S.foco===p.id?'sel':''} ${p.imagem?'comfoto':''}" ${p.imagem?`style="--foto:url('${esc(p.imagem)}')"`:''} data-a="addProd" data-id="${p.id}" ${f?'':'disabled'}>${badge(p.id,true)}<b>${esc(p.nome)}</b><span>${brl(p.preco)}</span></button>`).join('')}</div></div>`:'';
   return `<div class="head"><div><h1>Caixa</h1><p>Operador: ${nome} · ${f?'Fluxo '+f.n+' aberto às '+hhmm(f.abertura):'caixa fechado'} · ${S.vendas.filter(v=>v.op===S.user.id).length} vendas hoje</p></div></div>
   ${aviso}
   ${f?`<div class="pasta">${abasHtml()}<div class="folha ${S.abaPisca?'piscar':''}">`:'<div class="folha">'}<div class="pdv"><div class="col"><div class="scales">${S.balancas.map(scaleCard).join('')}</div>
-    ${f&&S.balancas.length?`<div class="note dica">Digite as gramas: <b>452</b> é 0,452 kg e <b>1257</b> é 1,257 kg. <b>Tab</b> avança a seleção e <b>Shift+Tab</b> volta · <b>Enter</b> adiciona (em produto, +1 a cada toque) · <b>Backspace</b> apaga o número ou tira 1 unidade do produto.</div>`:''}
+    ${pfDestaque}
     <section class="panel"><h2>Outros itens</h2>
       ${(()=>{const ps=prodsOrd();const bloco=(c,nome)=>{const its=ps.filter(p=>(catPos(p.cat)===catPos(c))&&!(c==='pf'?false:ehPF(p))).concat(c==='pf'?ps.filter(ehPF):[]);if(!its.length)return '';
         return `<div class="quadro ${c==='pf'?'prato pfdest':esc(c)}"><h3>${esc(nome)}</h3><div class="prods">${its.map(p=>`<button class="prod ${p.cat} ${S.foco===p.id?'sel':''} ${p.imagem?'comfoto':''}" ${p.imagem?`style="--foto:url('${esc(p.imagem)}')"`:''} data-a="addProd" data-id="${p.id}" ${f?'':'disabled'}>${badge(p.id,true)}<b>${esc(p.nome)}</b><span>${brl(p.preco)}</span></button>`).join('')}</div></div>`};
-        return (bloco('pf','Prato feito')+CATORD.map(c=>bloco(c,CATNOME[c])).join(''))||'<div class="empty">Nenhum produto cadastrado ainda.</div>'})()}
+        return CATORD.map(c=>bloco(c,CATNOME[c])).join('')||(pfDestaque?'<div class="empty">Os outros produtos aparecem aqui.</div>':'<div class="empty">Nenhum produto cadastrado ainda.</div>')})()}
     </section>
   </div><aside class="col">${vendaPanel()}</aside></div></div>${f?'</div>':''}`;
 }
@@ -1044,6 +1072,7 @@ function vRelatorios(){
     <div class="kpi" style="background-color:var(--acai)"><span class="lbl">Açaí vendido</span><strong>${kg1(a.gAcai)}</strong></div>
     <div class="kpi" style="background-color:var(--bebida)"><span class="lbl">Vendas</span><strong>${a.n.toLocaleString('pt-BR')}</strong></div>
     <div class="kpi" style="background-color:var(--doce)"><span class="lbl">Ticket médio</span><strong>${brl(a.n?Math.round(a.fat/a.n):0)}</strong></div>
+    <div class="kpi" style="background-color:#b45309"><span class="lbl">Descontos dados</span><strong>${brl(S.fin.vendas.descontos||0)}</strong></div>
   </div>
   ${S.periodo==='semanal'?`<section class="panel"><h2>Dia a dia</h2>${planilha()}</section>`:''}
   <div class="grid2">
@@ -1136,8 +1165,8 @@ function vClientes(){
     <div><label for="r-mg">Mínimo em 30 dias para ficar no grupo</label><input type="text" id="r-mg" inputmode="numeric" data-c="regra" ${isAdmin()?'':'disabled'} data-k="minGrupo" value="${R.minGrupo}"></div>
   </div></section>
   ${fiadosClientes()}
-  <section class="panel"><h2>Clientes</h2><div class="tw"><table><thead><tr><th>Cliente</th><th>Desconto</th><th>WhatsApp</th><th>Número para envio</th><th class="n">Pontos</th><th class="n">Consumido</th><th class="n">Gasto</th><th class="n">Pontos em 30 dias</th><th>Grupo do WhatsApp</th></tr></thead><tbody>
-    ${S.clientes.slice().sort((x,y)=>y.pontos-x.pontos).map(c=>`<tr><td><b>${esc(c.nome)}</b></td><td>${c.descPct?`<span class="pill ok">${pctTxt(c.descPct)} ${DSOBRE[c.descSobre]}</span>`:'<small>—</small>'}${isAdmin()?` <button class="chip sm" data-a="descAbrir" data-id="${c.id}">${c.descPct?'Mudar':'Dar desconto'}</button>`:''}</td><td>${esc(c.fone)}</td><td>${c.foneNorm?esc(c.foneNorm):'<span class="pill warn">inválido</span>'}</td><td class="n">${c.pontos}${c.pontos>=R.pontosResgate?' <span class="pill ok">pode resgatar</span>':''}</td><td class="n">${kg1(c.g)}</td><td class="n">${brl(c.gasto)}</td><td class="n">${c.p30}</td><td>${c.p30>=R.minGrupo?'<span class="pill ok">Permanece</span>':'<span class="pill warn">Abaixo do mínimo</span>'}</td></tr>`).join('')}
+  <section class="panel"><div class="head"><h2>Clientes</h2><button class="btn sm" data-a="cadAbrir">+ Cadastrar cliente</button></div><div class="tw"><table><thead><tr><th>Cliente</th><th>Empresa</th><th>Desconto</th><th>WhatsApp</th><th>Número para envio</th><th class="n">Pontos</th><th class="n">Consumido</th><th class="n">Gasto</th><th class="n">Pontos em 30 dias</th><th>Grupo do WhatsApp</th></tr></thead><tbody>
+    ${S.clientes.slice().sort((x,y)=>y.pontos-x.pontos).map(c=>`<tr><td><b>${esc(c.nome)}</b></td><td>${esc(c.empresa)||'<small>—</small>'}</td><td>${c.descPct?`<span class="pill ok">${pctTxt(c.descPct)} ${DSOBRE[c.descSobre]}</span>`:'<small>—</small>'}${isAdmin()?` <button class="chip sm" data-a="descAbrir" data-id="${c.id}">${c.descPct?'Mudar':'Dar desconto'}</button>`:''}</td><td>${esc(c.fone)}</td><td>${c.foneNorm?esc(c.foneNorm):'<span class="pill warn">inválido</span>'}</td><td class="n">${c.pontos}${c.pontos>=R.pontosResgate?' <span class="pill ok">pode resgatar</span>':''}</td><td class="n">${kg1(c.g)}</td><td class="n">${brl(c.gasto)}</td><td class="n">${c.p30}</td><td>${c.p30>=R.minGrupo?'<span class="pill ok">Permanece</span>':'<span class="pill warn">Abaixo do mínimo</span>'}</td></tr>`).join('')}
   </tbody></table></div>
   <div class="note">Quem fica abaixo do mínimo é enviado ao n8n no evento "grupo", para o senhor decidir a regra de aviso ou remoção.</div></section>`;
 }
@@ -1210,7 +1239,7 @@ async function carregarBase(){
       return{id:x.id,nome:x.nome,grupo:x.grupo,marca:x.marca,conexao:x.conexao,baud:String(x.baud),precoKg:x.preco_kg_centavos,bruto:a?a.bruto:0,tara:0,conectada:a?a.conectada:true,taras:ts}})}
   if(Array.isArray(pr))S.produtos=pr.map(x=>({id:x.id,nome:x.nome,preco:x.preco_centavos,cat:x.categoria,destaque:x.destaque,imagem:x.imagem||''}));
   if(cf&&cf!==true){S.regras={base:cf.base_pontos,pontosResgate:cf.pontos_resgate,valorResgate:cf.valor_resgate_centavos,minGrupo:cf.min_pontos_grupo};S.fundo=cf.fundo_troco_centavos;S.nomeRest=cf.nome_restaurante||'Restaurante';negAplicar({nome:S.nomeRest,fone:cf.telefone_restaurante||'',end:cf.endereco_restaurante||'',rodape:cf.rodape_recibo===undefined?'Obrigado pela preferência! 😊':cf.rodape_recibo||''});S.maq=!!cf.maquineta_ativa;S.valeMaq=cf.vale_maquineta!==false}
-  if(Array.isArray(cl)){const m={};(Array.isArray(p30)?p30:[]).forEach(x=>m[x.cliente_id]=Number(x.pontos));S.clientes=cl.map(x=>({id:x.id,nome:x.nome,fone:x.telefone,foneNorm:x.telefone_norm||'',descPct:Number(x.desconto_pct||0),descSobre:x.desconto_sobre||'tudo',pontos:x.pontos,g:Number(x.gramas_total),gasto:Number(x.gasto_centavos),p30:m[x.id]||0}))}
+  if(Array.isArray(cl)){const m={};(Array.isArray(p30)?p30:[]).forEach(x=>m[x.cliente_id]=Number(x.pontos));S.clientes=cl.map(x=>({id:x.id,nome:x.nome,fone:x.telefone,foneNorm:x.telefone_norm||'',descPct:Number(x.desconto_pct||0),empresa:x.empresa||'',descSobre:x.desconto_sobre||'tudo',pontos:x.pontos,g:Number(x.gramas_total),gasto:Number(x.gasto_centavos),p30:m[x.id]||0}))}
   if(Array.isArray(cd))S.cardapio=cd.map(x=>({id:x.id,cat:x.categoria,nome:x.nome,on:x.disponivel}));
   // Se algum preço mudou, a venda em andamento acompanha o banco.
   if(S.logged&&S.abasDe!==S.user.id)abasRestaurar();
@@ -1404,7 +1433,7 @@ function render(){
       <button class="user" data-a="conta" aria-label="Meu perfil: ${esc(S.user.nome)}"><span class="av">${avHtml(S.user)}</span><span class="who"><b>${esc(S.user.nome)}</b><span>${S.user.perfil} · perfil</span></span></button></div>`;
   S.bump=false;S.abaPisca=false;
   if(document.documentElement&&document.documentElement.style)document.documentElement.style.setProperty('--op',S.logged?corOp(S.user):PADRAO);
-  const M=$('#modal'),mh=S.logged&&S.modal&&(fa||S.modal==='conta'||S.modal==='senha'||S.modal==='recibo'||S.modal==='fiadoDia'||S.modal==='fiadoMes'||S.modal==='desc')?modalHtml(fa):'';M.style.display=mh?'grid':'none';M.innerHTML=mh;
+  const M=$('#modal'),mh=S.logged&&S.modal&&(fa||S.modal==='conta'||S.modal==='senha'||S.modal==='recibo'||S.modal==='fiadoDia'||S.modal==='fiadoMes'||S.modal==='desc'||S.modal==='dven'||S.modal==='cadCli')?modalHtml(fa):'';M.style.display=mh?'grid':'none';M.innerHTML=mh;
   $('#main').className=S.view==='caixa'?'fixo':'';
   // Guarda onde cada parte estava rolada para a tela não pular ao redesenhar.
   const MN=$('#main'),rolMain=MN.scrollTop,rol=[].slice.call(MN.querySelectorAll('.col,.lista,.tw')).map(e=>e.scrollTop);
@@ -1534,7 +1563,7 @@ const A={
     const tinha=S.cart.length,n=(S.abas[S.aba]||{n:1}).n;abaGuardar();
     if(S.abas.length>1)abaTirar(S.aba);else abasReset();
     if(tinha)toast('Venda '+n+' descartada. Nada foi registrado.')},
-  cancelar:()=>{S.modal=null;S.crop=null;S.apagar=null;S.descCli=null},
+  cancelar:()=>{S.modal=null;S.crop=null;S.apagar=null;S.descCli=null;S.dvNovo=null},
   confirmarFechar:()=>{const pd=pendurados();if(pd.length){S.modal=null;toast('Há fiado do dia pendurado ('+pd.map(a=>a.pend).join(', ')+'). Receba ou lance na conta do cliente antes de fechar o caixa.');return}if(abasComItens()){S.modal=null;toast('Há venda em aberto. Finalize ou descarte antes de fechar o caixa.');return}const v=$('#md-contado').value.trim();if(!v){toast('Informe o dinheiro contado na gaveta.');return true}
     const f=fxAberto(S.user.id);
     q(sb.rpc('fechar_caixa',{p_fluxo:f.id,p_contado_centavos:parseMoney(v)})).then(async r=>{if(r){S.modal=null;toast(`Fluxo ${f.n} fechado. A pesagem fica desabilitada até reabrir o caixa ou trocar de operador.`)}await carregarDia();render()});return true},
@@ -1553,8 +1582,8 @@ const A={
   addProd:e=>{S.abaConf=false;if(!fxAberto(S.user.id))return;const p=S.produtos.find(x=>x.id===e.dataset.id);S.bump=true;S.pags=null;S.foco=p.id;S.cart.push({src:p.id,desc:p.nome,grupo:'produto',cat:p.cat,valor:p.preco})},
   rmItem:e=>{S.cart.splice(+e.dataset.k,1);S.pags=null},
   novoCli:()=>{S.novoCli=!S.novoCli},
-  salvarCli:()=>{const n=$('#nc-nome').value.trim(),f=$('#nc-fone').value.trim();if(!f){toast('Digite o WhatsApp do cliente, com DDD.');return true}
-    q(sb.rpc('cliente_por_telefone',{p_telefone:f,p_nome:n||null}),'Cliente').then(async r=>{
+  salvarCli:()=>{const n=$('#nc-nome').value.trim(),f=$('#nc-fone').value.trim(),em=($('#nc-emp')||{value:''}).value.trim();if(!f){toast('Digite o telefone do cliente, com DDD.');return true}
+    q(n?sb.rpc('cliente_cadastrar',{p_nome:n,p_empresa:em,p_telefone:f}):sb.rpc('cliente_por_telefone',{p_telefone:f,p_nome:null}),'Cliente').then(async r=>{
       if(r&&r.id){await carregarBase();S.clienteId=r.id;S.resgate=false;S.pags=null;S.novoCli=false;S.recibo=true;
         toast(r.novo?r.nome+' cadastrado. O recibo vai para o WhatsApp dele.':'Cliente já cadastrado: '+r.nome+'.')}
       render()});return true},
@@ -1619,6 +1648,18 @@ const A={
   descSalvar:()=>{const pct=parseFloat(($('#ds-pct').value||'0').replace(',','.'))||0,sb2=$('#ds-sobre').value,c=S.clientes.find(x=>x.id===S.descCli);
     if(pct<0||pct>100){toast('O desconto vai de 0 a 100%.');return true}
     q(sb.rpc('cliente_desconto',{p_cliente:S.descCli,p_pct:pct,p_sobre:sb2}),'Desconto').then(async r=>{if(r&&r.id){toast(pct?`${c?c.nome:'Cliente'} agora tem ${pctTxt(pct)} de desconto ${DSOBRE[sb2]}.`:`Desconto de ${c?c.nome:'cliente'} retirado.`);S.modal=null;S.descCli=null;await carregarBase()}render()});return true},
+  dvAbrir:e=>{if(!S.cart.length)return true;S.dvNovo=+e.dataset.p;S.modal='dven'},
+  dvAplicar:()=>{const cli=$('#dv-cli').value,obs=$('#dv-obs').value.trim();
+    if(!cli&&!obs){toast('Escolha o cliente ou escreva uma observação para dar o desconto.');return true}
+    if(cli&&cli!==S.clienteId){S.clienteId=cli;S.resgate=false}
+    S.dven={pct:S.dvNovo,obs};S.pags=null;S.pagoMaq=null;if(S.dvNovo===100)S.forma='';S.modal=null;S.dvNovo=null;toast('Desconto de '+S.dven.pct+'% aplicado.')},
+  dvTirar:()=>{S.dven=null;S.pags=null;S.pagoMaq=null;toast('Desconto retirado.')},
+  cadAbrir:e=>{S.cadVolta=e.dataset.volta||'cancelar';S.modal='cadCli'},
+  cadSalvar:()=>{const n=$('#cc-nome').value.trim(),em=$('#cc-emp').value.trim(),f=$('#cc-fone').value.trim();
+    if(!n){toast('Digite o nome do cliente.');return true}if(!f){toast('Digite o telefone, com DDD.');return true}
+    const volta=S.cadVolta;q(sb.rpc('cliente_cadastrar',{p_nome:n,p_empresa:em,p_telefone:f}),'Cliente').then(async r=>{if(r&&r.id){await carregarBase();
+      toast(r.novo?r.nome+' cadastrado.':'Cadastro de '+r.nome+' atualizado.');
+      if(volta==='fiadoMes'&&S.view==='caixa'){S.clienteId=r.id;S.resgate=false;S.modal='fiadoMes'}else S.modal=null}render()});return true},
   maqDeNovo:()=>{cobFim();S.cob=null;S.modal=null;if(podeFinalizar()&&usaMaq())cobrarMaq()},
   maqManual:()=>{cobFim();S.cob=null;S.modal='confirmar'},
   maqFechar:()=>{cobFim();S.cob=null;S.modal=null},
@@ -1632,13 +1673,14 @@ const A={
     S.modal=null;
     if(!podeFinalizar()||S.enviando){render();return true}
     const t=totais(),rec=parseMoney(S.recebido);
-    const pagoNaPoint=maqPaga();
+    const pagoNaPoint=maqPaga(),zero=t.total===0&&t.dpct===100;
     const pags=S.pags?S.pags.linhas.map(l=>({rotulo:l.forma==='vale'?(l.rot?l.rot+' · ':'')+EXT:l.rot,forma:l.forma,valor_centavos:l.valor,recebido_centavos:l.forma==='dinheiro'&&S.pags.troco?l.valor+S.pags.troco:null}))
-      :[{rotulo:S.forma==='vale'&&!pagoNaPoint?EXT:'',forma:S.forma,valor_centavos:t.total,recebido_centavos:S.forma==='dinheiro'?rec:null}];
+      :zero?[]:[{rotulo:S.forma==='vale'&&!pagoNaPoint?EXT:'',forma:S.forma,valor_centavos:t.total,recebido_centavos:S.forma==='dinheiro'?rec:null}];
     const p={cliente_id:S.clienteId||null,usar_resgate:!!t.desc,tipo:S.pags?S.pags.tipo:'simples',
-      itens:S.cart.map(i=>i.grupo==='produto'?{produto_id:i.src}:{balanca_id:i.src,gramas:i.g,tara_gramas:i.tara||0}),pagamentos:pags};
+      itens:S.cart.map(i=>i.grupo==='produto'?{produto_id:i.src}:{balanca_id:i.src,gramas:i.g,tara_gramas:i.tara||0}),pagamentos:pags,
+      desconto_venda:t.dpct?{pct:t.dpct,obs:S.dven.obs||''}:null};
     const troco=S.pags?(S.pags.troco||0):S.forma==='dinheiro'?rec-t.total:0,nomeC=t.c?t.c.nome.split(' ')[0]:'';
-    const como=(S.pags?'('+S.pags.linhas.map(l=>FORMAS[l.forma]+' '+brl(l.valor)).join(' + ')+')':'no '+FORMAS[S.forma].toLowerCase())+(pags.some(x=>x.forma==='vale'&&x.rotulo.includes(EXT))?' · voucher de maquininha externa':'');
+    const como=zero?'com 100% de desconto':(S.pags?'('+S.pags.linhas.map(l=>FORMAS[l.forma]+' '+brl(l.valor)).join(' + ')+')':'no '+FORMAS[S.forma].toLowerCase())+(pags.some(x=>x.forma==='vale'&&x.rotulo.includes(EXT))?' · voucher de maquininha externa':'');
     const querRecibo=!!(t.c&&t.c.foneNorm&&S.recibo);
     S.enviando=true;render();toast('Registrando a venda…');
     q(sb.rpc('registrar_venda',{p})).then(async r=>{S.enviando=false;
@@ -1752,6 +1794,8 @@ document.addEventListener('input',ev=>{const t=ev.target;
   else if(t.dataset.i==='dv'){S.dv[+t.dataset.k].valor=t.value;const m=dvInfo();$('#dv-status').innerHTML=statusBox(m,!m.falta&&!m.ok);$('#dv-ok').disabled=!m.ok}
 });
 document.addEventListener('keydown',ev=>{
+  // Esc fecha a janela aberta (menos a da cobrança na maquineta, que tem os próprios botões).
+  if(ev.key==='Escape'&&S.modal&&S.modal!=='maquineta'&&!S.crop){ev.preventDefault();A.cancelar();return render()}
   // Digitação do peso: só no Caixa, com o caixa aberto e fora de qualquer campo de texto.
   if(!S.logged||!S.pronto||S.view!=='caixa'||S.modal||S.crop)return;
   if(ev.ctrlKey||ev.altKey||ev.metaKey)return;
