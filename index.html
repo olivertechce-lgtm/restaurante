@@ -11,8 +11,8 @@
 :root{
   color-scheme:light;
   --bg:#eeeff3; --soft:#f5f4f9; --line:#e6e3ee; --ink:#1c1a27; --muted:#676378;
-  --comida:#d44c14; --acai:#531f78; --pix:#0c9c8b; --credito:#2a66dd; --debito:#8a4fd0; --dinheiro:#27924a; --vale:#b7791f; --fiado:#5b6573;
-  --doce:#d83f77; --bebida:#1f86c9;
+  --comida:#d44c14; --acai:#531f78; --pix:#0c9c8b; --credito:#2a66dd; --debito:#8a4fd0; --dinheiro:#27924a; --vale:#b7791f; --fiado:#5b6573; --saldo:#3949ab;
+  --doce:#8f63d8; --bebida:#1f86c9;
   --ok:#1f8a44; --warn:#b86a00; --bad:#cf3434;
   --display:"Bricolage Grotesque","Trebuchet MS",sans-serif;
   --body:"Figtree","Segoe UI",system-ui,sans-serif;
@@ -129,7 +129,7 @@ tr.cont td{color:var(--muted)}
 .formas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .forma{min-height:64px;border-radius:16px;border:3px solid transparent;color:#fff;font-weight:700;font-size:18px;opacity:.55}
 .forma.on,.forma.none{opacity:1}.forma.on{border-color:var(--ink)}
-.f-pix{background:var(--pix)}.f-credito{background:var(--credito)}.f-debito{background:var(--debito)}.f-dinheiro{background:var(--dinheiro)}.f-vale{background:var(--vale)}.f-fiado{background:var(--fiado)}
+.f-pix{background:var(--pix)}.f-credito{background:var(--credito)}.f-debito{background:var(--debito)}.f-dinheiro{background:var(--dinheiro)}.f-vale{background:var(--vale)}.f-fiado{background:var(--fiado)}.f-saldo{background:var(--saldo)}
 .cash{display:flex;flex-direction:column;gap:10px}
 label{font-weight:600;font-size:14px}
 input[type=text],input[type=password],input[type=url],select,.field{min-height:52px;border:2px solid var(--line);border-radius:14px;padding:0 14px;background:#fff;width:100%}
@@ -408,6 +408,9 @@ input[type=range]{width:100%;accent-color:var(--op,var(--ink));min-height:32px}
 .quadro.pftopo{margin-top:-8px;padding:10px;border-radius:18px}
 #fav-sec{display:flex;flex-direction:column;gap:12px}#fav-sec label[for=fav-txt]{display:block;font-weight:600;margin-bottom:6px}#fav-txt{display:block;width:100%;box-sizing:border-box;font:inherit;font-size:15px;line-height:1.45;padding:12px 14px;border:1px solid var(--line);border-radius:12px;resize:vertical;background:#fff}
 #fav-txt:focus{outline:3px solid var(--ink);outline-offset:1px}
+.clibar{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.row.seg .chip{flex:1;justify-content:center}
+td.ok{color:var(--ok);font-weight:700}td.bad{color:var(--bad);font-weight:700}
 .dvbtns{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.dvbtns span{font-size:13px;color:var(--muted);margin-right:2px}.dvbtns .chip.on{background:var(--warn,#d97706);color:#fff;border-color:transparent}
 .tot.dvlinha{color:#7a4b00}.tot.dvlinha .chip{padding:0 8px;margin-left:4px}
 tr.comdesc td{background:#fff3df}tr.comdesc td:first-child{box-shadow:inset 4px 0 0 #d97706}
@@ -496,7 +499,7 @@ const hoje=new Date();
 const MES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
 const MESL=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const DIA=['dom','seg','ter','qua','qui','sex','sáb'];
-const FORMAS={pix:'Pix',credito:'Crédito',debito:'Débito',dinheiro:'Dinheiro',vale:'Vale-alimentação',fiado:'Fiado'};
+const FORMAS={pix:'Pix',credito:'Crédito',debito:'Débito',dinheiro:'Dinheiro',vale:'Vale-alimentação',fiado:'Fiado',saldo:'Crédito da conta'};
 const CATS=['Entradas','Proteínas','Pratos quentes','Guarnições','Saladas','Sobremesas','Bebidas','Açaí e acompanhamentos'];
 const EMOJI={'Entradas':'🥣','Proteínas':'🍗','Pratos quentes':'🍲','Guarnições':'🍚','Saladas':'🥗','Sobremesas':'🍮','Bebidas':'🥤','Açaí e acompanhamentos':'🍧'};
 /* Pratos comuns de restaurante brasileiro, para montar o cardápio do dia com um toque. */
@@ -520,7 +523,7 @@ const S={
   clientes:[],
   regras:{base:'valor',pontosResgate:100,valorResgate:1000,minGrupo:50},
   cardapio:[],
-  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pend:'',dven:null,pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',pedit:{},kedit:{},salvandoProd:false,neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},fav:{ativo:true,texto:''},rec:null,maq:false,valeMaq:true,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
+  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pend:'',dven:null,pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',saldo:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',pedit:{},kedit:{},salvandoProd:false,neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},fav:{ativo:true,texto:''},rec:null,maq:false,valeMaq:true,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
   periodo:'diario',refData:'',fin:null,saidas:[],saidaCats:[],saidaMes:'',rank:'qtd',logAberto:false,finSeq:0,finLimite:200,finCarregando:false,contado:{},fluxos:[],log:[],modal:null,menu:(typeof window!=='undefined'&&window.innerWidth>980),fundo:10000,
   wa:{url:'',eventos:{resumo:true,cardapio:true,pontos:true,grupo:false}},
   vendas:[]
@@ -528,7 +531,7 @@ const S={
 S.user={id:'',nome:'',login:'',perfil:'Caixa'};
 
 /* ---------- cálculos ---------- */
-const Z=()=>({fat:0,gCom:0,gAcai:0,n:0,itens:0,pix:0,credito:0,debito:0,dinheiro:0,vale:0,nVale:0,fiado:0});
+const Z=()=>({fat:0,gCom:0,gAcai:0,n:0,itens:0,pix:0,credito:0,debito:0,dinheiro:0,vale:0,nVale:0,fiado:0,saldo:0});
 const soma=(a,b)=>{for(const k in a)a[k]+=b[k];return a};
 function aggVendas(vs){const a=Z();vs.forEach(v=>{a.fat+=v.total;a.n++;v.pags.forEach(p=>a[p.forma]=(a[p.forma]||0)+p.valor);v.itens.forEach(i=>{if(i.grupo==='produto')a.itens++;else if(i.grupo==='acai')a.gAcai+=i.g;else a.gCom+=i.g})});return a}
 function genDay(seed){const r=rng(seed),a=Z();a.n=88+Math.floor(r()*50);a.fat=a.n*(2900+Math.floor(r()*700));a.gCom=a.n*(430+Math.floor(r()*90));a.gAcai=Math.floor(a.n*.3*(320+r()*90));a.itens=Math.floor(a.n*(.3+r()*.12));a.pix=Math.round(a.fat*(.38+r()*.08));a.debito=Math.round(a.fat*(.2+r()*.06));a.credito=Math.round(a.fat*(.17+r()*.06));a.dinheiro=a.fat-a.pix-a.debito-a.credito;return a}
@@ -558,7 +561,7 @@ const totais=()=>totaisDe(S);
 /* ---------- vendas em abas (até 4 em aberto) ----------
    A venda da aba ativa vive em S.cart, S.forma etc., como sempre. As outras ficam guardadas em S.abas. */
 const MAX_ABAS=4,MAX_PEND=20,CAMPOS=['cart','pags','mx','dv','clienteId','resgate','forma','recebido','novoCli','recibo','pagoMaq','pend','dven'];
-const vendaVazia=()=>({cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',rec:''},dv:[],clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,pagoMaq:null,pend:'',dven:null,pesos:null});
+const vendaVazia=()=>({cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',saldo:'',rec:''},dv:[],clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,pagoMaq:null,pend:'',dven:null,pesos:null});
 function abaGuardar(){const a=S.abas[S.aba];if(a){CAMPOS.forEach(k=>a[k]=S[k]);a.pesos=S.balancas.map(b=>({id:b.id,bruto:b.bruto,tara:b.tara}))}}
 function abaCarregar(k){S.aba=k;const a=S.abas[k];CAMPOS.forEach(c=>S[c]=a[c]);
   // Cada venda tem a sua pesagem em andamento: trocar de aba troca o que está na tela.
@@ -624,8 +627,10 @@ const badge=(id,soSe)=>{const n=qtd(id);return soSe&&!n?'':`<span class="qt ${n?
 const fxDe=uid=>S.fluxos.filter(f=>f.op===uid).sort((a,b)=>a.n-b.n);
 const fxAberto=uid=>S.fluxos.find(f=>f.op===uid&&!f.fechamento);
 const somaPags=()=>S.pags?S.pags.linhas.reduce((a,l)=>a+l.valor,0):0;
+const cliAtual=()=>S.clienteId?S.clientes.find(c=>c.id===S.clienteId)||null:null;
+const usoSaldo=()=>S.pags?S.pags.linhas.filter(l=>l.forma==='saldo').reduce((a,l)=>a+l.valor,0):(S.forma==='saldo'?totais().total:0);
 const temFiado=()=>S.pags?S.pags.linhas.some(l=>l.forma==='fiado'):S.forma==='fiado';
-const podeFinalizar=()=>{const t=totais();if(!fxAberto(S.user.id)||!S.cart.length)return false;if(t.total===0&&t.dpct===100)return true;if(temFiado()&&!S.clienteId)return false;return S.pags?somaPags()===t.total:!!S.forma&&(S.forma!=='dinheiro'||parseMoney(S.recebido)>=t.total)};
+const podeFinalizar=()=>{const t=totais();if(!fxAberto(S.user.id)||!S.cart.length)return false;if(t.total===0&&t.dpct===100)return true;if(temFiado()&&!S.clienteId)return false;{const u=usoSaldo();if(u&&(!cliAtual()||cliAtual().credito<u))return false}return S.pags?somaPags()===t.total:!!S.forma&&(S.forma!=='dinheiro'||parseMoney(S.recebido)>=t.total)};
 const GR=[['prato','Pratos'],['comida','Comida a quilo'],['acai','Açaí'],['doce','Sobremesas'],['bebida','Bebidas']];
 const gk=i=>i.grupo==='produto'?(i.cat||'doce'):i.grupo;
 function listaCart(){
@@ -639,6 +644,22 @@ function dvInfo(){const t=totais().total,s=S.dv.reduce((a,d)=>a+parseMoney(d.val
 function statusBox(m,semForma){return m.falta>0?`<div class="troco falta"><span>Falta distribuir</span><strong>${brl(m.falta)}</strong></div>`:m.falta<0?`<div class="troco falta"><span>Passou do total em</span><strong>${brl(-m.falta)}</strong></div>`:semForma?`<div class="troco falta"><span>Escolha a forma de cada pessoa</span><strong>${brl(m.t)}</strong></div>`:`<div class="troco"><span>Valores conferem</span><strong>${brl(m.t)}</strong></div>`}
 function dvIgual(){const t=totais().total,n=S.dv.length,b=Math.floor(t/n);S.dv.forEach((d,k)=>d.valor=num(k===n-1?t-b*(n-1):b))}
 function modalHtml(fa){
+  if(S.modal==='cliEdit'&&S.cliEd){const c=S.clientes.find(x=>x.id===S.cliEd);if(!c)return '';return `<div class="panel" style="width:min(480px,100%)"><h1>Editar cliente</h1>
+    <div class="form compacta"><div><label for="ce-nome">Nome</label><input type="text" id="ce-nome" maxlength="60" value="${esc(c.nome)}"></div>
+      <div><label for="ce-emp">Empresa (opcional)</label><input type="text" id="ce-emp" maxlength="60" value="${esc(c.empresa)}"></div>
+      <div><label for="ce-fone">Telefone / WhatsApp</label><input type="text" id="ce-fone" inputmode="tel" value="${esc(c.fone)}"></div></div>
+    <div class="row"><button class="btn line" data-a="cancelar">Cancelar</button><button class="btn" data-a="cliEditSalvar">Salvar</button></div></div>`}
+  if(S.modal==='credito'&&S.cred){const c=S.clientes.find(x=>x.id===S.cred.id);if(!c)return '';const k=S.cred,ex=k.extrato;
+    return `<div class="panel" style="width:min(560px,100%)"><h1>Crédito de ${esc(c.nome)}</h1>
+    <div class="conf-total"><span>Saldo na conta</span><strong>${brl(c.credito)}</strong></div>
+    <div class="row seg"><button class="chip ${k.tipo==='entrada'?'on':''}" data-a="credTipo" data-t="entrada">Colocar crédito</button><button class="chip ${k.tipo==='debito'?'on':''}" data-a="credTipo" data-t="debito">Debitar crédito</button></div>
+    <div><label for="cr-valor">Valor</label><input type="text" id="cr-valor" inputmode="numeric" data-m placeholder="0,00" value="${esc(k.valor||'')}"></div>
+    ${k.tipo==='entrada'?`<div><span class="lbl">Como o cliente pagou</span><div class="row">${['pix','dinheiro','debito','credito'].map(f=>`<button class="chip ${k.forma===f?'on':''}" data-a="credForma" data-f="${f}">${FORMAS[f]}</button>`).join('')}</div></div>`
+      :`<label class="sw" for="cr-dev">Devolvi esse valor em dinheiro <input type="checkbox" id="cr-dev" ${k.forma==='dinheiro'?'checked':''} data-c="credDev"></label>`}
+    <div><label for="cr-obs">${k.tipo==='entrada'?'Observação (opcional)':'Motivo'}</label><input type="text" id="cr-obs" maxlength="120" value="${esc(k.obs||'')}" placeholder="${k.tipo==='entrada'?'Ex.: adiantamento do mês':'Ex.: ajuste, cancelamento'}"></div>
+    ${k.forma==='dinheiro'?'<div class="note">Dinheiro conta na conferência da gaveta do seu caixa.</div>':''}
+    <div class="row"><button class="btn line" data-a="cancelar">Fechar</button><button class="btn" data-a="credSalvar" ${k.enviando?'disabled':''}>${k.tipo==='entrada'?'Colocar crédito':'Debitar crédito'}</button></div>
+    <details ${ex&&ex.length?'open':''}><summary>Extrato</summary>${ex===undefined?'<p>Carregando…</p>':ex.length?`<div class="tw"><table><tbody>${ex.map(m=>`<tr><td>${new Date(m.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} ${hhmm(new Date(m.criado_em))}</td><td>${({entrada:'Crédito colocado',debito:'Crédito debitado',uso:'Compra',estorno:'Devolvido'})[m.tipo]}${m.venda?' #'+m.venda:''}${m.forma?' · '+esc(FORMAS[m.forma]):''}${m.obs&&m.tipo!=='uso'?' · '+esc(m.obs):''}<br><small>${esc(m.operador||'')}</small></td><td class="n ${m.tipo==='entrada'||m.tipo==='estorno'?'ok':'bad'}">${m.tipo==='entrada'||m.tipo==='estorno'?'+':'−'} ${brl(Number(m.valor))}</td></tr>`).join('')}</tbody></table></div>`:'<p>Nenhum movimento ainda.</p>'}</details></div>`}
   if(S.modal==='dven'&&S.dvNovo){const t=totais(),base=t.sub-t.dcli,v=Math.round(base*S.dvNovo/100);
     return `<div class="panel" style="width:min(480px,100%)"><h1>Desconto de ${S.dvNovo}%</h1>
     <div class="conf-total"><span>${brl(base)} − ${S.dvNovo}%</span><strong>− ${brl(v)}</strong></div>
@@ -772,7 +793,7 @@ async function carregarFin(){
   S.finCarregando=false;
   if(!rs||rs===true||!vs||vs===true)return render();
   const vNo=rs.vale_no_caixa!==false;
-  const N=x=>{const o={fat:Number(x.fat),gCom:Number(x.gCom),gAcai:Number(x.gAcai),n:Number(x.n),itens:Number(x.itens),pix:Number(x.pix),credito:Number(x.credito),debito:Number(x.debito),dinheiro:Number(x.dinheiro),vale:Number(x.vale||0),nVale:Number(x.nVale||0),fiado:Number(x.fiado||0)};
+  const N=x=>{const o={fat:Number(x.fat),gCom:Number(x.gCom),gAcai:Number(x.gAcai),n:Number(x.n),itens:Number(x.itens),pix:Number(x.pix),credito:Number(x.credito),debito:Number(x.debito),dinheiro:Number(x.dinheiro),vale:Number(x.vale||0),nVale:Number(x.nVale||0),fiado:Number(x.fiado||0),saldo:Number(x.saldo||0)};
     if(!vNo){o.fat-=o.vale;o.n-=o.nVale}return o};
   const mp={};rs.buckets.forEach(x=>mp[x.k]=N(x));
   const hj=new Date(),kk=(d,hh)=>ymd(d)+'T'+String(hh).padStart(2,'0');let bs=[];
@@ -845,7 +866,7 @@ async function exportPdf(){
   const tab=(titulo,head,body,pintar)=>{doc.autoTable({startY:y,didParseCell:pintar?(d=>{if(d.section==='body'&&pintar[d.row.index]){d.cell.styles.fillColor=[255,240,214];d.cell.styles.textColor=[122,75,0]}}):undefined,margin:{left:40,right:40,bottom:44},head:[[{content:X(titulo),colSpan:head.length,styles:{fillColor:[255,255,255],textColor:[28,26,39],fontSize:12,cellPadding:{top:2,bottom:6,left:0,right:0}}}],head.map(X)],body:body.map(r=>r.map(X)),styles:{font:'helvetica',fontSize:9,cellPadding:5,textColor:[28,26,39],lineColor:[230,227,238],lineWidth:.5},headStyles:{fillColor:[28,26,39],textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[247,246,251]}});y=doc.lastAutoTable.finalY+22};
   tab('Resumo',['Faturamento','Comida vendida','Açaí vendido','Vendas','Ticket médio','Outros itens'],[[brl(a.fat),kg1(a.gCom),kg1(a.gAcai),String(a.n),brl(a.n?Math.round(a.fat/a.n):0),a.itens+' un.']]);
   tab('Por forma de pagamento',['Forma','Valor','Participação'],Object.keys(FORMAS).map(f=>[FORMAS[f],brl(a[f]),pct(a[f])]));
-  if(b.length)tab('Por '+I.por,['Período','Vendas','Comida','Açaí','Pix','Crédito','Débito','Dinheiro','Vale','Fiado','Faturamento'],b.map(x=>[x.l,String(x.a.n),kg1(x.a.gCom),kg1(x.a.gAcai),brl(x.a.pix),brl(x.a.credito),brl(x.a.debito),brl(x.a.dinheiro),brl(x.a.vale||0),brl(x.a.fiado||0),brl(x.a.fat)]));
+  if(b.length)tab('Por '+I.por,['Período','Vendas','Comida','Açaí','Pix','Crédito','Débito','Dinheiro','Vale','Fiado','Créd. conta','Faturamento'],b.map(x=>[x.l,String(x.a.n),kg1(x.a.gCom),kg1(x.a.gAcai),brl(x.a.pix),brl(x.a.credito),brl(x.a.debito),brl(x.a.dinheiro),brl(x.a.vale||0),brl(x.a.fiado||0),brl(x.a.saldo||0),brl(x.a.fat)]));
   if(Fn.produtos.length)tab('Outros itens vendidos',['Item','Quantidade','Valor'],Fn.produtos.map(x=>[x.nome,String(x.qtd),brl(Number(x.valor))]));
   const F=S.fil,fs=[F.forma&&'forma '+FORMAS[F.forma],F.tipo&&'tipo '+TIPOS[F.tipo],F.op&&'operador '+nomeOp(F.op),F.cli&&'cliente '+(F.cli==='_sem'?'não identificado':nomeCli(F.cli))].filter(Boolean);
   tab('Vendas do período ('+Fn.vendas.qtd+' · '+brl(Fn.vendas.soma)+')'+(fs.length?' · filtros: '+fs.join(', '):'')+(linhas.length<Fn.vendas.qtd?' · mostrando as '+linhas.length+' mais recentes':''),['Venda','Data e hora','Operador','Cliente','Itens','Parte','Forma','Valor pago','Total'],
@@ -988,6 +1009,7 @@ const cliOps=sel=>S.clientes.slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt
 function favPrevia(t){const n=S.neg,d=new Date(),ct=[n.end?'📍 '+n.end:'',n.foneBonito?'📞 '+n.foneBonito:''].filter(Boolean).join('\n');
   return (t||'').replace(/\{nome\}/g,'Maria').replace(/\{restaurante\}/g,nomeNeg()).replace(/\{valor\}/g,'R$ 32,50')
     .replace(/\{data\}/g,d.toLocaleDateString('pt-BR')).replace(/\{hora\}/g,hhmm(d)).replace(/\{venda\}/g,'123').replace(/\{contato\}/g,ct).trim()}
+function credLer(){const k=S.cred;if(!k)return;const v=$('#cr-valor'),o=$('#cr-obs');if(v)k.valor=v.value;if(o)k.obs=o.value}
 function trocoBox(){const t=totais(),rec=parseMoney(S.recebido);return rec<t.total?{c:'troco falta',h:`<span>Faltam</span><strong>${brl(t.total-rec)}</strong>`}:{c:'troco',h:`<span>Troco</span><strong>${brl(rec-t.total)}</strong>`}}
 function vendaPanel(){
   const t=totais(),tb=trocoBox();
@@ -996,6 +1018,8 @@ function vendaPanel(){
     <div class="row">${[1000,2000,5000,10000].map(v=>`<button class="chip" data-a="quick" data-v="${v}">+ ${brl(v)}</button>`).join('')}<button class="chip" data-a="exato">Valor exato</button><button class="chip" data-a="limparRec">Limpar</button></div>
     <div class="${tb.c}" id="troco">${tb.h}</div></div>`;
   else if(t.total===0&&t.dpct===100)pg=`<div class="note"><b>Venda com 100% de desconto.</b> Não há nada a cobrar: é só finalizar.</div>`;
+  else if(usoSaldo()&&(!cliAtual()||cliAtual().credito<usoSaldo()))pg=`<div class="note" role="alert" style="color:var(--bad)"><b>Crédito insuficiente.</b> ${cliAtual()?esc(cliAtual().nome)+' tem '+brl(cliAtual().credito)+' na conta. Use o pagamento misto para completar com outra forma.':'Escolha o cliente para usar o crédito da conta.'}</div>`;
+  else if(S.forma==='saldo')pg=`<div class="note">${brl(t.total)} sai do crédito de ${esc(cliAtual().nome)}. Saldo depois da compra: <b>${brl(cliAtual().credito-t.total)}</b>.</div>`;
   else if(temFiado()&&!S.clienteId)pg=`<div class="note" role="alert" style="color:var(--bad)"><b>Para vender fiado, escolha o cliente.</b> Use o campo de cliente acima (ou "Novo" para cadastrar pelo WhatsApp). O fiado fica no nome dele até ser recebido.</div>`;
   else if(S.forma==='fiado')pg=`<div class="note">${brl(t.total)} fica <b>fiado</b> no nome do cliente. Quando ele pagar, receba na lista de fiados do Financeiro.</div>`;
   else if(S.forma==='vale'&&!usaMaq())pg=`<div class="note"><b>Vale em maquininha externa.</b> Passe ${brl(t.total)} no cartão de vale na outra maquininha e finalize quando aprovar. A venda fica marcada como voucher de maquininha externa.</div>`;
@@ -1007,14 +1031,15 @@ function vendaPanel(){
   return `<section class="panel venda ${S.pend?'vpend':''}">${S.pend?`<div class="pendbar"><b>🕒 Fiado do dia · ${esc(S.pend)}</b><span>Quando ${esc(S.pend.split(' ')[0])} voltar, escolha como pagou e finalize. Se não voltar hoje, use Fiado → do mês.</span><button class="chip sm" data-a="despendurar">Tirar da espera</button></div>`:''}<div class="vhead"><h2>${S.pend?esc(S.pend):'Venda '+atual.n}</h2>${(S.cart.length||temOutra)?`<button class="chip sm ${S.abaConf?'perigo':''}" data-a="abaDescartar">${S.abaConf?'Confirmar: descartar':(S.cart.length?'Descartar venda':'Fechar aba')}</button>`:''}</div>
     <div class="lista">${listaCart()}</div>
     <div><label for="cliente">Cliente (programa de pontos)</label>
-      <div class="row"><select id="cliente" data-c="cliente" style="flex:1"><option value="">Sem identificação</option>${S.clientes.map(c=>`<option value="${c.id}" ${c.id===S.clienteId?'selected':''}>${esc(c.nome)} · ${esc(c.fone)}</option>`).join('')}</select><button class="btn line sm" data-a="novoCli">Novo</button></div>
+      <div class="row"><select id="cliente" data-c="cliente" style="flex:1"><option value="">Sem identificação</option>${cliOps(S.clienteId)}</select><button class="btn line sm" data-a="novoCli">Novo</button></div>
+      ${cliAtual()?`<div class="clibar"><span class="pill ${cliAtual().credito?'ok':''}">Crédito ${brl(cliAtual().credito)}</span><button class="chip sm" data-a="credAbrir" data-id="${cliAtual().id}">Crédito</button><button class="chip sm" data-a="cliEditAbrir" data-id="${cliAtual().id}">Editar cliente</button></div>`:''}
     </div>
     ${S.novoCli?`<div class="form"><div><label for="nc-fone">Telefone / WhatsApp</label><input type="text" id="nc-fone" inputmode="tel" placeholder="(85) 9..."></div><div><label for="nc-nome">Nome</label><input type="text" id="nc-nome" maxlength="60"></div><div><label for="nc-emp">Empresa (opcional)</label><input type="text" id="nc-emp" maxlength="60"></div><button class="btn sm" data-a="salvarCli">Cadastrar e usar</button></div>`:''}
     ${t.c?`<div class="sw"><span>${esc(t.c.nome.split(' ')[0])} tem ${t.c.pontos} pontos${t.pode?'':' (resgate a partir de '+S.regras.pontosResgate+')'}</span>${t.pode?`<button class="chip ${S.resgate?'on':''}" data-a="resgate">${S.resgate?'Desconto aplicado':'Usar '+brl(S.regras.valorResgate)}</button>`:''}</div>`:''}
     ${t.c?`<label class="sw" for="rec-zap"><span>Enviar recibo no WhatsApp${t.c.foneNorm?'':' (número inválido)'}</span><input type="checkbox" id="rec-zap" data-c="recibo" ${S.recibo&&t.c.foneNorm?'checked':''} ${t.c.foneNorm?'':'disabled'}></label>`:''}
     <div>${t.desc||t.dcli||t.dven?`<div class="tot"><span>Subtotal</span><span>${brl(t.sub)}</span></div>`:''}${t.dpct?`<div class="tot dvlinha"><span>Desconto ${t.dpct}%${S.dven.obs?' · '+esc(S.dven.obs):''} <button class="chip sm" data-a="dvTirar" aria-label="Tirar o desconto">×</button></span><span>− ${brl(t.dven)}</span></div>`:''}${t.dcli?`<div class="tot"><span>Desconto de ${esc(t.c.nome.split(' ')[0])} (${pctTxt(t.c.descPct)} ${DSOBRE[t.c.descSobre]})</span><span>− ${brl(t.dcli)}</span></div>`:''}${t.desc?`<div class="tot"><span>Desconto por pontos</span><span>− ${brl(t.desc)}</span></div>`:''}
       <div class="tot g"><span>Total</span><strong>${brl(t.total)}</strong></div></div>
-    <div class="formas">${Object.keys(FORMAS).map(f=>`<button class="forma f-${f} ${S.forma===f?'on':(S.forma||S.pags)?'':'none'}" data-a="forma" data-f="${f}">${FORMAS[f]}</button>`).join('')}</div>
+    <div class="formas">${Object.keys(FORMAS).filter(f=>f!=='saldo'||(cliAtual()&&cliAtual().credito>0)||S.forma==='saldo').map(f=>`<button class="forma f-${f} ${S.forma===f?'on':(S.forma||S.pags)?'':'none'}" data-a="forma" data-f="${f}">${FORMAS[f]}</button>`).join('')}</div>
     <div class="dvbtns"><span>Desconto</span>${[10,15,50,100].map(x=>`<button class="chip sm ${t.dpct===x?'on':''}" data-a="dvAbrir" data-p="${x}" ${S.cart.length?'':'disabled'}>${x}%</button>`).join('')}</div>
     ${valeChave('caixa')}
     <div class="row"><button class="btn line sm" data-a="abrirDividir" ${S.cart.length?'':'disabled'}>Dividir conta</button><button class="btn line sm" data-a="abrirMisto" ${S.cart.length?'':'disabled'}>Pagamento misto</button></div>
@@ -1202,8 +1227,8 @@ function vClientes(){
     <div><label for="r-mg">Mínimo em 30 dias para ficar no grupo</label><input type="text" id="r-mg" inputmode="numeric" data-c="regra" ${isAdmin()?'':'disabled'} data-k="minGrupo" value="${R.minGrupo}"></div>
   </div></section>
   ${fiadosClientes()}
-  <section class="panel"><div class="head"><h2>Clientes</h2><button class="btn sm" data-a="cadAbrir">+ Cadastrar cliente</button></div><div class="tw"><table><thead><tr><th>Cliente</th><th>Empresa</th><th>Desconto</th><th>WhatsApp</th><th>Número para envio</th><th class="n">Pontos</th><th class="n">Consumido</th><th class="n">Gasto</th><th class="n">Pontos em 30 dias</th><th>Grupo do WhatsApp</th></tr></thead><tbody>
-    ${S.clientes.slice().sort((x,y)=>y.pontos-x.pontos).map(c=>`<tr><td><b>${esc(c.nome)}</b></td><td>${esc(c.empresa)||'<small>—</small>'}</td><td>${c.descPct?`<span class="pill ok">${pctTxt(c.descPct)} ${DSOBRE[c.descSobre]}</span>`:'<small>—</small>'}${isAdmin()?` <button class="chip sm" data-a="descAbrir" data-id="${c.id}">${c.descPct?'Mudar':'Dar desconto'}</button>`:''}</td><td>${esc(c.fone)}</td><td>${c.foneNorm?esc(c.foneNorm):'<span class="pill warn">inválido</span>'}</td><td class="n">${c.pontos}${c.pontos>=R.pontosResgate?' <span class="pill ok">pode resgatar</span>':''}</td><td class="n">${kg1(c.g)}</td><td class="n">${brl(c.gasto)}</td><td class="n">${c.p30}</td><td>${c.p30>=R.minGrupo?'<span class="pill ok">Permanece</span>':'<span class="pill warn">Abaixo do mínimo</span>'}</td></tr>`).join('')}
+  <section class="panel"><div class="head"><h2>Clientes</h2><button class="btn sm" data-a="cadAbrir">+ Cadastrar cliente</button></div><div class="tw"><table><thead><tr><th>Cliente</th><th>Empresa</th><th class="n">Crédito</th><th>Desconto</th><th>WhatsApp</th><th>Número para envio</th><th class="n">Pontos</th><th class="n">Consumido</th><th class="n">Gasto</th><th class="n">Pontos em 30 dias</th><th>Grupo do WhatsApp</th></tr></thead><tbody>
+    ${S.clientes.slice().sort((x,y)=>y.pontos-x.pontos).map(c=>`<tr><td><b>${esc(c.nome)}</b><br><button class="chip sm" data-a="cliEditAbrir" data-id="${c.id}">Editar</button></td><td>${esc(c.empresa)||'<small>—</small>'}</td><td class="n"><b>${brl(c.credito)}</b><br><button class="chip sm" data-a="credAbrir" data-id="${c.id}">Crédito</button></td><td>${c.descPct?`<span class="pill ok">${pctTxt(c.descPct)} ${DSOBRE[c.descSobre]}</span>`:'<small>—</small>'}${isAdmin()?` <button class="chip sm" data-a="descAbrir" data-id="${c.id}">${c.descPct?'Mudar':'Dar desconto'}</button>`:''}</td><td>${esc(c.fone)}</td><td>${c.foneNorm?esc(c.foneNorm):'<span class="pill warn">inválido</span>'}</td><td class="n">${c.pontos}${c.pontos>=R.pontosResgate?' <span class="pill ok">pode resgatar</span>':''}</td><td class="n">${kg1(c.g)}</td><td class="n">${brl(c.gasto)}</td><td class="n">${c.p30}</td><td>${c.p30>=R.minGrupo?'<span class="pill ok">Permanece</span>':'<span class="pill warn">Abaixo do mínimo</span>'}</td></tr>`).join('')}
   </tbody></table></div>
   <div class="note">Quem fica abaixo do mínimo é enviado ao n8n no evento "grupo", para o senhor decidir a regra de aviso ou remoção.</div></section>`;
 }
@@ -1276,7 +1301,7 @@ async function carregarBase(){
       return{id:x.id,nome:x.nome,grupo:x.grupo,marca:x.marca,conexao:x.conexao,baud:String(x.baud),precoKg:x.preco_kg_centavos,bruto:a?a.bruto:0,tara:0,conectada:a?a.conectada:true,taras:ts}})}
   if(Array.isArray(pr))S.produtos=pr.map(x=>({id:x.id,nome:x.nome,preco:x.preco_centavos,cat:x.categoria,destaque:x.destaque,imagem:x.imagem||''}));
   if(cf&&cf!==true){S.regras={base:cf.base_pontos,pontosResgate:cf.pontos_resgate,valorResgate:cf.valor_resgate_centavos,minGrupo:cf.min_pontos_grupo};S.fundo=cf.fundo_troco_centavos;S.nomeRest=cf.nome_restaurante||'Restaurante';negAplicar({nome:S.nomeRest,fone:cf.telefone_restaurante||'',end:cf.endereco_restaurante||'',rodape:cf.rodape_recibo===undefined?'Obrigado pela preferência! 😊':cf.rodape_recibo||''});S.fav={ativo:cf.fiado_aviso_ativo!==false,texto:cf.fiado_aviso_texto||'Olá, {nome}! 😊\n\nPassando para avisar que uma compra no *{restaurante}* no valor de *{valor}* foi adicionada à sua conta em {data}, às {hora}.\n\nQualquer dúvida, é só chamar. Obrigado pela preferência!'};S.maq=!!cf.maquineta_ativa;S.valeMaq=cf.vale_maquineta!==false}
-  if(Array.isArray(cl)){const m={};(Array.isArray(p30)?p30:[]).forEach(x=>m[x.cliente_id]=Number(x.pontos));S.clientes=cl.map(x=>({id:x.id,nome:x.nome,fone:x.telefone,foneNorm:x.telefone_norm||'',descPct:Number(x.desconto_pct||0),empresa:x.empresa||'',descSobre:x.desconto_sobre||'tudo',pontos:x.pontos,g:Number(x.gramas_total),gasto:Number(x.gasto_centavos),p30:m[x.id]||0}))}
+  if(Array.isArray(cl)){const m={};(Array.isArray(p30)?p30:[]).forEach(x=>m[x.cliente_id]=Number(x.pontos));S.clientes=cl.map(x=>({id:x.id,nome:x.nome,fone:x.telefone,foneNorm:x.telefone_norm||'',descPct:Number(x.desconto_pct||0),empresa:x.empresa||'',credito:Number(x.credito_centavos||0),descSobre:x.desconto_sobre||'tudo',pontos:x.pontos,g:Number(x.gramas_total),gasto:Number(x.gasto_centavos),p30:m[x.id]||0}))}
   if(Array.isArray(cd))S.cardapio=cd.map(x=>({id:x.id,cat:x.categoria,nome:x.nome,on:x.disponivel}));
   // Se algum preço mudou, a venda em andamento acompanha o banco.
   if(S.logged&&S.abasDe!==S.user.id)abasRestaurar();
@@ -1470,7 +1495,7 @@ function render(){
       <button class="user" data-a="conta" aria-label="Meu perfil: ${esc(S.user.nome)}"><span class="av">${avHtml(S.user)}</span><span class="who"><b>${esc(S.user.nome)}</b><span>${S.user.perfil} · perfil</span></span></button></div>`;
   S.bump=false;S.abaPisca=false;
   if(document.documentElement&&document.documentElement.style)document.documentElement.style.setProperty('--op',S.logged?corOp(S.user):PADRAO);
-  const M=$('#modal'),mh=S.logged&&S.modal&&(fa||S.modal==='conta'||S.modal==='senha'||S.modal==='recibo'||S.modal==='fiadoDia'||S.modal==='fiadoMes'||S.modal==='desc'||S.modal==='dven'||S.modal==='cadCli')?modalHtml(fa):'';M.style.display=mh?'grid':'none';M.innerHTML=mh;
+  const M=$('#modal'),mh=S.logged&&S.modal&&(fa||S.modal==='conta'||S.modal==='senha'||S.modal==='recibo'||S.modal==='fiadoDia'||S.modal==='fiadoMes'||S.modal==='desc'||S.modal==='dven'||S.modal==='cadCli'||S.modal==='cliEdit'||S.modal==='credito')?modalHtml(fa):'';M.style.display=mh?'grid':'none';M.innerHTML=mh;
   $('#main').className=S.view==='caixa'?'fixo':'';
   // Guarda onde cada parte estava rolada para a tela não pular ao redesenhar.
   const MN=$('#main'),rolMain=MN.scrollTop,rol=[].slice.call(MN.querySelectorAll('.col,.lista,.tw')).map(e=>e.scrollTop);
@@ -1600,7 +1625,7 @@ const A={
     const tinha=S.cart.length,n=(S.abas[S.aba]||{n:1}).n;abaGuardar();
     if(S.abas.length>1)abaTirar(S.aba);else abasReset();
     if(tinha)toast('Venda '+n+' descartada. Nada foi registrado.')},
-  cancelar:()=>{S.modal=null;S.crop=null;S.apagar=null;S.descCli=null;S.dvNovo=null},
+  cancelar:()=>{S.modal=null;S.crop=null;S.apagar=null;S.descCli=null;S.dvNovo=null;S.cred=null;S.cliEd=null},
   confirmarFechar:()=>{const pd=pendurados();if(pd.length){S.modal=null;toast('Há fiado do dia pendurado ('+pd.map(a=>a.pend).join(', ')+'). Receba ou lance na conta do cliente antes de fechar o caixa.');return}if(abasComItens()){S.modal=null;toast('Há venda em aberto. Finalize ou descarte antes de fechar o caixa.');return}const v=$('#md-contado').value.trim();if(!v){toast('Informe o dinheiro contado na gaveta.');return true}
     const f=fxAberto(S.user.id);
     q(sb.rpc('fechar_caixa',{p_fluxo:f.id,p_contado_centavos:parseMoney(v)})).then(async r=>{if(r){S.modal=null;toast(`Fluxo ${f.n} fechado. A pesagem fica desabilitada até reabrir o caixa ou trocar de operador.`)}await carregarDia();render()});return true},
@@ -1702,6 +1727,23 @@ const A={
   favPadrao:()=>{const t=$('#fav-txt');t.value='Olá, {nome}! 😊\n\nPassando para avisar que uma compra no *{restaurante}* no valor de *{valor}* foi adicionada à sua conta em {data}, às {hora}.\n\nQualquer dúvida, é só chamar. Obrigado pela preferência!';S.fav.texto=t.value;$('#fav-previa').textContent=favPrevia(t.value);return true},
   favSalvar:()=>{const txt=$('#fav-txt').value,on=$('#fav-on').checked;
     q(sb.rpc('fiado_aviso_salvar',{p_ativo:on,p_texto:txt}),'Aviso de fiado').then(r=>{if(r&&r.texto!==undefined){S.fav={ativo:r.ativo,texto:r.texto};toast(r.ativo?'Aviso de fiado salvo. Vale para as próximas compras no fiado.':'Aviso de fiado desligado.')}render()});return true},
+  cliEditAbrir:e=>{S.cliEd=e.dataset.id;S.modal='cliEdit'},
+  cliEditSalvar:()=>{const n=$('#ce-nome').value.trim(),em=$('#ce-emp').value.trim(),f=$('#ce-fone').value.trim();
+    if(!n){toast('Digite o nome do cliente.');return true}if(!f){toast('Digite o telefone, com DDD.');return true}
+    q(sb.rpc('cliente_editar',{p_cliente:S.cliEd,p_nome:n,p_empresa:em,p_telefone:f}),'Cliente').then(async r=>{if(r&&r.id){toast('Cadastro de '+r.nome+' atualizado.');S.modal=null;S.cliEd=null;await carregarBase()}render()});return true},
+  credAbrir:e=>{const id=e.dataset.id;S.cred={id,tipo:'entrada',forma:'',valor:'',obs:''};S.modal='credito';
+    q(sb.rpc('cliente_credito_extrato',{p_cliente:id}),'Extrato').then(r=>{if(S.cred&&S.cred.id===id){S.cred.extrato=Array.isArray(r)?r:[];render()}})},
+  credTipo:e=>{credLer();S.cred.tipo=e.dataset.t;S.cred.forma=''},
+  credForma:e=>{credLer();S.cred.forma=e.dataset.f},
+  credSalvar:()=>{const k=S.cred;if(!k||k.enviando)return true;credLer();const v=parseMoney(k.valor);
+    if(!v){toast('Digite o valor.');return true}
+    if(k.tipo==='entrada'&&!k.forma){toast('Escolha como o cliente pagou o crédito.');return true}
+    if(k.tipo==='debito'&&!k.forma&&!k.obs.trim()){toast('Escreva o motivo do débito.');return true}
+    k.enviando=true;render();
+    q(sb.rpc('cliente_credito_mover',{p_cliente:k.id,p_tipo:k.tipo,p_valor:v,p_forma:k.forma||null,p_obs:k.obs}),'Crédito').then(async r=>{k.enviando=false;
+      if(r&&r.ok){toast((k.tipo==='entrada'?'Crédito colocado. ':'Crédito debitado. ')+r.cliente+' agora tem '+brl(r.saldo)+'.');await carregarBase();
+        S.cred={id:k.id,tipo:k.tipo,forma:'',valor:'',obs:''};q(sb.rpc('cliente_credito_extrato',{p_cliente:k.id}),'Extrato').then(x=>{if(S.cred&&S.cred.id===k.id){S.cred.extrato=Array.isArray(x)?x:[];render()}})}
+      render()});return true},
   maqDeNovo:()=>{cobFim();S.cob=null;S.modal=null;if(podeFinalizar()&&usaMaq())cobrarMaq()},
   maqManual:()=>{cobFim();S.cob=null;S.modal='confirmar'},
   maqFechar:()=>{cobFim();S.cob=null;S.modal=null},
@@ -1813,6 +1855,7 @@ const C={
   prodCat:e=>{prodMarcar(e.dataset.pe,'cat',e.value)},
   valeMaq:e=>{const v=e.checked;S.valeMaq=v;q(sb.rpc('vale_maquineta_definir',{p_ligado:v}),'Vale').then(r=>{if(r===null){S.valeMaq=!v}else toast(v?'Vale-alimentação pela maquineta do Mercado Pago.':'Vale-alimentação em maquininha externa: o Caixa confirma sem chamar a maquineta.');render()})},
   valeCaixa:e=>{q(sb.rpc('vale_no_caixa_definir',{p_ligado:e.checked}),'Vale').then(r=>{if(r!==null){toast(e.checked?'O vale-alimentação voltou a somar no total do caixa.':'O vale-alimentação saiu do total do caixa.');carregarFin()}})},
+  credDev:e=>{credLer();S.cred.forma=e.checked?'dinheiro':''},
   recVenda:e=>{const r=S.rec;if(!r)return;r.venda=e.value;const v=(r.lista||[]).find(x=>x.id===e.value),c=v&&v.cli&&S.clientes.find(x=>x.id===v.cli);
     r.fone=c?c.fone||'':'';r.nome=c&&!/^Cliente \d{4}$/.test(c.nome)?c.nome:''},
   nomeRest:e=>{const n=e.value.trim();if(!n)return;salvar(sb.from('config').update({nome_restaurante:n}).eq('id',1),'Nome do recibo atualizado.')},
