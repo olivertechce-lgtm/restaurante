@@ -406,6 +406,8 @@ input[type=range]{width:100%;accent-color:var(--op,var(--ink));min-height:32px}
 .fcab:focus-visible{outline:3px solid var(--ink);outline-offset:-3px}.fcli .tw{padding:0 14px}
 .fcfecha{display:flex;flex-direction:column;gap:6px;padding:12px 14px;background:var(--soft)}.fcfecha span{color:var(--muted)}
 .quadro.pftopo{margin-top:-8px;padding:10px;border-radius:18px}
+#fav-sec{display:flex;flex-direction:column;gap:12px}#fav-sec label[for=fav-txt]{display:block;font-weight:600;margin-bottom:6px}#fav-txt{display:block;width:100%;box-sizing:border-box;font:inherit;font-size:15px;line-height:1.45;padding:12px 14px;border:1px solid var(--line);border-radius:12px;resize:vertical;background:#fff}
+#fav-txt:focus{outline:3px solid var(--ink);outline-offset:1px}
 .dvbtns{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.dvbtns span{font-size:13px;color:var(--muted);margin-right:2px}.dvbtns .chip.on{background:var(--warn,#d97706);color:#fff;border-color:transparent}
 .tot.dvlinha{color:#7a4b00}.tot.dvlinha .chip{padding:0 8px;margin-left:4px}
 tr.comdesc td{background:#fff3df}tr.comdesc td:first-child{box-shadow:inset 4px 0 0 #d97706}
@@ -439,6 +441,30 @@ tr.comdesc td{background:#fff3df}tr.comdesc td:first-child{box-shadow:inset 4px 
 .vhead h2{margin:0}
 .chip.sm{min-height:36px;padding:0 12px;font-size:13px}
 .chip.perigo{background:var(--bad,#c62828);border-color:var(--bad,#c62828);color:#fff}
+
+/* ---- Caixa mais compacto (menos rolagem no atendimento) ---- */
+main:has(.head.cx){gap:10px;padding-top:12px}
+.head.cx>div{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 14px}
+.head.cx h1{font-size:21px;margin:0;line-height:1.2}
+.head.cx p{margin:0;font-size:13px}
+.pdv{grid-template-columns:minmax(0,1.25fr) minmax(400px,1fr);gap:16px}
+.pdv .col{gap:14px}
+.scales{gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.scale{padding:14px 16px;gap:10px}
+.peso{padding:8px 14px;border-radius:14px}
+.peso strong{font-size:36px}
+.teclas{gap:6px}
+.tecla{min-height:44px;font-size:20px}
+.tecla.sec{font-size:16px}
+.scale .btn{min-height:44px}
+.venda.panel{padding:14px 16px;gap:10px}
+.venda .cart{gap:6px}
+.venda .cart li{padding:7px 12px}
+.venda .forma{min-height:46px;border-radius:14px;padding:4px 6px;line-height:1.1;font-size:14px}
+.venda .formas{gap:6px}
+.venda select,.venda .row .btn,.venda .row>button{min-height:46px}
+.venda .vhead h2{font-size:18px}
+.venda .chip{min-height:38px}
 </style>
 </head>
 <body>
@@ -494,7 +520,7 @@ const S={
   clientes:[],
   regras:{base:'valor',pontosResgate:100,valorResgate:1000,minGrupo:50},
   cardapio:[],
-  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pend:'',dven:null,pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',pedit:{},kedit:{},salvandoProd:false,neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},rec:null,maq:false,valeMaq:true,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
+  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pend:'',dven:null,pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',pedit:{},kedit:{},salvandoProd:false,neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},fav:{ativo:true,texto:''},rec:null,maq:false,valeMaq:true,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
   periodo:'diario',refData:'',fin:null,saidas:[],saidaCats:[],saidaMes:'',rank:'qtd',logAberto:false,finSeq:0,finLimite:200,finCarregando:false,contado:{},fluxos:[],log:[],modal:null,menu:(typeof window!=='undefined'&&window.innerWidth>980),fundo:10000,
   wa:{url:'',eventos:{resumo:true,cardapio:true,pontos:true,grupo:false}},
   vendas:[]
@@ -893,6 +919,14 @@ function vNegocio(){const n=S.neg,contato=[n.end?'📍 '+n.end:'',n.foneBonito?'
     </div>
     <div class="note">O número é guardado no formato do WhatsApp (55 + DDD + número). Campos opcionais em branco simplesmente não aparecem nas mensagens. Recibos que já estão na fila ou já foram enviados não mudam; os próximos saem com os dados novos.</div>
   </section>
+  <section class="panel" id="fav-sec"><div class="head"><h2>Aviso de fiado no WhatsApp</h2>
+      <label class="sw" for="fav-on">Enviar aviso <input type="checkbox" id="fav-on" ${S.fav.ativo?'checked':''}></label></div>
+    <p style="margin:0">Quando uma compra entra no fiado do mês, o cliente recebe esta mensagem com o valor <b>daquela compra</b>. O total da conta nunca é enviado.</p>
+    <div><label for="fav-txt">Texto do aviso</label><textarea id="fav-txt" rows="7" maxlength="1000" data-fav>${esc(S.fav.texto)}</textarea></div>
+    <div class="row fav-marc">${['nome','restaurante','valor','data','hora','venda','contato'].map(k=>`<button class="chip sm" data-a="favMarc" data-k="${k}">{${k}}</button>`).join('')}<button class="chip sm" data-a="favPadrao">Voltar ao texto padrão</button></div>
+    <div class="note">Toque num marcador para colocá-lo no texto. {nome} é o primeiro nome do cliente, {valor} é o valor da compra, {contato} é o endereço e o telefone do restaurante.</div>
+    <div><b>Como o cliente recebe</b><div class="bubble bot" id="fav-previa" style="white-space:pre-wrap;margin-top:6px">${esc(favPrevia(S.fav.texto))}</div></div>
+    <div><button class="btn" data-a="favSalvar">Salvar aviso</button></div></section>
   <section class="panel"><h2>Como fica o recibo</h2><div class="bubble bot" id="ng-previa" style="white-space:pre-wrap">${esc(previa)}</div></section>`}
 /* ---------- Produtos: editar e salvar com botão ---------- */
 function prodMarcar(id,k,val){const p=S.produtos.find(x=>x.id===id);if(!p)return;const e=Object.assign({},S.pedit[id]||{});e[k]=val;
@@ -951,6 +985,9 @@ function fiadosClientes(){const pd=pendurados(),L=(S.fiadosCli||[]).filter(x=>!x
         <div class="fcfecha"><b>Fechar conta de ${brl(x.v)}</b><span>Como ${esc(x.nome.split(' ')[0])} pagou?</span><div class="row">${['pix','dinheiro','debito','credito','vale'].map(f=>`<button class="chip ${S.fcConf===(x.id+f)?'perigo':''}" data-a="fcFechar" data-id="${x.id}" data-f="${f}">${S.fcConf===(x.id+f)?'Confirmar: '+FORMAS[f]:FORMAS[f]}</button>`).join('')}</div></div>`:''}</div>`}).join('')}</div>`:'<p style="margin:0">Nenhum cliente com fiado em conta.</p>'}
   </section>`}
 const cliOps=sel=>S.clientes.slice().sort((a,b)=>a.nome.localeCompare(b.nome,'pt')).map(c=>`<option value="${c.id}" ${c.id===sel?'selected':''}>${esc(c.nome)}${c.empresa?' · '+esc(c.empresa):''} · ${esc(c.fone)}</option>`).join('');
+function favPrevia(t){const n=S.neg,d=new Date(),ct=[n.end?'📍 '+n.end:'',n.foneBonito?'📞 '+n.foneBonito:''].filter(Boolean).join('\n');
+  return (t||'').replace(/\{nome\}/g,'Maria').replace(/\{restaurante\}/g,nomeNeg()).replace(/\{valor\}/g,'R$ 32,50')
+    .replace(/\{data\}/g,d.toLocaleDateString('pt-BR')).replace(/\{hora\}/g,hhmm(d)).replace(/\{venda\}/g,'123').replace(/\{contato\}/g,ct).trim()}
 function trocoBox(){const t=totais(),rec=parseMoney(S.recebido);return rec<t.total?{c:'troco falta',h:`<span>Faltam</span><strong>${brl(t.total-rec)}</strong>`}:{c:'troco',h:`<span>Troco</span><strong>${brl(rec-t.total)}</strong>`}}
 function vendaPanel(){
   const t=totais(),tb=trocoBox();
@@ -992,7 +1029,7 @@ function vCaixa(){
     <div class="row"><button class="btn line" data-a="sair">Selecionar outro operador</button><button class="btn" data-a="reabrir" data-id="${S.user.id}">${ult?'Reabrir':'Abrir'} caixa (Fluxo ${meus.length+1})</button></div></div>`;
   const pfs=prodsOrd().filter(ehPF);
   const pfDestaque=pfs.length?`<div class="quadro prato pfdest pftopo"><div class="prods">${pfs.map(p=>`<button class="prod ${p.cat} ${S.foco===p.id?'sel':''} ${p.imagem?'comfoto':''}" ${p.imagem?`style="--foto:url('${esc(p.imagem)}')"`:''} data-a="addProd" data-id="${p.id}" ${f?'':'disabled'}>${badge(p.id,true)}<b>${esc(p.nome)}</b><span>${brl(p.preco)}</span></button>`).join('')}</div></div>`:'';
-  return `<div class="head"><div><h1>Caixa</h1><p>Operador: ${nome} · ${f?'Fluxo '+f.n+' aberto às '+hhmm(f.abertura):'caixa fechado'} · ${S.vendas.filter(v=>v.op===S.user.id).length} vendas hoje</p></div></div>
+  return `<div class="head cx"><div><h1>Caixa</h1><p>Operador: ${nome} · ${f?'Fluxo '+f.n+' aberto às '+hhmm(f.abertura):'caixa fechado'} · ${S.vendas.filter(v=>v.op===S.user.id).length} vendas hoje</p></div></div>
   ${aviso}
   ${f?`<div class="pasta">${abasHtml()}<div class="folha ${S.abaPisca?'piscar':''}">`:'<div class="folha">'}<div class="pdv"><div class="col"><div class="scales">${S.balancas.map(scaleCard).join('')}</div>
     ${pfDestaque}
@@ -1238,7 +1275,7 @@ async function carregarBase(){
     S.balancas=b.map(x=>{const ts=[{n:'Sem tara',g:0}].concat((x.taras||[]).slice().sort((m,n)=>m.gramas-n.gramas).map(t=>({n:t.nome,g:t.gramas}))),a=ant[x.id];
       return{id:x.id,nome:x.nome,grupo:x.grupo,marca:x.marca,conexao:x.conexao,baud:String(x.baud),precoKg:x.preco_kg_centavos,bruto:a?a.bruto:0,tara:0,conectada:a?a.conectada:true,taras:ts}})}
   if(Array.isArray(pr))S.produtos=pr.map(x=>({id:x.id,nome:x.nome,preco:x.preco_centavos,cat:x.categoria,destaque:x.destaque,imagem:x.imagem||''}));
-  if(cf&&cf!==true){S.regras={base:cf.base_pontos,pontosResgate:cf.pontos_resgate,valorResgate:cf.valor_resgate_centavos,minGrupo:cf.min_pontos_grupo};S.fundo=cf.fundo_troco_centavos;S.nomeRest=cf.nome_restaurante||'Restaurante';negAplicar({nome:S.nomeRest,fone:cf.telefone_restaurante||'',end:cf.endereco_restaurante||'',rodape:cf.rodape_recibo===undefined?'Obrigado pela preferência! 😊':cf.rodape_recibo||''});S.maq=!!cf.maquineta_ativa;S.valeMaq=cf.vale_maquineta!==false}
+  if(cf&&cf!==true){S.regras={base:cf.base_pontos,pontosResgate:cf.pontos_resgate,valorResgate:cf.valor_resgate_centavos,minGrupo:cf.min_pontos_grupo};S.fundo=cf.fundo_troco_centavos;S.nomeRest=cf.nome_restaurante||'Restaurante';negAplicar({nome:S.nomeRest,fone:cf.telefone_restaurante||'',end:cf.endereco_restaurante||'',rodape:cf.rodape_recibo===undefined?'Obrigado pela preferência! 😊':cf.rodape_recibo||''});S.fav={ativo:cf.fiado_aviso_ativo!==false,texto:cf.fiado_aviso_texto||'Olá, {nome}! 😊\n\nPassando para avisar que uma compra no *{restaurante}* no valor de *{valor}* foi adicionada à sua conta em {data}, às {hora}.\n\nQualquer dúvida, é só chamar. Obrigado pela preferência!'};S.maq=!!cf.maquineta_ativa;S.valeMaq=cf.vale_maquineta!==false}
   if(Array.isArray(cl)){const m={};(Array.isArray(p30)?p30:[]).forEach(x=>m[x.cliente_id]=Number(x.pontos));S.clientes=cl.map(x=>({id:x.id,nome:x.nome,fone:x.telefone,foneNorm:x.telefone_norm||'',descPct:Number(x.desconto_pct||0),empresa:x.empresa||'',descSobre:x.desconto_sobre||'tudo',pontos:x.pontos,g:Number(x.gramas_total),gasto:Number(x.gasto_centavos),p30:m[x.id]||0}))}
   if(Array.isArray(cd))S.cardapio=cd.map(x=>({id:x.id,cat:x.categoria,nome:x.nome,on:x.disponivel}));
   // Se algum preço mudou, a venda em andamento acompanha o banco.
@@ -1660,6 +1697,11 @@ const A={
     const volta=S.cadVolta;q(sb.rpc('cliente_cadastrar',{p_nome:n,p_empresa:em,p_telefone:f}),'Cliente').then(async r=>{if(r&&r.id){await carregarBase();
       toast(r.novo?r.nome+' cadastrado.':'Cadastro de '+r.nome+' atualizado.');
       if(volta==='fiadoMes'&&S.view==='caixa'){S.clienteId=r.id;S.resgate=false;S.modal='fiadoMes'}else S.modal=null}render()});return true},
+  favMarc:e=>{const t=$('#fav-txt');if(!t)return true;const k='{'+e.dataset.k+'}',a=t.selectionStart??t.value.length,b=t.selectionEnd??a;
+    t.value=t.value.slice(0,a)+k+t.value.slice(b);t.focus();t.selectionStart=t.selectionEnd=a+k.length;S.fav.texto=t.value;$('#fav-previa').textContent=favPrevia(t.value);return true},
+  favPadrao:()=>{const t=$('#fav-txt');t.value='Olá, {nome}! 😊\n\nPassando para avisar que uma compra no *{restaurante}* no valor de *{valor}* foi adicionada à sua conta em {data}, às {hora}.\n\nQualquer dúvida, é só chamar. Obrigado pela preferência!';S.fav.texto=t.value;$('#fav-previa').textContent=favPrevia(t.value);return true},
+  favSalvar:()=>{const txt=$('#fav-txt').value,on=$('#fav-on').checked;
+    q(sb.rpc('fiado_aviso_salvar',{p_ativo:on,p_texto:txt}),'Aviso de fiado').then(r=>{if(r&&r.texto!==undefined){S.fav={ativo:r.ativo,texto:r.texto};toast(r.ativo?'Aviso de fiado salvo. Vale para as próximas compras no fiado.':'Aviso de fiado desligado.')}render()});return true},
   maqDeNovo:()=>{cobFim();S.cob=null;S.modal=null;if(podeFinalizar()&&usaMaq())cobrarMaq()},
   maqManual:()=>{cobFim();S.cob=null;S.modal='confirmar'},
   maqFechar:()=>{cobFim();S.cob=null;S.modal=null},
@@ -1680,12 +1722,13 @@ const A={
       itens:S.cart.map(i=>i.grupo==='produto'?{produto_id:i.src}:{balanca_id:i.src,gramas:i.g,tara_gramas:i.tara||0}),pagamentos:pags,
       desconto_venda:t.dpct?{pct:t.dpct,obs:S.dven.obs||''}:null};
     const troco=S.pags?(S.pags.troco||0):S.forma==='dinheiro'?rec-t.total:0,nomeC=t.c?t.c.nome.split(' ')[0]:'';
+    const avisoFiado=S.fav.ativo&&S.clienteId&&pags.some(x=>x.forma==='fiado')?' · aviso de fiado no WhatsApp':'';
     const como=zero?'com 100% de desconto':(S.pags?'('+S.pags.linhas.map(l=>FORMAS[l.forma]+' '+brl(l.valor)).join(' + ')+')':'no '+FORMAS[S.forma].toLowerCase())+(pags.some(x=>x.forma==='vale'&&x.rotulo.includes(EXT))?' · voucher de maquininha externa':'');
     const querRecibo=!!(t.c&&t.c.foneNorm&&S.recibo);
     S.enviando=true;render();toast('Registrando a venda…');
     q(sb.rpc('registrar_venda',{p})).then(async r=>{S.enviando=false;
       if(!r||!r.numero){await carregarBase();return render()}
-      toast(`Venda nº ${r.numero} de ${brl(r.total_centavos)} registrada ${como}`+(troco?` · Troco ${brl(troco)}`:'')+(r.pontos_ganhos?` · ${nomeC} ganhou ${r.pontos_ganhos} pontos`:'')+(querRecibo?' · recibo no WhatsApp':''));
+      toast(`Venda nº ${r.numero} de ${brl(r.total_centavos)} registrada ${como}`+(troco?` · Troco ${brl(troco)}`:'')+(r.pontos_ganhos?` · ${nomeC} ganhou ${r.pontos_ganhos} pontos`:'')+(querRecibo?' · recibo no WhatsApp':'')+avisoFiado);
       if(querRecibo&&r.venda_id)q(sb.rpc('enfileirar_recibo',{p_venda:r.venda_id}),'Recibo');
       {const k=S.aba,era=S.abas[k].pend;
         if(era){S.abas.splice(k,1);let l=S.abas.findIndex(abaLivre);
@@ -1786,6 +1829,7 @@ document.addEventListener('input',ev=>{const t=ev.target;
   if(S.conta&&t.id==='cs-nome')S.conta.nome=t.value;
   if(S.conta&&t.id==='cs-nova')S.conta.senha=t.value;
   if(t.dataset&&t.dataset.m!==undefined){const d=t.value.replace(/\D/g,'');t.value=d?num(parseInt(d,10)):''}
+  if(t.dataset&&t.dataset.fav!==undefined){S.fav.texto=t.value;const pv=$('#fav-previa');if(pv)pv.textContent=favPrevia(t.value);return}
   if(t.dataset&&t.dataset.pe){prodMarcar(t.dataset.pe,t.dataset.k,t.value);return}
   if(t.dataset&&t.dataset.ke){const b=S.balancas.find(x=>x.id===t.dataset.ke);if(!b)return;if(parseMoney(t.value)===b.precoKg)delete S.kedit[b.id];else S.kedit[b.id]=t.value;
     const c=document.getElementById('kc-'+b.id);if(c)c.classList.toggle('sujo',S.kedit[b.id]!==undefined);prodBotao();return}
