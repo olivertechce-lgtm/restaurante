@@ -175,6 +175,25 @@ th{font-size:13px;color:var(--muted)} td.n,th.n{text-align:right}
 .navdata{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
 .navdata .field{width:auto;min-height:44px}
 .panel.larga{grid-column:1/-1}
+.ia-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+.ia-grid>div{display:flex;flex-direction:column;gap:6px}
+.ia-grid textarea,.ia-faq textarea{min-height:64px;font:inherit;line-height:1.4}
+.ia-hor{display:grid;grid-template-columns:110px 90px repeat(4,118px);justify-content:start;gap:6px 10px;align-items:center}
+.ia-hor .cab{font-size:12px;color:var(--muted);font-weight:700}
+.ia-hor input[type=time]{padding:6px 8px}
+@media (max-width:760px){.ia-hor{grid-template-columns:90px 80px 1fr 1fr}.ia-hor .t2{display:none}}
+.ia-faq{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.6fr) auto;gap:8px;align-items:start}
+@media (max-width:760px){.ia-faq{grid-template-columns:1fr}}
+.ia-auto{display:flex;flex-wrap:wrap;gap:8px}
+.ia-conv{display:flex;flex-direction:column;gap:6px;padding:8px 0}
+.ia-conv .bubble{max-width:80%}
+.ia-conv .bubble.cli{background:#fff;border:1px solid var(--line)}
+.ia-conv .bubble.eq{align-self:flex-end;background:#fff4d6}
+.ia-conv small{display:block;color:var(--muted);font-size:11px;margin-top:4px}
+.ia-salvar{position:sticky;bottom:10px;z-index:5;display:flex;gap:10px;align-items:center;justify-content:flex-end;background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px 14px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
+.ia-salvar.sujo{border-color:var(--doce)}
+a.chip{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
+pre.ia-prev{color:var(--ink);white-space:pre-wrap;max-height:460px;overflow:auto;background:var(--soft);border-radius:12px;padding:12px;font-size:12.5px}
 .kpi strong{white-space:nowrap}
 @media (max-width:1500px){.kpi strong{font-size:23px}}
 .seta{width:44px;height:44px;flex:none;border-radius:12px;border:1px solid var(--line);background:#fff;font:700 22px/1 var(--display);color:var(--ink)}
@@ -512,8 +531,8 @@ const SUGESTOES=[
   ['Sobremesas',['Pudim de leite','Doce de leite','Goiabada com queijo','Mousse de maracujá','Salada de frutas','Gelatina','Brigadeiro','Bolo de chocolate','Pavê']],
   ['Bebidas',['Refrigerante lata','Refrigerante 600 ml','Suco natural','Suco de polpa','Água mineral','Água com gás','Chá gelado']],
   ['Açaí e acompanhamentos',['Granola','Leite condensado','Leite em pó','Banana','Morango','Paçoca','Amendoim','Mel','Tapioca']]];
-const VIEWS=[['caixa','Caixa'],['cardapio','Cardápio do dia'],['produtos','Produtos'],['financeiro','Financeiro'],['saidas','Saídas'],['clientes','Clientes e pontos'],['usuarios','Usuários'],['balancas','Balanças'],['whatsapp','WhatsApp e n8n'],['negocio','Configurações do negócio']];
-const SO_ADMIN=['produtos','financeiro','saidas','usuarios','balancas','whatsapp','negocio'];
+const VIEWS=[['caixa','Caixa'],['cardapio','Cardápio do dia'],['produtos','Produtos'],['financeiro','Financeiro'],['saidas','Saídas'],['clientes','Clientes e pontos'],['usuarios','Usuários'],['balancas','Balanças'],['whatsapp','WhatsApp e n8n'],['atend','Atendimento com IA'],['negocio','Configurações do negócio']];
+const SO_ADMIN=['produtos','financeiro','saidas','usuarios','balancas','whatsapp','atend','negocio'];
 
 const S={
   view:'caixa',logged:false,auth:'carregando',authTab:'entrar',authMsg:'',perfil:null,perfis:null,recuperando:false,
@@ -879,7 +898,7 @@ async function exportPdf(){
   const blob=doc.output('blob'),nome='relatorio-'+S.periodo+'-'+S.refData+'.pdf';
   try{const u=URL.createObjectURL(blob),l=document.createElement('a');l.href=u;l.download=nome;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),8000);toast('PDF gerado: '+nome)}catch(_){toast('Não foi possível baixar o PDF neste navegador.')}
 }
-const ICO={negocio:'M4 10l2-5h12l2 5M5 10v9h14v-9M4 10h16M10 19v-5h4v5',menu:'M4 7h16M4 12h16M4 17h16',caixa:'M4 8h16v11H4zM8 8V5h8v3M8 13h8M8 16h4',cardapio:'M6 4h12v16H6zM9 8h6M9 12h6M9 16h3',produtos:'M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8',financeiro:'M5 20V11M11 20V5M17 20v-6M3 20h18',clientes:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 20c0-3.5 3.6-6 8-6s8 2.5 8 6',usuarios:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',balancas:'M12 4v16M7 20h10M5 8h14M5 8l-2.5 6a2.5 2.5 0 005 0zM19 8l-2.5 6a2.5 2.5 0 005 0z',whatsapp:'M4 20l1.4-4.2A8 8 0 1112 20a8 8 0 01-3.6-.9z',saidas:'M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2'};
+const ICO={atend:'M4 5h16v11H9l-5 4zM8 9h8M8 12h5',negocio:'M4 10l2-5h12l2 5M5 10v9h14v-9M4 10h16M10 19v-5h4v5',menu:'M4 7h16M4 12h16M4 17h16',caixa:'M4 8h16v11H4zM8 8V5h8v3M8 13h8M8 16h4',cardapio:'M6 4h12v16H6zM9 8h6M9 12h6M9 16h3',produtos:'M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8',financeiro:'M5 20V11M11 20V5M17 20v-6M3 20h18',clientes:'M12 12a4 4 0 100-8 4 4 0 000 8zM4 20c0-3.5 3.6-6 8-6s8 2.5 8 6',usuarios:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',balancas:'M12 4v16M7 20h10M5 8h14M5 8l-2.5 6a2.5 2.5 0 005 0zM19 8l-2.5 6a2.5 2.5 0 005 0z',whatsapp:'M4 20l1.4-4.2A8 8 0 1112 20a8 8 0 01-3.6-.9z',saidas:'M12 3v12m0 0l-4-4m4 4l4-4M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2'};
 const ico=k=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${ICO[k]}"/></svg>`;
 const isAdmin=()=>S.user.perfil==='Administrador';
 
@@ -949,6 +968,100 @@ function vNegocio(){const n=S.neg,contato=[n.end?'📍 '+n.end:'',n.foneBonito?'
     <div><b>Como o cliente recebe</b><div class="bubble bot" id="fav-previa" style="white-space:pre-wrap;margin-top:6px">${esc(favPrevia(S.fav.texto))}</div></div>
     <div><button class="btn" data-a="favSalvar">Salvar aviso</button></div></section>
   <section class="panel"><h2>Como fica o recibo</h2><div class="bubble bot" id="ng-previa" style="white-space:pre-wrap">${esc(previa)}</div></section>`}
+/* ---------- Atendimento com IA ---------- */
+const IA_DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+const IA_FAQ_SUG=['Tem opção vegetariana?','Aceita encomenda para eventos?','Tem estacionamento?','Pode levar marmita / quentinha?','Tem cadeirinha para criança?','Aceita reserva de mesa?'];
+function iaNormal(info){const i=Object.assign({},info||{});
+  let h=Array.isArray(i.horarios)&&i.horarios.length>=7?i.horarios.slice(0,7):[];
+  if(!h.length)h=IA_DIAS.map(()=>({a:false,ini:'',fim:'',ini2:'',fim2:''}));
+  i.horarios=h.map(x=>Object.assign({a:false,ini:'',fim:'',ini2:'',fim2:''},x||{}));
+  i.faq=Array.isArray(i.faq)&&i.faq.length?i.faq.map(x=>({p:x.p||'',r:x.r||''})):IA_FAQ_SUG.map(p=>({p,r:''}));
+  if(i.pausa_min===undefined)i.pausa_min=120;return i}
+async function carregarIa(){if(!sb||!isAdmin())return;
+  const [r,c]=await Promise.all([q(sb.rpc('ia_ler'),'Atendimento com IA'),q(sb.rpc('ia_conversas',{p_dias:7}),'Conversas')]);
+  if(r&&r!==true){if(!S.ia||!S.ia.sujo)S.ia={ativa:!!r.ativa,info:iaNormal(r.info),aberto:r.aberto,carregado:true,sujo:false}}
+  else if(!S.ia)S.ia={carregado:true,erro:true,info:iaNormal({})};
+  S.iaConv=c&&c!==true?c:{mensagens:[],pausas:[]};if(S.view==='atend')render()}
+function iaPacote(){const i=JSON.parse(JSON.stringify(S.ia.info));
+  if(!i.horarios.some(h=>h.a&&h.ini&&h.fim))i.horarios=[];
+  i.faq=i.faq.map(x=>({p:(x.p||'').trim(),r:(x.r||'').trim()})).filter(x=>x.p&&x.r);
+  i.pausa_min=Math.max(5,Math.min(1440,parseInt(i.pausa_min,10)||120));
+  ['atendente','tom','nao_sabe','referencia','mapa','instagram','ifood','pedidos_link','entrega','retirada','encomendas','funcionamento','pratos','sobremesas','acai','pagamentos','extras','horarios_obs'].forEach(k=>{if(typeof i[k]==='string')i[k]=i[k].trim()});
+  return i}
+function iaSujo(){if(!S.ia)return;S.ia.sujo=true;const b=document.querySelector('.ia-salvar');if(b){b.classList.add('sujo');const t=b.querySelector('span');if(t)t.textContent='Há alterações não salvas.'}}
+function iaCampo(k,rot,tipo,ph,max){const v=(S.ia.info[k]??'');const id='ia-'+k;
+  return `<div><label for="${id}">${rot}</label>${tipo==='area'?`<textarea id="${id}" data-ia="${k}" rows="3" maxlength="${max||1500}" placeholder="${esc(ph||'')}">${esc(v)}</textarea>`:`<input type="${tipo||'text'}" id="${id}" data-ia="${k}" maxlength="${max||300}" placeholder="${esc(ph||'')}" value="${esc(v)}">`}</div>`}
+function iaSw(k,rot,padrao){const on=S.ia.info[k]===undefined?padrao:!!S.ia.info[k];return `<label class="sw" for="ia-${k}">${rot} <input type="checkbox" id="ia-${k}" data-ia="${k}" ${on?'checked':''}></label>`}
+function iaConversas(){const C=S.iaConv||{mensagens:[],pausas:[]},g={};
+  (C.mensagens||[]).forEach(m=>{(g[m.telefone]=g[m.telefone]||{fone:m.telefone,nome:null,msgs:[],ult:0});const x=g[m.telefone];if(m.nome)x.nome=m.nome;x.msgs.push(m);x.ult=Math.max(x.ult,+new Date(m.criado_em))});
+  const pz={};(C.pausas||[]).forEach(p=>pz[p.telefone]=p);
+  const L=Object.values(g).sort((a,b)=>b.ult-a.ult);
+  const quando=d=>{d=new Date(d);return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+hhmm(d)};
+  return `<section class="panel"><div class="head"><h2>Conversas dos últimos 7 dias</h2><button class="chip sm" data-a="iaRecarregar">Atualizar</button></div>
+    ${(C.pausas||[]).length?`<div class="note"><b>IA em silêncio com ${C.pausas.length} ${C.pausas.length>1?'clientes':'cliente'}</b> (alguém da equipe está atendendo). Ela volta sozinha no horário indicado, ou toque em "Devolver para a IA".</div>`:''}
+    ${L.length?L.map(x=>{const p=pz[x.fone];return `<details><summary><b>${esc(x.nome||foneBonito(x.fone)||x.fone)}</b> · ${esc(foneBonito(x.fone)||x.fone)} · ${x.msgs.length} ${x.msgs.length>1?'mensagens':'mensagem'} · ${quando(x.ult)}
+        ${p?` <span class="pill warn">IA pausada até ${hhmm(new Date(p.ate))}</span>`:''}</summary>
+      <div class="ia-conv">${x.msgs.slice(-40).map(m=>`<div class="bubble ${m.papel==='cliente'?'cli':m.papel==='ia'?'bot':'eq'}">${esc(m.texto)}<small>${m.papel==='cliente'?'Cliente':m.papel==='ia'?esc(S.ia.info.atendente||'Joana')+' (IA)':'Equipe'} · ${quando(m.criado_em)}</small></div>`).join('')}</div>
+      <div class="row">${p?`<button class="chip sm" data-a="iaPausar" data-f="${esc(x.fone)}" data-m="0">Devolver para a IA</button>`:`<button class="chip sm" data-a="iaPausar" data-f="${esc(x.fone)}" data-m="${S.ia.info.pausa_min||120}">Pausar a IA para este cliente</button>`}
+        <a class="chip sm" href="https://wa.me/${esc(x.fone)}" target="_blank" rel="noopener">Abrir no WhatsApp</a></div></details>`}).join('')
+      :'<p style="margin:0">Nenhuma conversa ainda. Quando um cliente escrever para o WhatsApp do restaurante, ela aparece aqui.</p>'}
+    <div class="note">As conversas ficam guardadas por 30 dias e depois são apagadas sozinhas.</div></section>`}
+function vAtend(){const I=S.ia;
+  if(!I||!I.carregado)return `<div class="head"><div><h1>Atendimento com IA</h1><p>Carregando…</p></div></div>`;
+  const i=I.info,n=S.neg||{},nb=(S.balancas||[]).length,np=(S.produtos||[]).length,nd=(S.produtos||[]).filter(p=>p.cat==='doce').length;
+  const hor=i.horarios.map((h,d)=>`<b>${IA_DIAS[d]}</b><label class="row" style="gap:6px;margin:0"><input type="checkbox" data-iah="${d}:a" ${h.a?'checked':''}> aberto</label>
+      <input type="time" data-iah="${d}:ini" value="${esc(h.ini)}" aria-label="${IA_DIAS[d]} abre"><input type="time" data-iah="${d}:fim" value="${esc(h.fim)}" aria-label="${IA_DIAS[d]} fecha">
+      <input class="t2" type="time" data-iah="${d}:ini2" value="${esc(h.ini2)}" aria-label="${IA_DIAS[d]} abre de novo"><input class="t2" type="time" data-iah="${d}:fim2" value="${esc(h.fim2)}" aria-label="${IA_DIAS[d]} fecha de novo">`).join('');
+  return `<div class="head"><div><h1>Atendimento com IA</h1><p>Tudo o que a ${esc(i.atendente||'Joana')} pode responder aos clientes no WhatsApp. Ela responde <b>somente</b> com o que está aqui e com os dados do sistema. O que não souber, ela passa para a equipe.</p></div>
+    <span class="pill ${I.ativa?'ok':'warn'}">${I.ativa?'Atendendo clientes':'Desligada'}</span></div>
+  ${I.erro?'<div class="note">Não consegui ler as configurações. Confira se o arquivo 026 foi rodado no Supabase.</div>':''}
+  <section class="panel"><h2>Ligar o atendimento</h2>
+    <label class="sw" for="ia-ativa">A IA responde os clientes no WhatsApp <input type="checkbox" id="ia-ativa" data-iaon ${I.ativa?'checked':''}></label>
+    <div class="note">Desligada, a IA fica calada com os clientes. Os administradores continuam falando com a Joana do financeiro normalmente ("Joana, resumo de hoje").</div></section>
+  <section class="panel"><h2>A IA lê sozinha do sistema</h2>
+    <div class="ia-auto"><span class="pill">🍽️ Cardápio do dia (aba Cardápio do dia)</span><span class="pill">⚖️ Preço do quilo · ${nb} ${nb===1?'balança':'balanças'}</span><span class="pill">🏷️ ${np} produtos com preço${nd?` · ${nd} sobremesas`:''}</span><span class="pill">⭐ Regras de pontos e os pontos do cliente</span><span class="pill">📍 Nome, endereço e telefone (Configurações do negócio)</span></div>
+    <div class="note">Mudou o cardápio ou um preço no sistema, a resposta da IA muda junto. Não precisa repetir essas informações aqui.${n.end?'':' <b>O endereço ainda está em branco</b> em Configurações do negócio.'}</div></section>
+  <section class="panel"><h2>Quem atende e como fala</h2><div class="ia-grid">
+    ${iaCampo('atendente','Nome da atendente','text','Joana',30)}
+    ${iaCampo('tom','Jeito de falar','area','Simpática, frases curtas, emojis com moderação',400)}
+    ${iaCampo('nao_sabe','Quando ela não souber responder','area','Vou chamar alguém da equipe para falar com você…',300)}</div></section>
+  <section class="panel"><div class="head"><h2>Horário de funcionamento</h2><button class="chip sm" data-a="iaHorCopiar">Copiar segunda para terça a sábado</button></div>
+    <div class="ia-hor"><span class="cab">Dia</span><span class="cab"></span><span class="cab">Abre</span><span class="cab">Fecha</span><span class="cab t2">Abre de novo</span><span class="cab t2">Fecha de novo</span>${hor}</div>
+    <div class="note">"Abre de novo" é para quem fecha no meio do dia (ex.: almoço até 15h e açaí das 17h às 21h). Deixe em branco se não for o caso.</div>
+    <div class="ia-grid">${iaCampo('horarios_obs','Feriados e observações de horário','area','Ex.: Feriados abrimos só para o almoço. Fechamos no dia 25/12.',500)}</div></section>
+  <section class="panel"><h2>Onde fica</h2><div class="ia-grid">
+    <div><label>Endereço</label><input type="text" value="${esc(n.end||'')}" disabled placeholder="Preencha em Configurações do negócio"></div>
+    ${iaCampo('referencia','Ponto de referência','text','Ex.: em frente à praça, ao lado da farmácia',200)}
+    ${iaCampo('mapa','Link do Google Maps','url','https://maps.app.goo.gl/…',300)}
+    ${iaCampo('instagram','Instagram','url','https://instagram.com/…',200)}</div></section>
+  <section class="panel"><h2>Pedidos e entrega</h2><div class="ia-grid">
+    ${iaCampo('ifood','Link da loja no iFood','url','https://www.ifood.com.br/delivery/…',300)}
+    <div>${iaCampo('pedidos_link','Link do sistema de pedidos próprio','url','https://… (vamos criar depois)',300).replace(/^<div>|<\/div>$/g,'')}${iaSw('pedidos_ativo','Já está funcionando (a IA pode divulgar)',false)}</div>
+    ${iaCampo('entrega','Entrega: como funciona, taxas, bairros, tempo','area','Ex.: Entregamos só pelo iFood. Ou: taxa R$ 5 no Centro, R$ 8 na Aldeota; de 30 a 50 min.',800)}
+    ${iaCampo('retirada','Retirada no balcão','area','Ex.: Pode pedir pelo iFood e retirar aqui. Marmita para viagem custa o mesmo preço do quilo + embalagem R$ 1.',600)}
+    ${iaCampo('encomendas','Encomendas e eventos','area','Ex.: Fazemos almoço para empresas e eventos a partir de 20 pessoas, com 3 dias de antecedência.',600)}</div></section>
+  <section class="panel"><h2>Comida, sobremesas e açaí</h2><div class="ia-grid">
+    ${iaCampo('funcionamento','Como funciona o restaurante','area','Ex.: Self-service por quilo, com prato feito no balcão. O cardápio muda todo dia.',600)}
+    ${iaCampo('pratos','Prato feito e marmitas','area','Ex.: Prato feito com 1 ou 2 proteínas, arroz, feijão, salada e farofa.',600)}
+    ${iaCampo('sobremesas','Sobremesas','area','Ex.: Pudim e mousse feitos aqui todo dia. Sobremesa do dia muda.',600)}
+    ${iaCampo('acai','Açaí','area','Ex.: Açaí no peso, com mais de 20 acompanhamentos: granola, leite em pó, frutas…',600)}</div></section>
+  <section class="panel"><h2>Pagamento e outras informações</h2><div class="ia-grid">
+    ${iaCampo('pagamentos','Detalhes de pagamento','area','A IA já sabe: Pix, crédito, débito, dinheiro e vale. Escreva aqui quais vales aceita (ex.: Alelo e VR; Ticket ainda não).',500)}
+    ${iaCampo('extras','Outras informações','area','Ex.: Temos estacionamento na rua lateral. Ambiente climatizado. Wi‑Fi para clientes.',1500)}</div></section>
+  <section class="panel"><div class="head"><h2>Perguntas e respostas</h2><button class="chip sm" data-a="iaFaqAdd">+ Nova pergunta</button></div>
+    <p style="margin:0">A IA responde estas perguntas exatamente como estiver escrito. Pergunta sem resposta é ignorada.</p>
+    ${i.faq.map((f,k)=>`<div class="ia-faq"><input type="text" data-iaf="${k}:p" maxlength="200" placeholder="Pergunta" value="${esc(f.p)}" aria-label="Pergunta ${k+1}"><textarea data-iaf="${k}:r" rows="2" maxlength="800" placeholder="Resposta" aria-label="Resposta ${k+1}">${esc(f.r)}</textarea><button class="x" data-a="iaFaqDel" data-k="${k}" aria-label="Remover pergunta ${k+1}">×</button></div>`).join('')||'<p style="margin:0">Nenhuma pergunta.</p>'}</section>
+  <section class="panel"><h2>Comportamento</h2><div class="ia-grid">
+    ${iaSw('admins_testam','Responder também aos administradores (para testar)',true)}
+    ${iaSw('pausar_equipe','Ficar calada quando a equipe responder pelo celular',true)}
+    ${iaSw('avisar_admins','Avisar os administradores quando um cliente pedir atendente',true)}
+    ${iaSw('mostrar_pontos','Explicar o programa de pontos e dizer os pontos do cliente',true)}
+    ${iaCampo('pausa_min','Tempo calada depois que a equipe assume (minutos)','number','120',4)}</div>
+    <div class="note">Para "ficar calada quando a equipe responder", ligue no Z-API a opção de notificar também as mensagens enviadas por mim. Sem ela, a IA só fica calada quando ela mesma chama a equipe ou quando você toca em "Pausar a IA" nas conversas abaixo.</div></section>
+  <section class="panel"><div class="head"><h2>O que a IA vai saber</h2><button class="chip sm" data-a="iaPrevia">${S.iaPrev?'Atualizar':'Mostrar'}</button></div>
+    ${S.iaPrev?`<pre class="ia-prev">${esc(S.iaPrev)}</pre>`:'<p style="margin:0">Mostra o texto completo que a IA recebe, já com o cardápio e os preços de agora. Salve antes para ver as mudanças.</p>'}</section>
+  ${iaConversas()}
+  <div class="ia-salvar ${I.sujo?'sujo':''}"><span>${I.sujo?'Há alterações não salvas.':'Tudo salvo.'}</span><button class="btn" data-a="iaSalvar" ${I.salvando?'disabled':''}>${I.salvando?'Salvando…':'Salvar atendimento'}</button></div>`}
 /* ---------- Produtos: editar e salvar com botão ---------- */
 function prodMarcar(id,k,val){const p=S.produtos.find(x=>x.id===id);if(!p)return;const e=Object.assign({},S.pedit[id]||{});e[k]=val;
   const igual=(e.nome===undefined||e.nome.trim()===p.nome)&&(e.preco===undefined||parseMoney(e.preco)===p.preco)&&(e.cat===undefined||e.cat===p.cat);
@@ -1331,7 +1444,7 @@ async function carregarDia(){
 async function carregarTudo(){
   await carregarPerfis();
   await Promise.all([carregarBase(),carregarDia()]);
-  S.pronto=true;render();if(S.view==='financeiro')carregarFin();if(S.view==='clientes')carregarFiados();if(S.view==='whatsapp')carregarN8n();if(S.view==='saidas')carregarSaidas();
+  S.pronto=true;render();if(S.view==='financeiro')carregarFin();if(S.view==='clientes')carregarFiados();if(S.view==='whatsapp')carregarN8n();if(S.view==='saidas')carregarSaidas();if(S.view==='atend')carregarIa();
 }
 function mudarRef(s){const r=refData(),P=S.periodo;
   if(P==='diario')r.setDate(r.getDate()+s);else if(P==='semanal')r.setDate(r.getDate()+7*s);else if(P==='anual')r.setFullYear(r.getFullYear()+s);else r.setMonth(r.getMonth()+s,1);
@@ -1478,7 +1591,7 @@ ${esc(corpo(x))}</pre><div class="row">${cp(url(f),'Copiar endereço')}${cp(corp
     </tbody></table></div>
   </section>`;
 }
-const RENDER={caixa:vCaixa,cardapio:vCardapio,produtos:vProdutos,financeiro:vRelatorios,saidas:vSaidas,clientes:vClientes,usuarios:vUsuarios,balancas:vBalancas,whatsapp:vWhats,negocio:vNegocio};
+const RENDER={caixa:vCaixa,cardapio:vCardapio,produtos:vProdutos,financeiro:vRelatorios,saidas:vSaidas,clientes:vClientes,usuarios:vUsuarios,balancas:vBalancas,whatsapp:vWhats,atend:vAtend,negocio:vNegocio};
 function render(){
   if(!S.abas.length)abasReset();
   focoValido();
@@ -1515,7 +1628,7 @@ const bal=id=>S.balancas.find(b=>b.id===id);
 
 /* ---------- ações ---------- */
 const A={
-  ir:e=>{S.view=e.dataset.v;S.zerarConf=null;if(S.view==='saidas')carregarSaidas();if(S.view==='whatsapp')carregarN8n();if(S.view==='usuarios')carregarPerfis();if(S.view==='financeiro')carregarFin();if(S.view==='clientes')carregarFiados();if(typeof window!=='undefined'&&window.innerWidth<=980)S.menu=false;try{location.hash=S.view}catch(_){}},
+  ir:e=>{S.view=e.dataset.v;S.zerarConf=null;if(S.view==='saidas')carregarSaidas();if(S.view==='whatsapp')carregarN8n();if(S.view==='usuarios')carregarPerfis();if(S.view==='financeiro')carregarFin();if(S.view==='clientes')carregarFiados();if(S.view==='atend')carregarIa();if(typeof window!=='undefined'&&window.innerWidth<=980)S.menu=false;try{location.hash=S.view}catch(_){}},
   sair:()=>{abasSalvar();S.modal=null;S.recuperando=false;if(sb)sb.auth.signOut().then(()=>{},()=>{});else aoSessao(null);return true},
   apagarFluxo:e=>{const f=S.fin.fluxos.find(x=>x.id===e.dataset.id);if(!f)return;
     S.apagar={tipo:'fluxo',id:f.id,txt:`o Fluxo ${f.numero} de ${f.operador||''}, de ${new Date(f.aberto_em).toLocaleDateString('pt-BR')}`,extra:f.n?`${f.n===1?'A venda':'As '+f.n+' vendas'} deste fluxo (${brl(f.total)}) ${f.n===1?'será apagada':'serão apagadas'} junto, e os pontos que ${f.n===1?'ela deu':'elas deram'} aos clientes serão desfeitos.`:'Este fluxo não tem vendas.'};S.modal='senha'},
@@ -1725,6 +1838,17 @@ const A={
   favMarc:e=>{const t=$('#fav-txt');if(!t)return true;const k='{'+e.dataset.k+'}',a=t.selectionStart??t.value.length,b=t.selectionEnd??a;
     t.value=t.value.slice(0,a)+k+t.value.slice(b);t.focus();t.selectionStart=t.selectionEnd=a+k.length;S.fav.texto=t.value;$('#fav-previa').textContent=favPrevia(t.value);return true},
   favPadrao:()=>{const t=$('#fav-txt');t.value='Olá, {nome}! 😊\n\nPassando para avisar que uma compra no *{restaurante}* no valor de *{valor}* foi adicionada à sua conta em {data}, às {hora}.\n\nQualquer dúvida, é só chamar. Obrigado pela preferência!';S.fav.texto=t.value;$('#fav-previa').textContent=favPrevia(t.value);return true},
+  iaSalvar:()=>{const I=S.ia;if(!I||I.salvando)return true;I.salvando=true;
+    q(sb.rpc('ia_salvar',{p_ativa:!!I.ativa,p_info:iaPacote()}),'Atendimento com IA').then(r=>{I.salvando=false;
+      if(r&&r!==true&&r.info){S.ia={ativa:!!r.ativa,info:iaNormal(r.info),aberto:I.aberto,carregado:true,sujo:false};S.iaPrev=null;
+        toast(r.ativa?'Atendimento salvo. A IA já responde com as informações novas.':'Atendimento salvo. A IA está desligada para os clientes.')}
+      render()});return true},
+  iaFaqAdd:()=>{S.ia.info.faq.push({p:'',r:''});S.ia.sujo=true},
+  iaFaqDel:e=>{S.ia.info.faq.splice(+e.dataset.k,1);S.ia.sujo=true},
+  iaHorCopiar:()=>{const s1=S.ia.info.horarios[1];for(let d=2;d<=6;d++)S.ia.info.horarios[d]=Object.assign({},s1);S.ia.sujo=true;toast('Horário de segunda copiado para terça a sábado. Confira e salve.')},
+  iaPrevia:()=>{q(sb.rpc('ia_previa'),'Prévia').then(r=>{if(typeof r==='string'){S.iaPrev=r;render()}});return true},
+  iaRecarregar:()=>{carregarIa();return true},
+  iaPausar:e=>{const m=+e.dataset.m;q(sb.rpc('ia_pausar',{p_telefone:e.dataset.f,p_minutos:m}),'Pausa').then(r=>{if(r&&r.telefone){toast(m?'A IA ficou calada com este cliente por '+m+' minutos.':'Cliente devolvido para a IA.');carregarIa()}});return true},
   favSalvar:()=>{const txt=$('#fav-txt').value,on=$('#fav-on').checked;
     q(sb.rpc('fiado_aviso_salvar',{p_ativo:on,p_texto:txt}),'Aviso de fiado').then(r=>{if(r&&r.texto!==undefined){S.fav={ativo:r.ativo,texto:r.texto};toast(r.ativo?'Aviso de fiado salvo. Vale para as próximas compras no fiado.':'Aviso de fiado desligado.')}render()});return true},
   cliEditAbrir:e=>{S.cliEd=e.dataset.id;S.modal='cliEdit'},
@@ -1868,6 +1992,11 @@ const C={
 document.addEventListener('click',ev=>{if(S.menu&&window.innerWidth<=980&&!ev.target.closest('nav')&&!ev.target.closest('[data-a="menu"]')){S.menu=false;render();return}const e=ev.target.closest('[data-a]');if(!e||e.disabled)return;const keep=A[e.dataset.a](e);if(!keep)render()});
 document.addEventListener('change',ev=>{const e=ev.target.closest('[data-c]');if(!e)return;C[e.dataset.c](e);render()});
 document.addEventListener('input',ev=>{const t=ev.target;
+  if(S.ia&&t.dataset){const d=t.dataset;
+    if(d.ia!==undefined){S.ia.info[d.ia]=t.type==='checkbox'?t.checked:t.value;iaSujo();return}
+    if(d.iaon!==undefined){S.ia.ativa=t.checked;iaSujo();return}
+    if(d.iah){const [k,f]=d.iah.split(':');S.ia.info.horarios[+k][f]=t.type==='checkbox'?t.checked:t.value;iaSujo();return}
+    if(d.iaf){const [k,f]=d.iaf.split(':');S.ia.info.faq[+k][f]=t.value;iaSujo();return}}
   if(S.crop&&t.id==='crop-z'){S.crop.z=+t.value;cropDesenhar();return}
   if(S.conta&&t.id==='cs-nome')S.conta.nome=t.value;
   if(S.conta&&t.id==='cs-nova')S.conta.senha=t.value;
