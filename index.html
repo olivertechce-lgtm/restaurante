@@ -432,7 +432,8 @@ input[type=range]{width:100%;accent-color:var(--op,var(--ink));min-height:32px}
 td.ok{color:var(--ok);font-weight:700}td.bad{color:var(--bad);font-weight:700}
 .dvbtns{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.dvbtns span{font-size:13px;color:var(--muted);margin-right:2px}.dvbtns .chip.on{background:var(--warn,#d97706);color:#fff;border-color:transparent}
 .tot.dvlinha{color:#7a4b00}.tot.dvlinha .chip{padding:0 8px;margin-left:4px}
-tr.comdesc td{background:#fff3df}tr.comdesc td:first-child{box-shadow:inset 4px 0 0 #d97706}
+tr.comdesc td{background:#fff3df}
+.pill.avtag{background:#e3ecff;color:#1d3f91;white-space:normal}tr.comdesc td:first-child{box-shadow:inset 4px 0 0 #d97706}
 .pill.dtag{background:#fde3b6;color:#7a4b00;white-space:normal;text-align:right;font-weight:600}
 .quadro.pfdest .prods{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
 .quadro.pfdest .prod{min-height:112px;font-size:18px}
@@ -571,9 +572,9 @@ const DSOBRE={comida:'na comida',acai:'no açaí',peso:'na comida e no açaí',t
 const descAplica=(sobre,g)=>sobre==='tudo'||(sobre==='peso'&&(g==='comida'||g==='acai'))||sobre===g;
 const pctTxt=n=>String(Math.round(n*100)/100).replace('.',',')+'%';
 function totaisDe(v){const sub=v.cart.reduce((a,i)=>a+i.valor,0),c=S.clientes.find(x=>x.id===v.clienteId);
-  const base=c&&c.descPct>0?v.cart.filter(i=>descAplica(c.descSobre,i.grupo)).reduce((a,i)=>a+i.valor,0):0;
+  const base=c&&c.descPct>0?v.cart.filter(i=>i.grupo!=='avulso'&&descAplica(c.descSobre,i.grupo)).reduce((a,i)=>a+i.valor,0):0;
   const dcli=base?Math.min(sub,Math.round(base*Math.round(c.descPct*100)/10000)):0;
-  const dpct=v.dven&&v.dven.pct||0,dven=dpct?Math.round((sub-dcli)*dpct/100):0;
+  const avul=v.cart.filter(i=>i.grupo==='avulso').reduce((a,i)=>a+i.valor,0),dpct=v.dven&&v.dven.pct||0,dven=dpct?Math.round(Math.max(sub-dcli-avul,0)*dpct/100):0;
   const pode=!!c&&c.pontos>=S.regras.pontosResgate&&sub-dcli-dven>0,desc=v.resgate&&pode?Math.min(S.regras.valorResgate,sub-dcli-dven):0;
   return{sub,dcli,dpct,dven,desc,total:sub-dcli-dven-desc,pode,c}}
 const totais=()=>totaisDe(S);
@@ -622,7 +623,7 @@ function abasRestaurar(){S.abasDe=S.user.id;abasReset();
   const outroDia=d.dia!==new Date().toDateString(),fonte=outroDia?d.abas.filter(a=>a&&a.pend&&Array.isArray(a.cart)&&a.cart.length):d.abas;
   if(!fonte.length)return;
   const usados={},abas=fonte.filter(a=>a&&!a.pend).slice(0,MAX_ABAS).concat(fonte.filter(a=>a&&a.pend).slice(0,MAX_PEND)).map(a=>{const v=Object.assign(vendaVazia(),a||{});
-    v.cart=(Array.isArray(v.cart)?v.cart:[]).filter(i=>i&&(i.grupo==='produto'?S.produtos.some(x=>x.id===i.src):S.balancas.some(x=>x.id===i.src)));
+    v.cart=(Array.isArray(v.cart)?v.cart:[]).filter(i=>i&&(i.grupo==='avulso'?i.valor>0:i.grupo==='produto'?S.produtos.some(x=>x.id===i.src):S.balancas.some(x=>x.id===i.src)));
     if(v.clienteId&&!S.clientes.some(c=>c.id===v.clienteId)){v.clienteId='';v.resgate=false;v.pags=null}
     if(!Array.isArray(v.dv))v.dv=[];v.novoCli=false;
     if(v.pend){v.n=0;return v}
@@ -650,12 +651,12 @@ const cliAtual=()=>S.clienteId?S.clientes.find(c=>c.id===S.clienteId)||null:null
 const usoSaldo=()=>S.pags?S.pags.linhas.filter(l=>l.forma==='saldo').reduce((a,l)=>a+l.valor,0):(S.forma==='saldo'?totais().total:0);
 const temFiado=()=>S.pags?S.pags.linhas.some(l=>l.forma==='fiado'):S.forma==='fiado';
 const podeFinalizar=()=>{const t=totais();if(!fxAberto(S.user.id)||!S.cart.length)return false;if(t.total===0&&t.dpct===100)return true;if(temFiado()&&!S.clienteId)return false;{const u=usoSaldo();if(u&&(!cliAtual()||cliAtual().credito<u))return false}return S.pags?somaPags()===t.total:!!S.forma&&(S.forma!=='dinheiro'||parseMoney(S.recebido)>=t.total)};
-const GR=[['prato','Pratos'],['comida','Comida a quilo'],['acai','Açaí'],['doce','Sobremesas'],['bebida','Bebidas']];
+const GR=[['prato','Pratos'],['comida','Comida a quilo'],['acai','Açaí'],['doce','Sobremesas'],['bebida','Bebidas'],['avulso','Valores avulsos']];
 const gk=i=>i.grupo==='produto'?(i.cat||'doce'):i.grupo;
 function listaCart(){
   if(!S.cart.length)return `<div class="empty">Coloque o prato na balança ou toque em um item para começar.</div>`;
   return `<ul class="cart">${GR.map(([k,n])=>{const its=S.cart.map((i,idx)=>({i,idx})).filter(x=>gk(x.i)===k);if(!its.length)return '';
-    return `<li class="gh"><b>${n} · ${its.length}</b><b>${brl(its.reduce((a,x)=>a+x.i.valor,0))}</b></li>`+its.map(({i,idx})=>`<li><div><b>${esc(i.desc)}</b><small>${i.g?kg(i.g)+' × '+brl(i.precoKg)+'/kg':'1 unidade'}</small></div><b>${brl(i.valor)}</b><button class="x" data-a="rmItem" data-k="${idx}" aria-label="Remover ${esc(i.desc)}">×</button></li>`).join('')}).join('')}</ul>`;
+    return `<li class="gh"><b>${n} · ${its.length}</b><b>${brl(its.reduce((a,x)=>a+x.i.valor,0))}</b></li>`+its.map(({i,idx})=>`<li><div><b>${esc(i.desc)}</b><small>${i.grupo==='avulso'?'<span class="pill avtag">Valor avulso</span>'+(i.obs?' '+esc(i.obs):''):i.g?kg(i.g)+' × '+brl(i.precoKg)+'/kg':'1 unidade'}</small></div><b>${brl(i.valor)}</b><button class="x" data-a="rmItem" data-k="${idx}" aria-label="Remover ${esc(i.desc)}">×</button></li>`).join('')}).join('')}</ul>`;
 }
 function pagsBox(){const P=S.pags;return `<div class="note" style="color:var(--ink)"><b>${P.tipo==='dividida'?'Conta dividida em '+P.linhas.length:'Pagamento misto'}</b>${P.linhas.map(l=>`<div class="tot"><span>${l.rot} · ${FORMAS[l.forma]}</span><b>${brl(l.valor)}</b></div>`).join('')}${P.troco?`<div class="tot"><span>Troco do dinheiro</span><b>${brl(P.troco)}</b></div>`:''}<div class="row" style="margin-top:8px"><button class="chip" data-a="${P.tipo==='dividida'?'abrirDividir':'abrirMisto'}">Alterar</button><button class="chip" data-a="limparPags">Desfazer</button></div></div>`}
 function mistoInfo(){const t=totais().total,s=Object.keys(FORMAS).reduce((a,f)=>a+parseMoney(S.mx[f]),0),din=parseMoney(S.mx.dinheiro),rec=parseMoney(S.mx.rec);return{t,s,falta:t-s,troco:din&&rec>din?rec-din:0,ok:t>0&&s===t}}
@@ -686,6 +687,12 @@ function modalHtml(fa){
     <div><label for="dv-obs">Ou uma observação</label><input type="text" id="dv-obs" maxlength="120" placeholder="Ex.: funcionário, cortesia, prato errado" value="${esc((S.dven&&S.dven.obs)||'')}"></div>
     <div class="note">Escolha o cliente <b>ou</b> escreva uma observação. O desconto fica marcado na venda e no Financeiro.</div>
     <div class="row"><button class="btn line" data-a="cancelar">Voltar</button><button class="btn" data-a="dvAplicar">Aplicar ${S.dvNovo}%</button></div></div>`}
+  if(S.modal==='avulso')return `<div class="panel" style="width:min(460px,100%)"><h1>Valor avulso</h1>
+    <p style="margin:0">Digite o valor que vai entrar na venda. Serve, por exemplo, para completar um pagamento que foi passado errado.</p>
+    <div><label for="av-valor">Valor</label><input type="text" id="av-valor" inputmode="numeric" data-m placeholder="0,00" style="font:800 26px var(--display);min-height:60px"></div>
+    <div><label for="av-obs">Observação (opcional)</label><input type="text" id="av-obs" maxlength="120" placeholder="Ex.: complemento da venda nº 123, faltou no cartão"></div>
+    <div class="note">Entra com a etiqueta <b>Valor avulso</b> e aparece no Financeiro, no PDF, no recibo e no resumo da Joana. Não recebe desconto.</div>
+    <div class="row"><button class="btn line" data-a="cancelar">Voltar</button><button class="btn" data-a="avAdd">Adicionar à venda</button></div></div>`;
   if(S.modal==='cadCli')return `<div class="panel" style="width:min(480px,100%)"><h1>Cadastrar cliente</h1>
     <div class="form compacta"><div><label for="cc-nome">Nome</label><input type="text" id="cc-nome" maxlength="60" autocomplete="off"></div>
       <div><label for="cc-emp">Empresa (opcional)</label><input type="text" id="cc-emp" maxlength="60" autocomplete="off"></div>
@@ -781,6 +788,9 @@ function bannerTeste(){const g=GRUPO_PAG[S.view],bt=(gr,rot)=>`<button class="bt
   return `<div class="banner teste" role="status"><div><b>Modo teste ligado</b><span>Nada do que for feito aqui entra no financeiro real. Os dados de teste ficam separados.</span></div>
     <div class="row">${g?bt(g[0],'Zerar '+g[1]+' de teste'):''}${bt('tudo','Zerar tudo do teste')}<button class="btn sm" data-a="testeModo" data-on="0">Sair do modo teste</button></div></div>`}
 const itensTxt=v=>v.itens.map(i=>i.desc+(i.g?' '+kg(i.g):'')).join(', ');
+const ehAvulso=i=>/^Valor avulso/.test(i.desc||'');
+const avObs=i=>{const m=/^Valor avulso \((.*)\)$/.exec(i.desc||'');return m?m[1]:''};
+const itensCel=v=>{const n=v.itens.filter(i=>!ehAvulso(i)).map(i=>esc(i.desc+(i.g?' '+kg(i.g):''))).join(', '),a=v.itens.filter(ehAvulso).map(i=>`<span class="pill avtag">Valor avulso · ${brl(i.valor)}${avObs(i)?' · '+esc(avObs(i)):''}</span>`).join(' ');return [n,a].filter(Boolean).join('<br>')};
 const ymd=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 S.refData=ymd(new Date());
 function refData(){const x=(S.refData||ymd(new Date())).split('-').map(Number);return new Date(x[0],x[1]-1,x[2])}
@@ -852,7 +862,7 @@ function vendasFin(){
   return `<section class="panel"><div class="head"><h2>Vendas do período</h2><span class="pill">${V.qtd.toLocaleString('pt-BR')} ${V.qtd===1?'venda':'vendas'}${ativo?' com esses filtros':''} · ${brl(V.soma)}</span></div>
   <div class="form">${sel('forma','Forma de pagamento',Object.entries(FORMAS))}${sel('tipo','Tipo de pagamento',Object.entries(TIPOS))}${sel('op','Operador',S.usuarios.map(u=>[u.id,u.nome]))}${sel('cli','Cliente',[['_sem','Sem cliente identificado']].concat(S.clientes.map(c=>[c.id,c.nome])))}<button class="btn line" data-a="limparFil" ${ativo?'':'disabled'}>Limpar filtros</button></div>
   <div class="tw"><table><thead><tr><th>Venda</th><th>${S.periodo==='diario'?'Hora':'Data e hora'}</th><th>Operador</th><th>Cliente</th><th>Itens</th><th>Parte</th><th>Forma</th><th class="n">Valor pago</th><th class="n">Total da venda</th><th></th></tr></thead><tbody>
-    ${V.linhas.map(({v,n})=>v.pags.map((p,k)=>{const rs=`rowspan="${v.pags.length}"`;return `<tr class="${k?'cont':''} ${temDesc(v)?'comdesc':''}">${k?'':`<td ${rs}><b>#${n}</b>${v.tipo==='simples'?'':` <span class="pill warn">${TIPOS[v.tipo]}</span>`}</td><td ${rs}>${dataHora(v.ts)}</td><td ${rs}>${esc(v.opNome)}</td><td ${rs}>${esc(v.cliNome)}</td><td ${rs} style="white-space:normal;min-width:180px">${esc(itensTxt(v))}</td>`}<td>${esc(p.rot)||'Única'}</td><td>${p.forma?`<span class="pill" style="background:var(--${p.forma});color:#fff">${FORMAS[p.forma]}</span>`:'<small>—</small>'}</td><td class="n">${brl(p.valor)}</td>${k?'':`<td class="n" ${rs}><b>${brl(v.total)}</b>${temDesc(v)?`<br><span class="pill dtag">${esc(descTag(v))}</span><br><small>de ${brl(v.sub)}</small>`:''}</td><td ${rs}><div class="row" style="flex-wrap:nowrap;gap:6px"><button class="btn line sm" data-a="recAbrir" data-id="${v.id}" data-n="${n}" data-t="${v.total}" data-cli="${v.cli||''}">Comprovante</button>${ehDono()?`<button class="btn line sm perigo" data-a="apagarVenda" data-id="${v.id}">Apagar</button>`:''}</div></td>`}</tr>`}).join('')).join('')||`<tr><td colspan="10">Nenhuma venda neste período${ativo?' com esses filtros':''}.</td></tr>`}
+    ${V.linhas.map(({v,n})=>v.pags.map((p,k)=>{const rs=`rowspan="${v.pags.length}"`;return `<tr class="${k?'cont':''} ${temDesc(v)?'comdesc':''}">${k?'':`<td ${rs}><b>#${n}</b>${v.tipo==='simples'?'':` <span class="pill warn">${TIPOS[v.tipo]}</span>`}</td><td ${rs}>${dataHora(v.ts)}</td><td ${rs}>${esc(v.opNome)}</td><td ${rs}>${esc(v.cliNome)}</td><td ${rs} style="white-space:normal;min-width:180px">${itensCel(v)}</td>`}<td>${esc(p.rot)||'Única'}</td><td>${p.forma?`<span class="pill" style="background:var(--${p.forma});color:#fff">${FORMAS[p.forma]}</span>`:'<small>—</small>'}</td><td class="n">${brl(p.valor)}</td>${k?'':`<td class="n" ${rs}><b>${brl(v.total)}</b>${temDesc(v)?`<br><span class="pill dtag">${esc(descTag(v))}</span><br><small>de ${brl(v.sub)}</small>`:''}</td><td ${rs}><div class="row" style="flex-wrap:nowrap;gap:6px"><button class="btn line sm" data-a="recAbrir" data-id="${v.id}" data-n="${n}" data-t="${v.total}" data-cli="${v.cli||''}">Comprovante</button>${ehDono()?`<button class="btn line sm perigo" data-a="apagarVenda" data-id="${v.id}">Apagar</button>`:''}</div></td>`}</tr>`}).join('')).join('')||`<tr><td colspan="10">Nenhuma venda neste período${ativo?' com esses filtros':''}.</td></tr>`}
   </tbody></table></div>${V.linhas.length<V.qtd?`<button class="btn line" data-a="finMais">Mostrar mais (${V.linhas.length.toLocaleString('pt-BR')} de ${V.qtd.toLocaleString('pt-BR')})</button>`:''}</section>`;
 }
 function fluxosFin(){
@@ -1155,7 +1165,7 @@ function vendaPanel(){
     <div class="formas">${Object.keys(FORMAS).filter(f=>f!=='saldo'||(cliAtual()&&cliAtual().credito>0)||S.forma==='saldo').map(f=>`<button class="forma f-${f} ${S.forma===f?'on':(S.forma||S.pags)?'':'none'}" data-a="forma" data-f="${f}">${FORMAS[f]}</button>`).join('')}</div>
     <div class="dvbtns"><span>Desconto</span>${[10,15,50,100].map(x=>`<button class="chip sm ${t.dpct===x?'on':''}" data-a="dvAbrir" data-p="${x}" ${S.cart.length?'':'disabled'}>${x}%</button>`).join('')}</div>
     ${valeChave('caixa')}
-    <div class="row"><button class="btn line sm" data-a="abrirDividir" ${S.cart.length?'':'disabled'}>Dividir conta</button><button class="btn line sm" data-a="abrirMisto" ${S.cart.length?'':'disabled'}>Pagamento misto</button></div>
+    <div class="row"><button class="btn line sm" data-a="avAbrir">+ Valor avulso</button><button class="btn line sm" data-a="abrirDividir" ${S.cart.length?'':'disabled'}>Dividir conta</button><button class="btn line sm" data-a="abrirMisto" ${S.cart.length?'':'disabled'}>Pagamento misto</button></div>
     ${S.pags?pagsBox():pg}
     <div class="fim"><button class="btn go" id="finalizar" data-a="finalizar" ${podeFinalizar()?'':'disabled'}>Finalizar venda</button>
       <button class="btn line sm" data-a="recAbrir" style="margin-top:8px;width:100%">Enviar comprovante de uma venda já feita</button></div>
@@ -1552,7 +1562,7 @@ function vWhats(){
   </section>
   <section class="panel"><h2>3. Joana, a assistente do financeiro</h2>
     <p style="margin:0">Uma consulta só responde a tudo: o n8n manda o número de quem escreveu e o texto da mensagem, e o banco devolve a resposta pronta no campo <b>texto</b>. Se o campo <b>responder</b> vier como falso, o fluxo não envia nada.</p>
-    <div class="note" style="color:var(--ink)"><b>Ela só responde quando é chamada.</b> A mensagem precisa trazer o nome <b>Joana</b> ou a palavra <b>restaurante</b>. Sem isso ela fica calada e a mensagem segue o caminho normal do outro robô. Cada mensagem vale por si: não existe assunto em andamento nem memória da conversa anterior.</div>
+    <div class="note" style="color:var(--ink)"><b>O número é só do restaurante.</b> Pedidos claros do caixa (resumo, balanço, faturamento, lista de vendas, saídas, quem está no caixa) ela responde com ou sem o nome dela. Chamando por <b>Joana</b>, ela entende também perguntas soltas como "quanto vendeu hoje" e o cardápio. O que não for pedido do caixa vai para o <b>Atendimento com IA</b>, que responde como o restaurante.</div>
     <pre class="cod">POST ${esc(url('n8n_pergunta'))}
 
 ${esc(JSON.stringify({p_token:tk||'COLE_AQUI_A_CHAVE_DE_ACESSO',p_telefone:'={{ $json.body.phone }}',p_texto:'={{ $json.body.text.message }}'},null,2))}</pre>
@@ -1608,7 +1618,7 @@ function render(){
       <button class="user" data-a="conta" aria-label="Meu perfil: ${esc(S.user.nome)}"><span class="av">${avHtml(S.user)}</span><span class="who"><b>${esc(S.user.nome)}</b><span>${S.user.perfil} · perfil</span></span></button></div>`;
   S.bump=false;S.abaPisca=false;
   if(document.documentElement&&document.documentElement.style)document.documentElement.style.setProperty('--op',S.logged?corOp(S.user):PADRAO);
-  const M=$('#modal'),mh=S.logged&&S.modal&&(fa||S.modal==='conta'||S.modal==='senha'||S.modal==='recibo'||S.modal==='fiadoDia'||S.modal==='fiadoMes'||S.modal==='desc'||S.modal==='dven'||S.modal==='cadCli'||S.modal==='cliEdit'||S.modal==='credito')?modalHtml(fa):'';M.style.display=mh?'grid':'none';M.innerHTML=mh;
+  const M=$('#modal'),mh=S.logged&&S.modal&&(fa||S.modal==='conta'||S.modal==='senha'||S.modal==='recibo'||S.modal==='fiadoDia'||S.modal==='fiadoMes'||S.modal==='desc'||S.modal==='dven'||S.modal==='cadCli'||S.modal==='avulso'||S.modal==='cliEdit'||S.modal==='credito')?modalHtml(fa):'';M.style.display=mh?'grid':'none';M.innerHTML=mh;
   $('#main').className=S.view==='caixa'?'fixo':'';
   // Guarda onde cada parte estava rolada para a tela não pular ao redesenhar.
   const MN=$('#main'),rolMain=MN.scrollTop,rol=[].slice.call(MN.querySelectorAll('.col,.lista,.tw')).map(e=>e.scrollTop);
@@ -1672,7 +1682,7 @@ const A={
     anon.rpc('n8n_pergunta',{p_token:S.n8n.token,p_telefone:fone,p_texto:txt}).then(r=>{
       S.n8n.teste=r.error?{nome:'Pergunta: '+txt,erro:r.error.message}
         :{nome:'Pergunta: '+txt,texto:(r.data&&r.data.texto)||'',json:JSON.stringify(r.data,null,2),
-          aviso:r.data&&!r.data.responder?(r.data.autorizado?'Joana ficou em silêncio: a mensagem não a chamou pelo nome nem falou em restaurante, então ela deixa passar.':'Número não autorizado: o fluxo não envia resposta nenhuma.'):''};
+          aviso:r.data&&!r.data.responder?(r.data.autorizado?'Não é pedido do caixa: no WhatsApp, quem responde esta mensagem é o Atendimento com IA.':'Número não autorizado para os números do caixa: no WhatsApp, quem responde é o Atendimento com IA.'):''};
       render()},er=>{S.n8n.teste={nome:'Pergunta: '+txt,erro:String(er&&er.message||er)};render()});return true},
   n8nGerar:()=>{if(S.n8n&&S.n8n.token&&!S.n8n.confTroca){S.n8n.confTroca=true;return}
     q(sb.rpc('n8n_gerar_token'),'Chave do n8n').then(async r=>{if(typeof r==='string')toast('Chave de acesso gerada.');if(S.n8n)S.n8n.confTroca=false;await carregarN8n();render()});return true},
@@ -1829,6 +1839,10 @@ const A={
     if(cli&&cli!==S.clienteId){S.clienteId=cli;S.resgate=false}
     S.dven={pct:S.dvNovo,obs};S.pags=null;S.pagoMaq=null;if(S.dvNovo===100)S.forma='';S.modal=null;S.dvNovo=null;toast('Desconto de '+S.dven.pct+'% aplicado.')},
   dvTirar:()=>{S.dven=null;S.pags=null;S.pagoMaq=null;toast('Desconto retirado.')},
+  avAbrir:()=>{if(!fxAberto(S.user.id)){toast('Abra o caixa para lançar um valor avulso.');return true}S.modal='avulso';setTimeout(()=>{const x=$('#av-valor');if(x)x.focus()},30)},
+  avAdd:()=>{const v=parseMoney($('#av-valor').value),obs=$('#av-obs').value.trim().replace(/\s+/g,' ');
+    if(!v){toast('Digite o valor avulso.');return true}if(v>1000000){toast('O valor avulso vai até R$ 10.000,00.');return true}
+    S.cart.push({src:'avulso',grupo:'avulso',desc:'Valor avulso'+(obs?' ('+obs+')':''),obs,valor:v});S.pags=null;S.pagoMaq=null;S.bump=true;S.abaConf=false;S.modal=null;toast('Valor avulso de '+brl(v)+' adicionado à venda.')},
   cadAbrir:e=>{S.cadVolta=e.dataset.volta||'cancelar';S.modal='cadCli'},
   cadSalvar:()=>{const n=$('#cc-nome').value.trim(),em=$('#cc-emp').value.trim(),f=$('#cc-fone').value.trim();
     if(!n){toast('Digite o nome do cliente.');return true}if(!f){toast('Digite o telefone, com DDD.');return true}
@@ -1885,7 +1899,7 @@ const A={
     const pags=S.pags?S.pags.linhas.map(l=>({rotulo:l.forma==='vale'?(l.rot?l.rot+' · ':'')+EXT:l.rot,forma:l.forma,valor_centavos:l.valor,recebido_centavos:l.forma==='dinheiro'&&S.pags.troco?l.valor+S.pags.troco:null}))
       :zero?[]:[{rotulo:S.forma==='vale'&&!pagoNaPoint?EXT:'',forma:S.forma,valor_centavos:t.total,recebido_centavos:S.forma==='dinheiro'?rec:null}];
     const p={cliente_id:S.clienteId||null,usar_resgate:!!t.desc,tipo:S.pags?S.pags.tipo:'simples',
-      itens:S.cart.map(i=>i.grupo==='produto'?{produto_id:i.src}:{balanca_id:i.src,gramas:i.g,tara_gramas:i.tara||0}),pagamentos:pags,
+      itens:S.cart.map(i=>i.grupo==='avulso'?{avulso:true,valor_centavos:i.valor,obs:i.obs||''}:i.grupo==='produto'?{produto_id:i.src}:{balanca_id:i.src,gramas:i.g,tara_gramas:i.tara||0}),pagamentos:pags,
       desconto_venda:t.dpct?{pct:t.dpct,obs:S.dven.obs||''}:null};
     const troco=S.pags?(S.pags.troco||0):S.forma==='dinheiro'?rec-t.total:0,nomeC=t.c?t.c.nome.split(' ')[0]:'';
     const avisoFiado=S.fav.ativo&&S.clienteId&&pags.some(x=>x.forma==='fiado')?' · aviso de fiado no WhatsApp':'';
@@ -2032,7 +2046,7 @@ document.addEventListener('keydown',ev=>{
     if(pr){ev.preventDefault();A.addProd({dataset:{id:pr.id}});return render()}
     return}
 },true);
-document.addEventListener('keydown',ev=>{if(ev.key!=='Enter')return;{const t=ev.target;if(t&&t.id==='fd-nome'){ev.preventDefault();A.pendurar();render();return}if(t&&t.dataset&&(t.dataset.pe||t.dataset.ke)){ev.preventDefault();t.dataset.pe?prodGravar([t.dataset.pe],[]):prodGravar([],[t.dataset.ke]);return}}if(ev.target.id==='ap-senha'){ev.preventDefault();const o=document.getElementById('ap-ok');if(o)o.click();return}const cx=ev.target.closest&&ev.target.closest('#login');const b=cx&&cx.querySelector('[data-enter]');if(b){ev.preventDefault();b.click()}});
+document.addEventListener('keydown',ev=>{if(ev.key!=='Enter')return;{const t=ev.target;if(t&&t.id==='fd-nome'){ev.preventDefault();A.pendurar();render();return}if(t&&(t.id==='av-valor'||t.id==='av-obs')){ev.preventDefault();A.avAdd();render();return}if(t&&t.dataset&&(t.dataset.pe||t.dataset.ke)){ev.preventDefault();t.dataset.pe?prodGravar([t.dataset.pe],[]):prodGravar([],[t.dataset.ke]);return}}if(ev.target.id==='ap-senha'){ev.preventDefault();const o=document.getElementById('ap-ok');if(o)o.click();return}const cx=ev.target.closest&&ev.target.closest('#login');const b=cx&&cx.querySelector('[data-enter]');if(b){ev.preventDefault();b.click()}});
 function rota(){const h=(location.hash||'').slice(1);if(RENDER[h])S.view=h;render()}
 window.addEventListener('hashchange',rota);
 rota();
