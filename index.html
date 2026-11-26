@@ -543,7 +543,7 @@ const S={
   clientes:[],
   regras:{base:'valor',pontosResgate:100,valorResgate:1000,minGrupo:50},
   cardapio:[],
-  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pend:'',dven:null,pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',saldo:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',pedit:{},kedit:{},salvandoProd:false,neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},fav:{ativo:true,texto:''},rec:null,maq:false,valeMaq:true,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
+  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pend:'',dven:null,pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',saldo:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',pedit:{},kedit:{},salvandoProd:false,neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},fav:{ativo:true,texto:''},susp:{ativo:false,desde:null,volta:5000,aviso:true,txtS:'',txtV:''},rec:null,maq:false,valeMaq:true,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
   periodo:'diario',refData:'',fin:null,saidas:[],saidaCats:[],saidaMes:'',rank:'qtd',logAberto:false,finSeq:0,finLimite:200,finCarregando:false,contado:{},fluxos:[],log:[],modal:null,menu:(typeof window!=='undefined'&&window.innerWidth>980),fundo:10000,
   wa:{url:'',eventos:{resumo:true,cardapio:true,pontos:true,grupo:false}},
   vendas:[]
@@ -575,7 +575,7 @@ function totaisDe(v){const sub=v.cart.reduce((a,i)=>a+i.valor,0),c=S.clientes.fi
   const base=c&&c.descPct>0?v.cart.filter(i=>i.grupo!=='avulso'&&descAplica(c.descSobre,i.grupo)).reduce((a,i)=>a+i.valor,0):0;
   const dcli=base?Math.min(sub,Math.round(base*Math.round(c.descPct*100)/10000)):0;
   const avul=v.cart.filter(i=>i.grupo==='avulso').reduce((a,i)=>a+i.valor,0),dpct=v.dven&&v.dven.pct||0,dven=dpct?Math.round(Math.max(sub-dcli-avul,0)*dpct/100):0;
-  const pode=!!c&&c.pontos>=S.regras.pontosResgate&&sub-dcli-dven>0,desc=v.resgate&&pode?Math.min(S.regras.valorResgate,sub-dcli-dven):0;
+  const pode=!!c&&!c.susp&&c.pontos>=S.regras.pontosResgate&&sub-dcli-dven>0,desc=v.resgate&&pode?Math.min(S.regras.valorResgate,sub-dcli-dven):0;
   return{sub,dcli,dpct,dven,desc,total:sub-dcli-dven-desc,pode,c}}
 const totais=()=>totaisDe(S);
 /* ---------- vendas em abas (até 4 em aberto) ----------
@@ -978,6 +978,19 @@ function vNegocio(){const n=S.neg,contato=[n.end?'📍 '+n.end:'',n.foneBonito?'
     <div><b>Como o cliente recebe</b><div class="bubble bot" id="fav-previa" style="white-space:pre-wrap;margin-top:6px">${esc(favPrevia(S.fav.texto))}</div></div>
     <div><button class="btn" data-a="favSalvar">Salvar aviso</button></div></section>
   <section class="panel"><h2>Como fica o recibo</h2><div class="bubble bot" id="ng-previa" style="white-space:pre-wrap">${esc(previa)}</div></section>`}
+/* ---------- Suspensão no programa de pontos ---------- */
+function susPainel(){if(!isAdmin())return '';const U=S.susp,R=S.regras,nS=S.clientes.filter(c=>c.susp).length,ab=S.clientes.filter(c=>!c.susp&&c.p30<R.minGrupo).length;
+  const marc=['nome','restaurante','pontos','valor_volta','minimo'].map(k=>`<code>{${k}}</code>`).join(' ');
+  return `<section class="panel" id="sus-sec"><div class="head"><h2>Suspensão no programa</h2><span class="pill ${U.ativo?'ok':''}">${U.ativo?'Ligada':'Desligada'}${nS?' · '+nS+' suspensos':''}</span></div>
+    <label class="sw" for="sus-on">Suspender quem ganhar menos de ${R.minGrupo} pontos em 30 dias <input type="checkbox" id="sus-on" ${U.ativo?'checked':''}></label>
+    <div class="form compacta"><div><label for="sus-volta">Para voltar, o cliente precisa somar em compras</label><input type="text" id="sus-volta" inputmode="numeric" data-m value="${num(U.volta)}"></div>
+      <label class="sw" for="sus-aviso">Avisar o cliente no WhatsApp <input type="checkbox" id="sus-aviso" ${U.aviso?'checked':''}></label></div>
+    <div class="note">Suspenso, o cliente <b>não ganha pontos novos e não pode trocar</b>, mas o saldo fica guardado. O que ele gasta conta para voltar; ao chegar no valor, volta sozinho e já ganha os pontos daquela compra.
+      Ninguém é suspenso nos primeiros 30 dias depois do cadastro, depois de voltar ao programa, nem nos 30 dias seguintes a ligar esta regra${U.ativo&&U.desde?' (ligada em '+new Date(U.desde).toLocaleDateString('pt-BR')+')':''}. A conferência roda sozinha a cada hora, das 9h às 20h. Hoje há ${ab} ${ab===1?'cliente ativo abaixo':'clientes ativos abaixo'} do mínimo.</div>
+    <div><label for="sus-ts">Aviso de suspensão</label><textarea id="sus-ts" rows="6" maxlength="1000" style="width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:12px">${esc(U.txtS)}</textarea></div>
+    <div><label for="sus-tv">Aviso de volta ao programa</label><textarea id="sus-tv" rows="4" maxlength="1000" style="width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:12px">${esc(U.txtV)}</textarea></div>
+    <div class="note">Marcadores: ${marc}. {valor_volta} é o valor que falta somar; {minimo} é o mínimo de pontos.</div>
+    <div class="row"><button class="btn" data-a="susSalvar">Salvar suspensão</button><button class="btn line" data-a="susAvaliar" ${U.ativo?'':'disabled'}>Conferir agora</button></div></section>`}
 /* ---------- Atendimento com IA ---------- */
 const IA_DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
 const IA_FAQ_SUG=['Tem opção vegetariana?','Aceita encomenda para eventos?','Tem estacionamento?','Pode levar marmita / quentinha?','Tem cadeirinha para criança?','Aceita reserva de mesa?'];
@@ -1158,7 +1171,8 @@ function vendaPanel(){
       ${cliAtual()?`<div class="clibar"><span class="pill ${cliAtual().credito?'ok':''}">Crédito ${brl(cliAtual().credito)}</span><button class="chip sm" data-a="credAbrir" data-id="${cliAtual().id}">Crédito</button><button class="chip sm" data-a="cliEditAbrir" data-id="${cliAtual().id}">Editar cliente</button></div>`:''}
     </div>
     ${S.novoCli?`<div class="form"><div><label for="nc-fone">Telefone / WhatsApp</label><input type="text" id="nc-fone" inputmode="tel" placeholder="(85) 9..."></div><div><label for="nc-nome">Nome</label><input type="text" id="nc-nome" maxlength="60"></div><div><label for="nc-emp">Empresa (opcional)</label><input type="text" id="nc-emp" maxlength="60"></div><button class="btn sm" data-a="salvarCli">Cadastrar e usar</button></div>`:''}
-    ${t.c?`<div class="sw"><span>${esc(t.c.nome.split(' ')[0])} tem ${t.c.pontos} pontos${t.pode?'':' (resgate a partir de '+S.regras.pontosResgate+')'}</span>${t.pode?`<button class="chip ${S.resgate?'on':''}" data-a="resgate">${S.resgate?'Desconto aplicado':'Usar '+brl(S.regras.valorResgate)}</button>`:''}</div>`:''}
+    ${t.c&&t.c.susp?`<div class="sw"><span>${esc(t.c.nome.split(' ')[0])} está <b>suspenso</b> no programa de pontos (${t.c.pontos} pontos guardados). Faltam ${brl(Math.max(0,S.susp.volta-t.c.volta))} em compras para voltar.</span></div>`:''}
+    ${t.c&&!t.c.susp?`<div class="sw"><span>${esc(t.c.nome.split(' ')[0])} tem ${t.c.pontos} pontos${t.pode?'':' (resgate a partir de '+S.regras.pontosResgate+')'}</span>${t.pode?`<button class="chip ${S.resgate?'on':''}" data-a="resgate">${S.resgate?'Desconto aplicado':'Usar '+brl(S.regras.valorResgate)}</button>`:''}</div>`:''}
     ${t.c?`<label class="sw" for="rec-zap"><span>Enviar recibo no WhatsApp${t.c.foneNorm?'':' (número inválido)'}</span><input type="checkbox" id="rec-zap" data-c="recibo" ${S.recibo&&t.c.foneNorm?'checked':''} ${t.c.foneNorm?'':'disabled'}></label>`:''}
     <div>${t.desc||t.dcli||t.dven?`<div class="tot"><span>Subtotal</span><span>${brl(t.sub)}</span></div>`:''}${t.dpct?`<div class="tot dvlinha"><span>Desconto ${t.dpct}%${S.dven.obs?' · '+esc(S.dven.obs):''} <button class="chip sm" data-a="dvTirar" aria-label="Tirar o desconto">×</button></span><span>− ${brl(t.dven)}</span></div>`:''}${t.dcli?`<div class="tot"><span>Desconto de ${esc(t.c.nome.split(' ')[0])} (${pctTxt(t.c.descPct)} ${DSOBRE[t.c.descSobre]})</span><span>− ${brl(t.dcli)}</span></div>`:''}${t.desc?`<div class="tot"><span>Desconto por pontos</span><span>− ${brl(t.desc)}</span></div>`:''}
       <div class="tot g"><span>Total</span><strong>${brl(t.total)}</strong></div></div>
@@ -1344,14 +1358,21 @@ function vClientes(){
   const R=S.regras;
   return `<div class="head"><div><h1>Clientes e pontos</h1><p>${S.clientes.length} clientes cadastrados</p></div></div>
   <section class="panel"><h2>Regras do programa</h2><div class="form">
-    <div><label for="r-base">Como pontua</label><select id="r-base" data-c="regra" ${isAdmin()?'':'disabled'} data-k="base"><option value="valor" ${R.base==='valor'?'selected':''}>1 ponto a cada R$ 1,00 gasto</option><option value="gramas" ${R.base==='gramas'?'selected':''}>1 ponto a cada 100 g</option></select></div>
+    <div><label for="r-cada">Como pontua</label><select id="r-cada" data-c="regra" ${isAdmin()?'':'disabled'} data-k="cada">${[50,100,200,300,400,500,600,700,800,900,1000].map(v=>`<option value="${v}" ${(R.cada||100)===v?'selected':''}>1 ponto a cada ${brl(v)}</option>`).join('')}</select></div>
     <div><label for="r-pr">Pontos para resgatar</label><input type="text" id="r-pr" inputmode="numeric" data-c="regra" ${isAdmin()?'':'disabled'} data-k="pontosResgate" value="${R.pontosResgate}"></div>
     <div><label for="r-vr">Vale em alimentação (R$)</label><input type="text" id="r-vr" inputmode="numeric" data-m data-c="regra" ${isAdmin()?'':'disabled'} data-k="valorResgate" value="${num(R.valorResgate)}"></div>
-    <div><label for="r-mg">Mínimo em 30 dias para ficar no grupo</label><input type="text" id="r-mg" inputmode="numeric" data-c="regra" ${isAdmin()?'':'disabled'} data-k="minGrupo" value="${R.minGrupo}"></div>
-  </div></section>
+    <div><label for="r-mg">Mínimo de pontos em 30 dias para continuar no programa</label><input type="text" id="r-mg" inputmode="numeric" data-c="regra" ${isAdmin()?'':'disabled'} data-k="minGrupo" value="${R.minGrupo}"></div>
+  </div>
+    <div class="row">
+      <label class="sw" for="r-kg" style="flex:1">Compras no quilo (comida e açaí) geram pontos <input type="checkbox" id="r-kg" data-c="regra" data-k="kg" ${R.kg?'checked':''} ${isAdmin()?'':'disabled'}></label>
+      <label class="sw" for="r-pf" style="flex:1">Prato feito gera pontos <input type="checkbox" id="r-pf" data-c="regra" data-k="pf" ${R.pf?'checked':''} ${isAdmin()?'':'disabled'}></label></div>
+    <div class="note">${!R.kg&&!R.pf?'<b>Programa pausado:</b> nenhuma compra gera pontos novos. Quem já tem pontos continua podendo trocar pelo desconto.'
+      :`Só ${R.kg&&R.pf?'o quilo e o prato feito geram':R.kg?'o quilo (comida e açaí) gera':'o prato feito gera'} pontos. ${R.kg&&R.pf?'Se a mesma compra tiver os dois, conta só um deles: o de maior valor. ':''}Bebidas, sobremesas e valores avulsos não pontuam. Os descontos da venda diminuem os pontos na mesma proporção.`}
+      <br><b>Mínimo em 30 dias:</b> quantos pontos o cliente precisa ganhar nos últimos 30 dias para continuar no programa. Com a suspensão ligada (abaixo), quem ficar abaixo é suspenso.</div></section>
+  ${susPainel()}
   ${fiadosClientes()}
-  <section class="panel"><div class="head"><h2>Clientes</h2><button class="btn sm" data-a="cadAbrir">+ Cadastrar cliente</button></div><div class="tw"><table><thead><tr><th>Cliente</th><th>Empresa</th><th class="n">Crédito</th><th>Desconto</th><th>WhatsApp</th><th>Número para envio</th><th class="n">Pontos</th><th class="n">Consumido</th><th class="n">Gasto</th><th class="n">Pontos em 30 dias</th><th>Grupo do WhatsApp</th></tr></thead><tbody>
-    ${S.clientes.slice().sort((x,y)=>y.pontos-x.pontos).map(c=>`<tr><td><b>${esc(c.nome)}</b><br><button class="chip sm" data-a="cliEditAbrir" data-id="${c.id}">Editar</button></td><td>${esc(c.empresa)||'<small>—</small>'}</td><td class="n"><b>${brl(c.credito)}</b><br><button class="chip sm" data-a="credAbrir" data-id="${c.id}">Crédito</button></td><td>${c.descPct?`<span class="pill ok">${pctTxt(c.descPct)} ${DSOBRE[c.descSobre]}</span>`:'<small>—</small>'}${isAdmin()?` <button class="chip sm" data-a="descAbrir" data-id="${c.id}">${c.descPct?'Mudar':'Dar desconto'}</button>`:''}</td><td>${esc(c.fone)}</td><td>${c.foneNorm?esc(c.foneNorm):'<span class="pill warn">inválido</span>'}</td><td class="n">${c.pontos}${c.pontos>=R.pontosResgate?' <span class="pill ok">pode resgatar</span>':''}</td><td class="n">${kg1(c.g)}</td><td class="n">${brl(c.gasto)}</td><td class="n">${c.p30}</td><td>${c.p30>=R.minGrupo?'<span class="pill ok">Permanece</span>':'<span class="pill warn">Abaixo do mínimo</span>'}</td></tr>`).join('')}
+  <section class="panel"><div class="head"><h2>Clientes</h2><button class="btn sm" data-a="cadAbrir">+ Cadastrar cliente</button></div><div class="tw"><table><thead><tr><th>Cliente</th><th>Empresa</th><th class="n">Crédito</th><th>Desconto</th><th>WhatsApp</th><th>Número para envio</th><th class="n">Pontos</th><th class="n">Consumido</th><th class="n">Gasto</th><th class="n">Pontos em 30 dias</th><th>Programa de pontos</th></tr></thead><tbody>
+    ${S.clientes.slice().sort((x,y)=>y.pontos-x.pontos).map(c=>`<tr><td><b>${esc(c.nome)}</b><br><button class="chip sm" data-a="cliEditAbrir" data-id="${c.id}">Editar</button></td><td>${esc(c.empresa)||'<small>—</small>'}</td><td class="n"><b>${brl(c.credito)}</b><br><button class="chip sm" data-a="credAbrir" data-id="${c.id}">Crédito</button></td><td>${c.descPct?`<span class="pill ok">${pctTxt(c.descPct)} ${DSOBRE[c.descSobre]}</span>`:'<small>—</small>'}${isAdmin()?` <button class="chip sm" data-a="descAbrir" data-id="${c.id}">${c.descPct?'Mudar':'Dar desconto'}</button>`:''}</td><td>${esc(c.fone)}</td><td>${c.foneNorm?esc(c.foneNorm):'<span class="pill warn">inválido</span>'}</td><td class="n">${c.pontos}${c.pontos>=R.pontosResgate?' <span class="pill ok">pode resgatar</span>':''}</td><td class="n">${kg1(c.g)}</td><td class="n">${brl(c.gasto)}</td><td class="n">${c.p30}</td><td>${c.susp?`<span class="pill warn">Suspenso · faltam ${brl(Math.max(0,S.susp.volta-c.volta))}</span>`:c.p30>=R.minGrupo?'<span class="pill ok">Ativo</span>':'<span class="pill">Ativo · abaixo do mínimo</span>'}${isAdmin()?`<br><button class="chip sm ${S.cpConf===c.id?'perigo':''}" data-a="cliPtsStatus" data-id="${c.id}" data-on="${c.susp?1:0}">${S.cpConf===c.id?'Toque de novo para confirmar':c.susp?'Reativar':'Suspender'}</button>`:''}</td></tr>`).join('')}
   </tbody></table></div>
   <div class="note">Quem fica abaixo do mínimo é enviado ao n8n no evento "grupo", para o senhor decidir a regra de aviso ou remoção.</div></section>`;
 }
@@ -1423,8 +1444,8 @@ async function carregarBase(){
     S.balancas=b.map(x=>{const ts=[{n:'Sem tara',g:0}].concat((x.taras||[]).slice().sort((m,n)=>m.gramas-n.gramas).map(t=>({n:t.nome,g:t.gramas}))),a=ant[x.id];
       return{id:x.id,nome:x.nome,grupo:x.grupo,marca:x.marca,conexao:x.conexao,baud:String(x.baud),precoKg:x.preco_kg_centavos,bruto:a?a.bruto:0,tara:0,conectada:a?a.conectada:true,taras:ts}})}
   if(Array.isArray(pr))S.produtos=pr.map(x=>({id:x.id,nome:x.nome,preco:x.preco_centavos,cat:x.categoria,destaque:x.destaque,imagem:x.imagem||''}));
-  if(cf&&cf!==true){S.regras={base:cf.base_pontos,pontosResgate:cf.pontos_resgate,valorResgate:cf.valor_resgate_centavos,minGrupo:cf.min_pontos_grupo};S.fundo=cf.fundo_troco_centavos;S.nomeRest=cf.nome_restaurante||'Restaurante';negAplicar({nome:S.nomeRest,fone:cf.telefone_restaurante||'',end:cf.endereco_restaurante||'',rodape:cf.rodape_recibo===undefined?'Obrigado pela preferência! 😊':cf.rodape_recibo||''});S.fav={ativo:cf.fiado_aviso_ativo!==false,texto:cf.fiado_aviso_texto||'Olá, {nome}! 😊\n\nPassando para avisar que uma compra no *{restaurante}* no valor de *{valor}* foi adicionada à sua conta em {data}, às {hora}.\n\nQualquer dúvida, é só chamar. Obrigado pela preferência!'};S.maq=!!cf.maquineta_ativa;S.valeMaq=cf.vale_maquineta!==false}
-  if(Array.isArray(cl)){const m={};(Array.isArray(p30)?p30:[]).forEach(x=>m[x.cliente_id]=Number(x.pontos));S.clientes=cl.map(x=>({id:x.id,nome:x.nome,fone:x.telefone,foneNorm:x.telefone_norm||'',descPct:Number(x.desconto_pct||0),empresa:x.empresa||'',credito:Number(x.credito_centavos||0),descSobre:x.desconto_sobre||'tudo',pontos:x.pontos,g:Number(x.gramas_total),gasto:Number(x.gasto_centavos),p30:m[x.id]||0}))}
+  if(cf&&cf!==true){S.regras={base:cf.base_pontos,pontosResgate:cf.pontos_resgate,valorResgate:cf.valor_resgate_centavos,minGrupo:cf.min_pontos_grupo,cada:cf.pontos_cada_centavos||100,kg:cf.pontos_kg!==false,pf:cf.pontos_pf!==false};S.fundo=cf.fundo_troco_centavos;S.nomeRest=cf.nome_restaurante||'Restaurante';negAplicar({nome:S.nomeRest,fone:cf.telefone_restaurante||'',end:cf.endereco_restaurante||'',rodape:cf.rodape_recibo===undefined?'Obrigado pela preferência! 😊':cf.rodape_recibo||''});S.fav={ativo:cf.fiado_aviso_ativo!==false,texto:cf.fiado_aviso_texto||'Olá, {nome}! 😊\n\nPassando para avisar que uma compra no *{restaurante}* no valor de *{valor}* foi adicionada à sua conta em {data}, às {hora}.\n\nQualquer dúvida, é só chamar. Obrigado pela preferência!'};S.maq=!!cf.maquineta_ativa;S.susp={ativo:!!cf.pontos_suspender,desde:cf.pontos_suspender_desde||null,volta:cf.pontos_volta_centavos||5000,aviso:cf.pontos_aviso_ativo!==false,txtS:cf.pontos_aviso_suspenso||'',txtV:cf.pontos_aviso_volta||''};S.valeMaq=cf.vale_maquineta!==false}
+  if(Array.isArray(cl)){const m={};(Array.isArray(p30)?p30:[]).forEach(x=>m[x.cliente_id]=Number(x.pontos));S.clientes=cl.map(x=>({id:x.id,nome:x.nome,fone:x.telefone,foneNorm:x.telefone_norm||'',descPct:Number(x.desconto_pct||0),empresa:x.empresa||'',credito:Number(x.credito_centavos||0),susp:x.pontos_status==='suspenso',volta:Number(x.volta_centavos||0),descSobre:x.desconto_sobre||'tudo',pontos:x.pontos,g:Number(x.gramas_total),gasto:Number(x.gasto_centavos),p30:m[x.id]||0}))}
   if(Array.isArray(cd))S.cardapio=cd.map(x=>({id:x.id,cat:x.categoria,nome:x.nome,on:x.disponivel}));
   // Se algum preço mudou, a venda em andamento acompanha o banco.
   if(S.logged&&S.abasDe!==S.user.id)abasRestaurar();
@@ -1843,6 +1864,13 @@ const A={
   avAdd:()=>{const v=parseMoney($('#av-valor').value),obs=$('#av-obs').value.trim().replace(/\s+/g,' ');
     if(!v){toast('Digite o valor avulso.');return true}if(v>1000000){toast('O valor avulso vai até R$ 10.000,00.');return true}
     S.cart.push({src:'avulso',grupo:'avulso',desc:'Valor avulso'+(obs?' ('+obs+')':''),obs,valor:v});S.pags=null;S.pagoMaq=null;S.bump=true;S.abaConf=false;S.modal=null;toast('Valor avulso de '+brl(v)+' adicionado à venda.')},
+  susSalvar:()=>{const on=$('#sus-on').checked,v=parseMoney($('#sus-volta').value),av=$('#sus-aviso').checked,ts=$('#sus-ts').value,tv=$('#sus-tv').value;
+    if(v<100){toast('Digite o valor que o cliente precisa somar para voltar.');return true}
+    q(sb.rpc('pontos_suspensao_salvar',{p_ativo:on,p_volta_centavos:v,p_aviso:av,p_txt_suspenso:ts,p_txt_volta:tv}),'Suspensão').then(async r=>{if(r&&r!==true){
+      toast(on?'Suspensão ligada. Ninguém é suspenso antes de 30 dias a partir de quando ela foi ligada.':'Suspensão salva e desligada.');await carregarBase()}render()});return true},
+  susAvaliar:()=>{q(sb.rpc('pontos_avaliar'),'Suspensão').then(async n=>{if(typeof n==='number'){toast(n?n+(n===1?' cliente suspenso agora.':' clientes suspensos agora.'):'Conferido: ninguém para suspender agora.');await carregarBase();render()}});return true},
+  cliPtsStatus:e=>{const id=e.dataset.id,on=e.dataset.on==='1';if(S.cpConf!==id){S.cpConf=id;return}S.cpConf=null;
+    q(sb.rpc('cliente_pontos_status',{p_cliente:id,p_ativo:on}),'Programa de pontos').then(async r=>{if(r&&r.id){toast(on?r.nome+' voltou ao programa de pontos.':r.nome+' foi suspenso do programa de pontos.');await carregarBase()}render()});return true},
   cadAbrir:e=>{S.cadVolta=e.dataset.volta||'cancelar';S.modal='cadCli'},
   cadSalvar:()=>{const n=$('#cc-nome').value.trim(),em=$('#cc-emp').value.trim(),f=$('#cc-fone').value.trim();
     if(!n){toast('Digite o nome do cliente.');return true}if(!f){toast('Digite o telefone, com DDD.');return true}
@@ -1908,7 +1936,7 @@ const A={
     S.enviando=true;render();toast('Registrando a venda…');
     q(sb.rpc('registrar_venda',{p})).then(async r=>{S.enviando=false;
       if(!r||!r.numero){await carregarBase();return render()}
-      toast(`Venda nº ${r.numero} de ${brl(r.total_centavos)} registrada ${como}`+(troco?` · Troco ${brl(troco)}`:'')+(r.pontos_ganhos?` · ${nomeC} ganhou ${r.pontos_ganhos} pontos`:'')+(querRecibo?' · recibo no WhatsApp':'')+avisoFiado);
+      toast(`Venda nº ${r.numero} de ${brl(r.total_centavos)} registrada ${como}`+(troco?` · Troco ${brl(troco)}`:'')+(r.reativado?` · ${nomeC} voltou ao programa de pontos`:'')+(r.pontos_ganhos?` · ${nomeC} ganhou ${r.pontos_ganhos} pontos`:'')+(querRecibo?' · recibo no WhatsApp':'')+avisoFiado);
       if(querRecibo&&r.venda_id)q(sb.rpc('enfileirar_recibo',{p_venda:r.venda_id}),'Recibo');
       {const k=S.aba,era=S.abas[k].pend;
         if(era){S.abas.splice(k,1);let l=S.abas.findIndex(abaLivre);
@@ -1961,7 +1989,7 @@ const C={
   recibo:e=>{S.recibo=e.checked},
   taraManual:e=>{bal(e.dataset.id).tara=Math.max(0,parseInt(e.value,10)||0)},
   cliente:e=>{S.clienteId=e.value;S.resgate=false;S.pags=null},
-  regra:e=>{const k=e.dataset.k,M={base:'base_pontos',pontosResgate:'pontos_resgate',valorResgate:'valor_resgate_centavos',minGrupo:'min_pontos_grupo'},v=k==='base'?e.value:k==='valorResgate'?parseMoney(e.value):Math.max(0,parseInt(e.value,10)||0);
+  regra:e=>{const k=e.dataset.k,M={base:'base_pontos',pontosResgate:'pontos_resgate',valorResgate:'valor_resgate_centavos',minGrupo:'min_pontos_grupo',cada:'pontos_cada_centavos',kg:'pontos_kg',pf:'pontos_pf'},v=k==='kg'||k==='pf'?e.checked:k==='base'?e.value:k==='valorResgate'?parseMoney(e.value):Math.max(0,parseInt(e.value,10)||0);
     if(k==='pontosResgate'&&v<1)return toast('Os pontos para resgatar precisam ser pelo menos 1.');
     salvar(sb.from('config').update({[M[k]]:v}).eq('id',1),'Regra atualizada.')},
   contado:e=>{S.contado[e.dataset.id]=e.value.trim()},
