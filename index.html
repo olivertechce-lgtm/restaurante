@@ -454,6 +454,9 @@ tr.comdesc td{background:#fff3df}
 .cur{display:inline-block;width:3px;height:.8em;margin-left:6px;background:currentColor;vertical-align:-2px}
 @media (prefers-reduced-motion:no-preference){.cur{animation:pisca 1s steps(1) infinite}}
 @keyframes pisca{50%{opacity:0}}
+.maqfaixa{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;background:#e6f6ef;border:1px solid #9fd9bf;border-radius:12px;padding:10px 12px}
+.maqfaixa span{flex:1 1 220px;font-size:14px}.maqfaixa.fim{background:#fdecc8;border-color:#e8b85a}
+.maqfaixa i{flex:none;width:18px;height:18px;border-radius:50%;border:3px solid #9fd9bf;border-top-color:var(--ok);animation:maqgira .9s linear infinite}
 .maqespera{display:flex;align-items:center;gap:14px;background:var(--soft);border-radius:14px;padding:16px;font-size:16px;color:var(--ink)}
 .maqespera i{flex:none;width:26px;height:26px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--ok);animation:maqgira .9s linear infinite}
 @keyframes maqgira{to{transform:rotate(360deg)}}
@@ -543,7 +546,7 @@ const S={
   clientes:[],
   regras:{base:'valor',pontosResgate:100,valorResgate:1000,minGrupo:50},
   cardapio:[],
-  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pend:'',dven:null,pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',saldo:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',pedit:{},kedit:{},salvandoProd:false,neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},fav:{ativo:true,texto:''},susp:{ativo:false,desde:null,volta:5000,aviso:true,txtS:'',txtV:''},rec:null,maq:false,valeMaq:true,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
+  abas:[],aba:0,abaConf:false,abasDe:'',foco:'',abaPisca:false,rolarFoco:false,cart:[],pend:'',dven:null,pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',saldo:'',rec:''},dv:[],todas:false,fil:{forma:'',tipo:'',op:'',cli:''},clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,nomeRest:'Restaurante',pedit:{},kedit:{},salvandoProd:false,neg:{nome:'Restaurante',fone:'',foneBonito:'',end:'',rodape:''},fav:{ativo:true,texto:''},cob:null,maqQtd:1,susp:{ativo:false,desde:null,volta:5000,aviso:true,txtS:'',txtV:''},rec:null,maq:false,valeMaq:true,maqUrl:'',cob:null,cobT:null,pagoMaq:null,cobrancas:[],
   periodo:'diario',refData:'',fin:null,saidas:[],saidaCats:[],saidaMes:'',rank:'qtd',logAberto:false,finSeq:0,finLimite:200,finCarregando:false,contado:{},fluxos:[],log:[],modal:null,menu:(typeof window!=='undefined'&&window.innerWidth>980),fundo:10000,
   wa:{url:'',eventos:{resumo:true,cardapio:true,pontos:true,grupo:false}},
   vendas:[]
@@ -580,8 +583,8 @@ function totaisDe(v){const sub=v.cart.reduce((a,i)=>a+i.valor,0),c=S.clientes.fi
 const totais=()=>totaisDe(S);
 /* ---------- vendas em abas (até 4 em aberto) ----------
    A venda da aba ativa vive em S.cart, S.forma etc., como sempre. As outras ficam guardadas em S.abas. */
-const MAX_ABAS=4,MAX_PEND=20,CAMPOS=['cart','pags','mx','dv','clienteId','resgate','forma','recebido','novoCli','recibo','pagoMaq','pend','dven'];
-const vendaVazia=()=>({cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',saldo:'',rec:''},dv:[],clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,pagoMaq:null,pend:'',dven:null,pesos:null});
+const MAX_ABAS=4,MAX_PEND=20,CAMPOS=['cart','pags','mx','dv','clienteId','resgate','forma','recebido','novoCli','recibo','pagoMaq','pend','dven','cob'];
+const vendaVazia=()=>({cart:[],pags:null,mx:{pix:'',credito:'',debito:'',dinheiro:'',vale:'',fiado:'',saldo:'',rec:''},dv:[],clienteId:'',resgate:false,forma:'',recebido:'',novoCli:false,recibo:true,pagoMaq:null,pend:'',dven:null,cob:null,pesos:null});
 function abaGuardar(){const a=S.abas[S.aba];if(a){CAMPOS.forEach(k=>a[k]=S[k]);a.pesos=S.balancas.map(b=>({id:b.id,bruto:b.bruto,tara:b.tara}))}}
 function abaCarregar(k){S.aba=k;const a=S.abas[k];CAMPOS.forEach(c=>S[c]=a[c]);
   // Cada venda tem a sua pesagem em andamento: trocar de aba troca o que está na tela.
@@ -625,7 +628,7 @@ function abasRestaurar(){S.abasDe=S.user.id;abasReset();
   const usados={},abas=fonte.filter(a=>a&&!a.pend).slice(0,MAX_ABAS).concat(fonte.filter(a=>a&&a.pend).slice(0,MAX_PEND)).map(a=>{const v=Object.assign(vendaVazia(),a||{});
     v.cart=(Array.isArray(v.cart)?v.cart:[]).filter(i=>i&&(i.grupo==='avulso'?i.valor>0:i.grupo==='produto'?S.produtos.some(x=>x.id===i.src):S.balancas.some(x=>x.id===i.src)));
     if(v.clienteId&&!S.clientes.some(c=>c.id===v.clienteId)){v.clienteId='';v.resgate=false;v.pags=null}
-    if(!Array.isArray(v.dv))v.dv=[];v.novoCli=false;
+    if(!Array.isArray(v.dv))v.dv=[];v.novoCli=false;v.cob=null;
     if(v.pend){v.n=0;return v}
     v.n=(v.n>=1&&v.n<=MAX_ABAS&&!usados[v.n])?v.n:0;if(v.n)usados[v.n]=1;return v});
   abas.forEach(v=>{if(!v.pend&&!v.n){for(let n=1;n<=MAX_ABAS;n++)if(!usados[n]){v.n=n;usados[n]=1;break}}});
@@ -638,7 +641,7 @@ function abasHtml(){abaGuardar();
   const ordem=S.abas.map((a,k)=>k).sort((x,y)=>(!!S.abas[x].pend-!!S.abas[y].pend)||x-y);
   return `<div class="abas" role="tablist" aria-label="Vendas em aberto">${ordem.map(k=>{const a=S.abas[k],t=totaisDe(a),on=k===S.aba,nome=t.c?t.c.nome.split(' ')[0]:'';
     if(a.pend)return `<button class="aba pend ${on?'on':''}" role="tab" aria-selected="${on}" data-a="abaIr" data-k="${k}" title="Fiado do dia · ${esc(a.pend)} · ${brl(t.total)}"><b>🕒 ${esc(a.pend)}</b><small>Fiado do dia · ${brl(t.total)}</small></button>`;
-    return `<button class="aba ${on?'on':a.cart.length?'espera':''}" role="tab" aria-selected="${on}" data-a="abaIr" data-k="${k}" title="Venda ${a.n}${nome?' · '+esc(nome):''} · ${a.cart.length} ${a.cart.length===1?'item':'itens'} · ${brl(t.total)}"><b>Venda ${a.n}</b><small>${nome?esc(nome):a.cart.length?brl(t.total):'vazia'}</small></button>`}).join('')}<button class="aba mais" data-a="abaNova" aria-label="Abrir outra venda" title="${abasNormais()>=MAX_ABAS&&!S.abas.some(abaLivre)?'Limite de '+MAX_ABAS+' vendas em aberto':'Abrir outra venda'}"><b>+ Nova</b><small>${abasNormais()} de ${MAX_ABAS}</small></button></div>`}
+    return `<button class="aba ${on?'on':a.cart.length?'espera':''}" role="tab" aria-selected="${on}" data-a="abaIr" data-k="${k}" title="Venda ${a.n}${nome?' · '+esc(nome):''} · ${a.cart.length} ${a.cart.length===1?'item':'itens'} · ${brl(t.total)}"><b>Venda ${a.n}</b><small>${cobAtiva(a.cob)?'💳 na maquineta':nome?esc(nome):a.cart.length?brl(t.total):'vazia'}</small></button>`}).join('')}<button class="aba mais" data-a="abaNova" aria-label="Abrir outra venda" title="${abasNormais()>=MAX_ABAS&&!S.abas.some(abaLivre)?'Limite de '+MAX_ABAS+' vendas em aberto':'Abrir outra venda'}"><b>+ Nova</b><small>${abasNormais()} de ${MAX_ABAS}</small></button></div>`}
 const reg=()=>{};
 const deQuem=id=>id===S.user.id?'o próprio caixa':'o caixa de '+S.usuarios.find(u=>u.id===id).nome;
 function regFech(){}
@@ -650,7 +653,7 @@ const somaPags=()=>S.pags?S.pags.linhas.reduce((a,l)=>a+l.valor,0):0;
 const cliAtual=()=>S.clienteId?S.clientes.find(c=>c.id===S.clienteId)||null:null;
 const usoSaldo=()=>S.pags?S.pags.linhas.filter(l=>l.forma==='saldo').reduce((a,l)=>a+l.valor,0):(S.forma==='saldo'?totais().total:0);
 const temFiado=()=>S.pags?S.pags.linhas.some(l=>l.forma==='fiado'):S.forma==='fiado';
-const podeFinalizar=()=>{const t=totais();if(!fxAberto(S.user.id)||!S.cart.length)return false;if(t.total===0&&t.dpct===100)return true;if(temFiado()&&!S.clienteId)return false;{const u=usoSaldo();if(u&&(!cliAtual()||cliAtual().credito<u))return false}return S.pags?somaPags()===t.total:!!S.forma&&(S.forma!=='dinheiro'||parseMoney(S.recebido)>=t.total)};
+const podeFinalizar=()=>{const t=totais();if(!fxAberto(S.user.id)||!S.cart.length||cobAtiva(S.cob))return false;if(t.total===0&&t.dpct===100)return true;if(temFiado()&&!S.clienteId)return false;{const u=usoSaldo();if(u&&(!cliAtual()||cliAtual().credito<u))return false}return S.pags?somaPags()===t.total:!!S.forma&&(S.forma!=='dinheiro'||parseMoney(S.recebido)>=t.total)};
 const GR=[['prato','Pratos'],['comida','Comida a quilo'],['acai','Açaí'],['doce','Sobremesas'],['bebida','Bebidas'],['avulso','Valores avulsos']];
 const gk=i=>i.grupo==='produto'?(i.cat||'doce'):i.grupo;
 function listaCart(){
@@ -730,11 +733,11 @@ function modalHtml(fa){
   if(S.modal==='maquineta'&&S.cob){const c=S.cob,fim=COB_FIM.includes(c.status),
     tit=({na_maquineta:'Aguardando o pagamento na maquineta',cancelada:'Cobrança cancelada',falhou:'A cobrança não foi feita',expirada:'O tempo acabou',estornada:'Pagamento estornado'})[c.status]||'Enviando para a maquineta…';
     return `<div class="panel" id="maqbox" style="width:min(480px,100%)"><h1>${tit}</h1>
-    <div class="conf-total"><span>${FORMAS[c.forma]} na maquineta</span><strong>${brl(c.valor)}</strong></div>
+    <div class="conf-total"><span>${FORMAS[c.forma]} na ${maqNome(c)}</span><strong>${brl(c.valor)}</strong></div>
     ${fim?`<div class="note" role="alert" style="color:var(--bad)">${esc(c.detalhe||'O pagamento não foi concluído.')}</div>`
       :`<div class="maqespera"><i></i><span>${c.status==='na_maquineta'?'Peça para o cliente pagar na maquineta. A venda é registrada sozinha quando aprovar.':'Aguarde, o valor já vai aparecer na maquineta.'}</span></div>${c.lento?`<div class="note" style="color:var(--warn)">Está demorando. Confira se o fluxo da maquineta está ativo no n8n e se a maquineta está ligada.</div>`:''}`}
     ${fim?`<button class="btn" data-a="maqDeNovo">Cobrar de novo</button><button class="btn line" data-a="maqManual">Recebi de outro jeito: confirmar manualmente</button><button class="btn line" data-a="maqFechar">Voltar para a venda</button>`
-      :`${c.status==='na_maquineta'?`<button class="btn line" data-a="maqConferir">Já pagou e não atualizou? Conferir agora</button>`:''}<button class="btn line nao" data-a="maqCancelar">Cancelar a cobrança</button>`}</div>`}
+      :`${c.status==='na_maquineta'?`<button class="btn line" data-a="maqConferir">Já pagou e não atualizou? Conferir agora</button>`:''}<button class="btn line" data-a="maqEsperar">Atender outra venda enquanto espera</button><button class="btn line nao" data-a="maqCancelar">Cancelar a cobrança</button>`}</div>`}
   if(S.modal==='confirmar'){const t=totais(),como=S.pags?S.pags.linhas.map(l=>(l.rot?l.rot+': ':'')+FORMAS[l.forma]+' '+brl(l.valor)).join(' + '):FORMAS[S.forma]||'';
     return `<div class="panel" style="width:min(480px,100%)"><h1>Tem certeza que quer finalizar a venda?</h1>
     <p style="margin:0;font-size:18px;color:var(--ink)"><b>O cliente já fez o pagamento?</b></p>
@@ -933,23 +936,40 @@ const usaMaq=()=>!!S.maq&&!S.pags&&totais().total>0&&(['credito','debito','pix']
 const EXT='Maquininha externa';
 const maqPaga=()=>!!(S.pagoMaq&&S.pagoMaq.valor===totais().total&&S.pagoMaq.forma===S.forma);
 function cobFim(){clearInterval(S.cobT);S.cobT=null}
-function cobStatus(st,det){const c=S.cob;if(!c)return;const mudou=c.status!==st||c.detalhe!==(det||'');c.status=st;c.detalhe=det||'';
-  if(st==='aprovada'){cobFim();S.pagoMaq={valor:c.valor,forma:c.forma,id:c.id};S.cob=null;S.modal=null;A.finalizarSim();return}
-  if(COB_FIM.includes(st))cobFim();
+/* Cada venda (aba) tem a sua cobrança. Com duas maquinetas, uma venda espera o pagamento
+   enquanto a outra é cobrada na outra maquineta. */
+const cobAtiva=c=>!!(c&&!COB_FIM.includes(c.status));
+const cobDe=k=>k===S.aba?S.cob:(S.abas[k]||{}).cob;
+const abaDaCob=c=>S.abas.findIndex((a,k)=>cobDe(k)===c);
+const rotAba=k=>{const a=S.abas[k]||{};return a.pend?a.pend:'Venda '+(a.n||k+1)};
+function cobLigar(){if(!S.cobT)S.cobT=setInterval(cobVarrer,2000)}
+function cobVarrer(){const L=S.abas.map((a,k)=>cobDe(k)).filter(c=>c&&c.id&&cobAtiva(c));if(!L.length)return cobFim();L.forEach(cobOlhar)}
+function cobTirar(c){const k=abaDaCob(c);if(k<0)return;if(k===S.aba){S.cob=null;if(S.modal==='maquineta')S.modal=null}else S.abas[k].cob=null}
+function cobStatus(c,st,det){if(!c)return;const mudou=c.status!==st||c.detalhe!==(det||'');c.status=st;c.detalhe=det||'';
+  if(st==='aprovada')return cobFinalizar(c);
+  if(mudou&&COB_FIM.includes(st)){const k=abaDaCob(c);if(k>=0&&k!==S.aba)toast(rotAba(k)+': o pagamento na maquineta não foi concluído. Abra a aba para ver.')}
   if(mudou)render()}
-async function cobOlhar(){const c=S.cob;if(!c||!c.id||c.olhando)return;c.olhando=true;let r=null;
+// Pagamento aprovado: registra a venda daquela aba, mesmo que o caixa esteja em outra.
+function cobFinalizar(c){const k=abaDaCob(c);if(k<0)return;
+  if(S.enviando)return setTimeout(()=>cobFinalizar(c),600);
+  const volta=k===S.aba?null:S.abas[S.aba],modal=S.modal;
+  if(volta){abaGuardar();abaCarregar(k)}
+  S.pagoMaq={valor:c.valor,forma:c.forma,id:c.id};S.cob=null;if(S.modal==='maquineta'||volta)S.modal=null;
+  A.finalizarSim();
+  if(volta){const vt=()=>{if(S.enviando)return setTimeout(vt,300);const j=S.abas.indexOf(volta);if(j>=0&&j!==S.aba){abaGuardar();abaCarregar(j);if(modal&&modal!=='maquineta')S.modal=modal;render()}};setTimeout(vt,300)}}
+async function cobOlhar(c){if(!c||!c.id||c.olhando)return;c.olhando=true;let r=null;
   try{r=(await sb.from('cobrancas').select('status,detalhe').eq('id',c.id).maybeSingle()).data}catch(e){}
-  c.olhando=false;if(S.cob!==c)return;
-  if(r&&r.status)cobStatus(r.status,r.detalhe);
-  if(S.cob!==c||COB_FIM.includes(c.status))return;
+  c.olhando=false;if(abaDaCob(c)<0)return;
+  if(r&&r.status)cobStatus(c,r.status,r.detalhe);
+  if(!cobAtiva(c))return;
   const seg=(Date.now()-c.ini)/1000;
-  if(seg>390)return cobStatus('expirada','Não chegou resposta da maquineta. Confira nela se o pagamento passou antes de cobrar de novo.');
+  if(seg>390)return cobStatus(c,'expirada','Não chegou resposta da maquineta. Confira nela se o pagamento passou antes de cobrar de novo.');
   const lento=seg>20&&c.status!=='na_maquineta';if(lento!==!!c.lento){c.lento=lento;render()}}
-function cobrarMaq(){const t=totais();cobFim();S.cob={id:null,valor:t.total,forma:S.forma,status:'pedindo',detalhe:'',ini:Date.now()};S.modal='maquineta';const c=S.cob;
-  q(sb.rpc('cobrar_maquineta',{p_valor:t.total,p_forma:S.forma})).then(r=>{if(S.cob!==c)return;
-    if(!r||!r.id){S.cob=null;S.modal=null;return render()}
-    c.id=r.id;cobStatus(r.status,'');
-    if(S.cob===c&&!COB_FIM.includes(c.status))S.cobT=setInterval(cobOlhar,2000)})}
+function cobrarMaq(){const t=totais();S.cob={id:null,valor:t.total,forma:S.forma,status:'pedindo',detalhe:'',ini:Date.now(),maq:0,qtd:S.maqQtd||1};S.modal='maquineta';const c=S.cob;abaGuardar();
+  q(sb.rpc('cobrar_maquineta',{p_valor:t.total,p_forma:S.forma})).then(r=>{if(abaDaCob(c)<0)return;
+    if(!r||!r.id){cobTirar(c);return render()}
+    c.id=r.id;c.maq=r.maquineta||1;c.qtd=r.maquinetas||1;cobStatus(c,r.status,'');if(cobAtiva(c))cobLigar();render()})}
+const maqNome=c=>c&&c.qtd>1&&c.maq?'Maquineta '+c.maq:'maquineta';
 /* ---------- Dados do negócio: um lugar só, usado no sistema inteiro ---------- */
 const foneBonito=n=>/^55\d{10,11}$/.test(n||'')?`(${n.slice(2,4)}) ${n.slice(4,n.length-4)}-${n.slice(-4)}`:(n||'');
 const nomeNeg=()=>(S.neg&&S.neg.nome)||'Restaurante';
@@ -1164,7 +1184,9 @@ function vendaPanel(){
   else if(S.forma==='pix')pg=`<div class="note">Receba o Pix de ${brl(t.total)} e finalize quando o pagamento cair.</div>`;
   else if(S.forma)pg=`<div class="note">Passe ${brl(t.total)} na maquininha no ${FORMAS[S.forma].toLowerCase()} e finalize quando aprovar.</div>`;
   const atual=S.abas[S.aba]||{n:1},temOutra=S.abas.length>1;
-  return `<section class="panel venda ${S.pend?'vpend':''}">${S.pend?`<div class="pendbar"><b>🕒 Fiado do dia · ${esc(S.pend)}</b><span>Quando ${esc(S.pend.split(' ')[0])} voltar, escolha como pagou e finalize. Se não voltar hoje, use Fiado → do mês.</span><button class="chip sm" data-a="despendurar">Tirar da espera</button></div>`:''}<div class="vhead"><h2>${S.pend?esc(S.pend):'Venda '+atual.n}</h2>${(S.cart.length||temOutra)?`<button class="chip sm ${S.abaConf?'perigo':''}" data-a="abaDescartar">${S.abaConf?'Confirmar: descartar':(S.cart.length?'Descartar venda':'Fechar aba')}</button>`:''}</div>
+  const cb=S.cob,faixa=cb?(cobAtiva(cb)?`<div class="maqfaixa"><i></i><span><b>Aguardando o pagamento na ${maqNome(cb)}</b> · ${FORMAS[cb.forma]} ${brl(cb.valor)}. A venda é registrada sozinha quando aprovar.</span><div class="row"><button class="chip sm" data-a="maqVer">Ver</button><button class="chip sm" data-a="maqCancelar">Cancelar cobrança</button></div></div>`
+    :`<div class="maqfaixa fim"><span><b>O pagamento na ${maqNome(cb)} não foi concluído.</b> ${esc(cb.detalhe||'')}</span><div class="row"><button class="chip sm" data-a="maqVer">Ver opções</button></div></div>`):'';
+  return `<section class="panel venda ${S.pend?'vpend':''}">${faixa}${S.pend?`<div class="pendbar"><b>🕒 Fiado do dia · ${esc(S.pend)}</b><span>Quando ${esc(S.pend.split(' ')[0])} voltar, escolha como pagou e finalize. Se não voltar hoje, use Fiado → do mês.</span><button class="chip sm" data-a="despendurar">Tirar da espera</button></div>`:''}<div class="vhead"><h2>${S.pend?esc(S.pend):'Venda '+atual.n}</h2>${(S.cart.length||temOutra)?`<button class="chip sm ${S.abaConf?'perigo':''}" data-a="abaDescartar">${S.abaConf?'Confirmar: descartar':(S.cart.length?'Descartar venda':'Fechar aba')}</button>`:''}</div>
     <div class="lista">${listaCart()}</div>
     <div><label for="cliente">Cliente (programa de pontos)</label>
       <div class="row"><select id="cliente" data-c="cliente" style="flex:1"><option value="">Sem identificação</option>${cliOps(S.clienteId)}</select><button class="btn line sm" data-a="novoCli">Novo</button></div>
@@ -1444,7 +1466,7 @@ async function carregarBase(){
     S.balancas=b.map(x=>{const ts=[{n:'Sem tara',g:0}].concat((x.taras||[]).slice().sort((m,n)=>m.gramas-n.gramas).map(t=>({n:t.nome,g:t.gramas}))),a=ant[x.id];
       return{id:x.id,nome:x.nome,grupo:x.grupo,marca:x.marca,conexao:x.conexao,baud:String(x.baud),precoKg:x.preco_kg_centavos,bruto:a?a.bruto:0,tara:0,conectada:a?a.conectada:true,taras:ts}})}
   if(Array.isArray(pr))S.produtos=pr.map(x=>({id:x.id,nome:x.nome,preco:x.preco_centavos,cat:x.categoria,destaque:x.destaque,imagem:x.imagem||''}));
-  if(cf&&cf!==true){S.regras={base:cf.base_pontos,pontosResgate:cf.pontos_resgate,valorResgate:cf.valor_resgate_centavos,minGrupo:cf.min_pontos_grupo,cada:cf.pontos_cada_centavos||100,kg:cf.pontos_kg!==false,pf:cf.pontos_pf!==false};S.fundo=cf.fundo_troco_centavos;S.nomeRest=cf.nome_restaurante||'Restaurante';negAplicar({nome:S.nomeRest,fone:cf.telefone_restaurante||'',end:cf.endereco_restaurante||'',rodape:cf.rodape_recibo===undefined?'Obrigado pela preferência! 😊':cf.rodape_recibo||''});S.fav={ativo:cf.fiado_aviso_ativo!==false,texto:cf.fiado_aviso_texto||'Olá, {nome}! 😊\n\nPassando para avisar que uma compra no *{restaurante}* no valor de *{valor}* foi adicionada à sua conta em {data}, às {hora}.\n\nQualquer dúvida, é só chamar. Obrigado pela preferência!'};S.maq=!!cf.maquineta_ativa;S.susp={ativo:!!cf.pontos_suspender,desde:cf.pontos_suspender_desde||null,volta:cf.pontos_volta_centavos||5000,aviso:cf.pontos_aviso_ativo!==false,txtS:cf.pontos_aviso_suspenso||'',txtV:cf.pontos_aviso_volta||''};S.valeMaq=cf.vale_maquineta!==false}
+  if(cf&&cf!==true){S.regras={base:cf.base_pontos,pontosResgate:cf.pontos_resgate,valorResgate:cf.valor_resgate_centavos,minGrupo:cf.min_pontos_grupo,cada:cf.pontos_cada_centavos||100,kg:cf.pontos_kg!==false,pf:cf.pontos_pf!==false};S.fundo=cf.fundo_troco_centavos;S.nomeRest=cf.nome_restaurante||'Restaurante';negAplicar({nome:S.nomeRest,fone:cf.telefone_restaurante||'',end:cf.endereco_restaurante||'',rodape:cf.rodape_recibo===undefined?'Obrigado pela preferência! 😊':cf.rodape_recibo||''});S.fav={ativo:cf.fiado_aviso_ativo!==false,texto:cf.fiado_aviso_texto||'Olá, {nome}! 😊\n\nPassando para avisar que uma compra no *{restaurante}* no valor de *{valor}* foi adicionada à sua conta em {data}, às {hora}.\n\nQualquer dúvida, é só chamar. Obrigado pela preferência!'};S.maq=!!cf.maquineta_ativa;S.maqQtd=cf.maquinetas||1;S.susp={ativo:!!cf.pontos_suspender,desde:cf.pontos_suspender_desde||null,volta:cf.pontos_volta_centavos||5000,aviso:cf.pontos_aviso_ativo!==false,txtS:cf.pontos_aviso_suspenso||'',txtV:cf.pontos_aviso_volta||''};S.valeMaq=cf.vale_maquineta!==false}
   if(Array.isArray(cl)){const m={};(Array.isArray(p30)?p30:[]).forEach(x=>m[x.cliente_id]=Number(x.pontos));S.clientes=cl.map(x=>({id:x.id,nome:x.nome,fone:x.telefone,foneNorm:x.telefone_norm||'',descPct:Number(x.desconto_pct||0),empresa:x.empresa||'',credito:Number(x.credito_centavos||0),susp:x.pontos_status==='suspenso',volta:Number(x.volta_centavos||0),descSobre:x.desconto_sobre||'tudo',pontos:x.pontos,g:Number(x.gramas_total),gasto:Number(x.gasto_centavos),p30:m[x.id]||0}))}
   if(Array.isArray(cd))S.cardapio=cd.map(x=>({id:x.id,cat:x.categoria,nome:x.nome,on:x.disponivel}));
   // Se algum preço mudou, a venda em andamento acompanha o banco.
@@ -1552,7 +1574,7 @@ async function carregarN8n(){
     q(sb.from('whats_admins').select('*').order('nome'),'Administradores do WhatsApp')]);
   const rc=await q(sb.from('recibos').select('id,telefone,status,criado_em,enviado_em').order('criado_em',{ascending:false}).limit(12),'Recibos');
   S.recibos=Array.isArray(rc)?rc:[];
-  const cb=await q(sb.from('cobrancas').select('valor_centavos,forma,status,detalhe,criado_em').order('criado_em',{ascending:false}).limit(8),'Maquineta');
+  const cb=await q(sb.from('cobrancas').select('valor_centavos,forma,status,detalhe,criado_em,maquineta').order('criado_em',{ascending:false}).limit(8),'Maquineta');
   S.cobrancas=Array.isArray(cb)?cb:[];S.maqUrl=r&&r!==true&&r.maquineta_url?r.maquineta_url:'';
   S.n8n=Object.assign(S.n8n||{},{carregado:true,token:r&&r!==true?r.token:null,quando:r&&r!==true&&r.token_criado_em?new Date(r.token_criado_em):null,
     admins:Array.isArray(a)?a:(S.n8n&&S.n8n.admins)||[]});
@@ -1615,10 +1637,11 @@ ${esc(corpo(x))}</pre><div class="row">${cp(url(f),'Copiar endereço')}${cp(corp
   <section class="panel"><h2>7. Maquineta do Mercado Pago</h2>
     <p style="margin:0">Com a maquineta ligada, ao finalizar uma venda no crédito, débito ou Pix o valor aparece sozinho na Point e a venda é registrada quando o pagamento aprovar. Dinheiro, pagamento misto e conta dividida continuam manuais. No modo teste a cobrança é simulada e nada chega à maquineta.</p>
     <div class="form compacta"><div><label for="mq-url">Endereço do fluxo "maquineta" no n8n (Production URL do nó "Pedido do Caixa")</label><input type="url" id="mq-url" placeholder="https://seu-n8n/webhook/caixa-maquineta" value="${esc(S.maqUrl||'')}"></div>
+      <div><label for="mq-qtd">Quantas maquinetas neste caixa</label><select id="mq-qtd" data-c="maqQtd">${[1,2,3,4].map(n=>`<option value="${n}" ${(S.maqQtd||1)===n?'selected':''}>${n}</option>`).join('')}</select></div>
       <label class="sw" for="mq-on">Cobrar crédito, débito e Pix pela maquineta <input type="checkbox" id="mq-on" ${S.maq?'checked':''}></label>
       <div><button class="btn sm" data-a="maqSalvar">Salvar</button></div></div>
-    <div class="tw"><table><thead><tr><th>Quando</th><th>Valor</th><th>Forma</th><th>Situação</th></tr></thead><tbody>
-      ${(S.cobrancas||[]).map(x=>`<tr><td>${new Date(x.criado_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</td><td>${brl(x.valor_centavos)}</td><td>${esc(FORMAS[x.forma]||x.forma)}</td><td>${x.status==='aprovada'?'<span class="pill ok">Aprovada</span>':`<span class="pill warn">${esc(({pendente:'Enviando',enviada:'Enviando',na_maquineta:'Na maquineta',cancelada:'Cancelada',falhou:'Não foi feita',expirada:'Tempo esgotado',estornada:'Estornada'})[x.status]||x.status)}</span>`}${x.detalhe&&x.status!=='aprovada'?` <small>${esc(x.detalhe)}</small>`:''}</td></tr>`).join('')||'<tr><td colspan="4">Nenhuma cobrança ainda.</td></tr>'}
+    <div class="tw"><table><thead><tr><th>Quando</th><th>Valor</th><th>Forma</th>${(S.maqQtd||1)>1?'<th>Maquineta</th>':''}<th>Situação</th></tr></thead><tbody>
+      ${(S.cobrancas||[]).map(x=>`<tr><td>${new Date(x.criado_em).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</td><td>${brl(x.valor_centavos)}</td><td>${esc(FORMAS[x.forma]||x.forma)}</td>${(S.maqQtd||1)>1?`<td>${x.maquineta||1}</td>`:''}<td>${x.status==='aprovada'?'<span class="pill ok">Aprovada</span>':`<span class="pill warn">${esc(({pendente:'Enviando',enviada:'Enviando',na_maquineta:'Na maquineta',cancelada:'Cancelada',falhou:'Não foi feita',expirada:'Tempo esgotado',estornada:'Estornada'})[x.status]||x.status)}</span>`}${x.detalhe&&x.status!=='aprovada'?` <small>${esc(x.detalhe)}</small>`:''}</td></tr>`).join('')||'<tr><td colspan="4">Nenhuma cobrança ainda.</td></tr>'}
     </tbody></table></div>
   </section>`;
 }
@@ -1910,11 +1933,13 @@ const A={
       if(r&&r.ok){toast((k.tipo==='entrada'?'Crédito colocado. ':'Crédito debitado. ')+r.cliente+' agora tem '+brl(r.saldo)+'.');await carregarBase();
         S.cred={id:k.id,tipo:k.tipo,forma:'',valor:'',obs:''};q(sb.rpc('cliente_credito_extrato',{p_cliente:k.id}),'Extrato').then(x=>{if(S.cred&&S.cred.id===k.id){S.cred.extrato=Array.isArray(x)?x:[];render()}})}
       render()});return true},
-  maqDeNovo:()=>{cobFim();S.cob=null;S.modal=null;if(podeFinalizar()&&usaMaq())cobrarMaq()},
-  maqManual:()=>{cobFim();S.cob=null;S.modal='confirmar'},
-  maqFechar:()=>{cobFim();S.cob=null;S.modal=null},
+  maqDeNovo:()=>{S.cob=null;S.modal=null;if(podeFinalizar()&&usaMaq())cobrarMaq()},
+  maqManual:()=>{S.cob=null;S.modal='confirmar'},
+  maqFechar:()=>{S.cob=null;S.modal=null},
+  maqEsperar:()=>{S.modal=null;toast('Esta venda fica esperando o pagamento e é registrada sozinha quando aprovar. Toque em "+ Nova" para atender o próximo cliente.')},
+  maqVer:()=>{if(S.cob)S.modal='maquineta'},
   maqCancelar:()=>{const c=S.cob;if(!c||!c.id)return true;toast('Pedindo o cancelamento…');
-    q(sb.rpc('cancelar_cobranca',{p_id:c.id}),'Maquineta').then(r=>{if(S.cob===c&&r&&r.status==='cancelada')cobStatus('cancelada','Cancelada no Caixa.')});return true},
+    q(sb.rpc('cancelar_cobranca',{p_id:c.id}),'Maquineta').then(r=>{if(abaDaCob(c)>=0&&r&&r.status==='cancelada')cobStatus(c,'cancelada','Cancelada no Caixa.')});return true},
   maqConferir:()=>{const c=S.cob;if(!c||!c.id)return true;toast('Conferindo no Mercado Pago…');q(sb.rpc('conferir_cobranca',{p_id:c.id}),'Maquineta');return true},
   maqSalvar:()=>{const u=$('#mq-url').value.trim(),on=$('#mq-on').checked;
     q(sb.rpc('maquineta_config',{p_url:u||null,p_ativa:on}),'Maquineta').then(async r=>{if(r&&r!==true){S.maqUrl=u;S.maq=on;toast(on?'Maquineta ligada. Crédito, débito e Pix agora vão para ela.':'Maquineta desligada. O Caixa voltou ao modo manual.');await carregarBase()}render()});return true},
@@ -2019,6 +2044,7 @@ const C={
       im.onerror=()=>toast('Não foi possível ler essa imagem.');im.src=rd.result};rd.readAsDataURL(f)},
   fil:e=>{S.fil[e.dataset.k]=e.value;S.finLimite=200;carregarFin()},
   prodCat:e=>{prodMarcar(e.dataset.pe,'cat',e.value)},
+  maqQtd:e=>{const n=+e.value;q(sb.rpc('maquinetas_definir',{p_qtd:n}),'Maquineta').then(r=>{if(r){S.maqQtd=n;toast(n>1?n+' maquinetas: cada cobrança vai para a que estiver livre.':'Uma maquineta só.')}render()})},
   valeMaq:e=>{const v=e.checked;S.valeMaq=v;q(sb.rpc('vale_maquineta_definir',{p_ligado:v}),'Vale').then(r=>{if(r===null){S.valeMaq=!v}else toast(v?'Vale-alimentação pela maquineta do Mercado Pago.':'Vale-alimentação em maquininha externa: o Caixa confirma sem chamar a maquineta.');render()})},
   valeCaixa:e=>{q(sb.rpc('vale_no_caixa_definir',{p_ligado:e.checked}),'Vale').then(r=>{if(r!==null){toast(e.checked?'O vale-alimentação voltou a somar no total do caixa.':'O vale-alimentação saiu do total do caixa.');carregarFin()}})},
   credDev:e=>{credLer();S.cred.forma=e.checked?'dinheiro':''},
@@ -2031,8 +2057,11 @@ const C={
   waUrl:e=>{S.wa.url=e.value.trim()},
   waEv:e=>{S.wa.eventos[e.dataset.k]=e.checked}
 };
-document.addEventListener('click',ev=>{if(S.menu&&window.innerWidth<=980&&!ev.target.closest('nav')&&!ev.target.closest('[data-a="menu"]')){S.menu=false;render();return}const e=ev.target.closest('[data-a]');if(!e||e.disabled)return;const keep=A[e.dataset.a](e);if(!keep)render()});
-document.addEventListener('change',ev=>{const e=ev.target.closest('[data-c]');if(!e)return;C[e.dataset.c](e);render()});
+const TRAVA=['addPeso','addProd','rmItem','forma','avAbrir','dvAbrir','dvTirar','resgate','abrirDividir','abrirMisto','abaDescartar','tecla','finalizar','novoCli','limparPags','quick','exato','limparRec','despendurar'];
+const travada=()=>cobAtiva(S.cob)&&S.view==='caixa';
+const avisoTrava=()=>toast('Esta venda está esperando o pagamento na '+maqNome(S.cob)+'. Toque em "+ Nova" para outra venda, ou cancele a cobrança.');
+document.addEventListener('click',ev=>{{const t=ev.target.closest&&ev.target.closest('[data-a]');if(t&&TRAVA.includes(t.dataset.a)&&travada()){avisoTrava();return}}if(S.menu&&window.innerWidth<=980&&!ev.target.closest('nav')&&!ev.target.closest('[data-a="menu"]')){S.menu=false;render();return}const e=ev.target.closest('[data-a]');if(!e||e.disabled)return;const keep=A[e.dataset.a](e);if(!keep)render()});
+document.addEventListener('change',ev=>{const e=ev.target.closest('[data-c]');if(!e)return;if((e.dataset.c==='cliente'||e.dataset.c==='recibo')&&travada()){avisoTrava();render();return}C[e.dataset.c](e);render()});
 document.addEventListener('input',ev=>{const t=ev.target;
   if(S.ia&&t.dataset){const d=t.dataset;
     if(d.ia!==undefined){S.ia.info[d.ia]=t.type==='checkbox'?t.checked:t.value;iaSujo();return}
@@ -2056,6 +2085,7 @@ document.addEventListener('keydown',ev=>{
   if(ev.key==='Escape'&&S.modal&&S.modal!=='maquineta'&&!S.crop){ev.preventDefault();A.cancelar();return render()}
   // Digitação do peso: só no Caixa, com o caixa aberto e fora de qualquer campo de texto.
   if(!S.logged||!S.pronto||S.view!=='caixa'||S.modal||S.crop)return;
+  if(travada()&&(/^[0-9]$/.test(ev.key)||ev.key==='Enter'||ev.key==='Backspace')){ev.preventDefault();return avisoTrava()}
   if(ev.ctrlKey||ev.altKey||ev.metaKey)return;
   const al=ev.target;
   if(al&&(al.tagName==='INPUT'||al.tagName==='SELECT'||al.tagName==='TEXTAREA'||al.isContentEditable))return;
